@@ -183,4 +183,18 @@
     <string name="fin_p_all">Semua</string>
     <string name="fin_empty">Belum ada catatan di periode ini. Katakan ke Nine: \"tadi beli kopi 18 ribu\" atau \"gajian 5 juta\".</string>
     <string name="fin_delete">Hapus</string>
+    <string name="profile_title">Profil saya</string>
+    <string name="profile_intro">Perkenalkan diri Anda supaya Nine bisa menyapa dengan pas. Semua ini hanya tersimpan di HP ini dan tidak dikirim ke internet.</string>
+    <string name="profile_intro_edit">Ubah profil Anda kapan saja. Semua ini hanya tersimpan di HP ini.</string>
+    <string name="profile_name">Nama</string>
+    <string name="profile_call">Panggilan (Tuan, Nyonya, Bos, …)</string>
+    <string name="profile_call_hint">Nine memanggil Anda dengan ini. Boleh dikosongkan.</string>
+    <string name="profile_birth">Tanggal lahir (opsional)</string>
+    <string name="profile_birth_clear">Hapus tanggal lahir</string>
+    <string name="profile_partner">Pasangan (opsional)</string>
+    <string name="profile_partner_hint">Bila diisi, Nine akan sesekali menanyakan kabarnya.</string>
+    <string name="profile_save">Simpan</string>
+    <string name="profile_later">Nanti saja</string>
+    <string name="profile_saved">Profil disimpan</string>
+    <string name="profile_button">Ubah profil (nama, panggilan, tanggal lahir, pasangan)</string>
 </resources>

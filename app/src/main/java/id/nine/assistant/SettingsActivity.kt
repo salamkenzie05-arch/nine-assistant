@@ -216,6 +216,7 @@ class SettingsActivity : AppCompatActivity() {
         }
         binding.editHonId.setText(prefs.honorificId)
         binding.editHonEn.setText(prefs.honorificEn)
+        binding.btnProfile.setOnClickListener { startActivity(Intent(this, ProfileActivity::class.java)) }
 
         // --- Suara
         binding.switchSpeak.isChecked = prefs.speakReplies

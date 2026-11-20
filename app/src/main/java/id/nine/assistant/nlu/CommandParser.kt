@@ -40,6 +40,7 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
         if (raw.isEmpty()) return Command.Unknown(input.trim())
         val norm = NumberWords.normalize(raw)
         val now = clock()
+        planText = input.lowercase()
         val cmd = parseCommand(raw, norm, now)
         // Pertanyaan umum ("kenapa alarm saya tidak bunyi?", "how do I set an alarm?") lebih cocok untuk otak AI,
         // kecuali pertanyaan informasi yang memang dijawab perangkat (jam, baterai, jadwal, tugas, ...).
@@ -60,6 +61,9 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
         else -> false
     }
 
+    /** Ucapan asli (huruf kecil) sebelum dibersihkan: dipakai untuk membedakan rencana ("mau beli …") dari catatan. */
+    private var planText: String = ""
+
     private fun parseCommand(raw: String, norm: String, now: LocalDateTime): Command {
         return parseLanguage(raw)
             ?: parseReset(raw)
@@ -77,7 +81,7 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
             ?: parseFlashlight(raw)
             ?: parseSettings(raw)
             ?: parseVolume(norm)
-            ?: FinanceParser.parse(raw)
+            ?: (if (FinanceParser.isPlan(planText)) null else FinanceParser.parse(raw))
             ?: parseCloseApps(raw)
             ?: parseFun(raw)
             ?: parseSetName(raw)

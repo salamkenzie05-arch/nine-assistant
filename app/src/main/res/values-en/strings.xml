@@ -183,4 +183,18 @@
     <string name="fin_p_all">All</string>
     <string name="fin_empty">No entries in this period yet. Tell Nine: \"spent 18 thousand on coffee\" or \"salary 5 million\".</string>
     <string name="fin_delete">Delete</string>
+    <string name="profile_title">My profile</string>
+    <string name="profile_intro">Tell Nine a little about yourself so it can greet you properly. All of this stays on this phone and is never sent to the internet.</string>
+    <string name="profile_intro_edit">Change your profile any time. All of this stays on this phone.</string>
+    <string name="profile_name">Name</string>
+    <string name="profile_call">What to call you (Sir, Madam, Boss, …)</string>
+    <string name="profile_call_hint">Nine will address you this way. You can leave it empty.</string>
+    <string name="profile_birth">Date of birth (optional)</string>
+    <string name="profile_birth_clear">Clear date of birth</string>
+    <string name="profile_partner">Partner (optional)</string>
+    <string name="profile_partner_hint">If filled in, Nine will occasionally ask how they are.</string>
+    <string name="profile_save">Save</string>
+    <string name="profile_later">Maybe later</string>
+    <string name="profile_saved">Profile saved</string>
+    <string name="profile_button">Edit profile (name, title, birth date, partner)</string>
 </resources>

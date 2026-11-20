@@ -1183,11 +1183,16 @@ class SkillExecutor(
             if (xpLeft > 0) parts += "$xpLeft XP"
             if (dLeft > 0) parts += lang.t("$dLeft hari pemakaian", "$dLeft more days of use")
             val need = parts.joinToString(lang.t(" dan ", " and "))
-            lang.t(" Menuju level ${n.number}, ${n.name(lang)}: $need lagi.", " To level ${n.number}, ${n.name(lang)}: $need to go.")
+            val pct = (st.progress * 100).toInt().coerceIn(0, 99)
+            lang.t(
+                " Progres menuju level ${n.number}, ${n.name(lang)}: $pct%. Sisa: $need.",
+                " Progress to level ${n.number}, ${n.name(lang)}: $pct%. Remaining: $need."
+            )
         } ?: lang.t(" Kita sudah di puncak. Saya terharu.", " We've reached the top. I'm quite touched.")
-        val days = lang.t(
-            " Level tertinggi baru terbuka setelah ${AffinityRules.FULL_DAYS} hari pemakaian; ini hari ke-${st.days}.",
-            " The top level only opens after ${AffinityRules.FULL_DAYS} days of use; this is day ${st.days}."
+        val total = (st.days * 100 / AffinityRules.FULL_DAYS).coerceIn(0, 100)
+        val days = if (st.next == null) "" else lang.t(
+            " Menuju level tertinggi: hari ke-${st.days} dari ${AffinityRules.FULL_DAYS} ($total%), tidak bisa dipercepat dengan XP.",
+            " Toward the top level: day ${st.days} of ${AffinityRules.FULL_DAYS} ($total%); XP can't speed that up."
         )
         return SkillResult(
             lang.t(

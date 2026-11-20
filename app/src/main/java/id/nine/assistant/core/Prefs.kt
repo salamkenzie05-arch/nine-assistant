@@ -45,11 +45,11 @@ class Prefs(context: Context) {
 
     var honorificId: String
         get() = sp.getString("hon_id", "Tuan") ?: "Tuan"
-        set(value) = sp.edit().putString("hon_id", value.trim()).apply()
+        set(value) = sp.edit().putString("hon_id", cleanName(value)).apply()
 
     var honorificEn: String
         get() = sp.getString("hon_en", "sir") ?: "sir"
-        set(value) = sp.edit().putString("hon_en", value.trim()).apply()
+        set(value) = sp.edit().putString("hon_en", cleanName(value)).apply()
 
     /** Token Hugging Face (opsional) bila model memerlukan login. Disimpan terenkripsi (Android Keystore). */
     var hfToken: String
@@ -144,6 +144,50 @@ class Prefs(context: Context) {
     var lastTalk: Long
         get() = sp.getLong("last_talk", 0L)
         set(value) = sp.edit().putLong("last_talk", value).apply()
+
+    // --- Profil pengguna (hanya di HP ini; tanggal lahir/pasangan tidak pernah masuk ke instruksi AI online)
+    var userName: String
+        get() = sp.getString("user_name", "") ?: ""
+        set(value) = sp.edit().putString("user_name", cleanName(value)).apply()
+
+    var partnerName: String
+        get() = sp.getString("partner_name", "") ?: ""
+        set(value) = sp.edit().putString("partner_name", cleanName(value)).apply()
+
+    /** Tanggal lahir "yyyy-MM-dd" atau kosong. */
+    private var birthRaw: String
+        get() = sp.getString("birth_date", "") ?: ""
+        set(value) = sp.edit().putString("birth_date", value).apply()
+
+    fun birthDateOrNull(): java.time.LocalDate? = runCatching { java.time.LocalDate.parse(birthRaw) }.getOrNull()
+
+    fun setBirthDate(d: java.time.LocalDate?) {
+        birthRaw = d?.toString() ?: ""
+    }
+
+    var profileDone: Boolean
+        get() = sp.getBoolean("profile_done", false)
+        set(value) = sp.edit().putBoolean("profile_done", value).apply()
+
+    /** Dialog perkenalan (setelah profil pertama kali disimpan) belum ditampilkan. */
+    var introPending: Boolean
+        get() = sp.getBoolean("intro_pending", false)
+        set(value) = sp.edit().putBoolean("intro_pending", value).apply()
+
+    /** Kapan sapaan terakhir ditampilkan (agar tidak menyapa tiap kali layar menyala). */
+    var lastGreetAt: Long
+        get() = sp.getLong("last_greet", 0L)
+        set(value) = sp.edit().putLong("last_greet", value).apply()
+
+    /** Tahun terakhir ucapan ulang tahun disampaikan (sekali setahun). */
+    var birthdayGreetedYear: Int
+        get() = sp.getInt("bday_year", 0)
+        set(value) = sp.edit().putInt("bday_year", value).apply()
+
+    /** Kapan terakhir pengguna menghina/memarahi Nine (memengaruhi suasana hati sapaan). */
+    var lastInsultAt: Long
+        get() = sp.getLong("last_insult", 0L)
+        set(value) = sp.edit().putLong("last_insult", value).apply()
 
     // --- Reaksi musik
 

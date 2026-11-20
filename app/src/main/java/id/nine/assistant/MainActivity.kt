@@ -20,6 +20,7 @@ import id.nine.assistant.audio.GuitarTuner
 import id.nine.assistant.audio.GuitarTuning
 import id.nine.assistant.audio.MusicReactor
 import id.nine.assistant.core.Affinity
+import id.nine.assistant.core.Greeter
 import id.nine.assistant.core.DailyQuota
 import id.nine.assistant.core.UiAction
 import id.nine.assistant.core.Mood
@@ -146,7 +147,7 @@ open class MainActivity : AppCompatActivity(), AssistantController.Ui {
         onLanguageChanged(controller.lang)
         onState(AssistantController.State.IDLE)
 
-        if (nine.log.entries.isEmpty()) nine.log.add(false, welcomeText())
+        if (nine.log.entries.isEmpty() && !nine.prefs.profileDone) nine.log.add(false, welcomeText())
 
         binding.orb.setOnClickListener {
             if (RecorderService.recording) {
@@ -241,6 +242,72 @@ open class MainActivity : AppCompatActivity(), AssistantController.Ui {
         if (nine.prefs.wakeEnabled && !RecorderService.recording) WakeWordService.pause(this)
         renderRecording()
         syncAudio()
+        greetOrOnboard()
+    }
+
+    private var onboardingAsked = false
+
+    /** Pertama kali: minta profil. Sesudahnya: dialog perkenalan sekali, lalu sapaan beragam tiap Nine dibuka kembali. */
+    private fun greetOrOnboard() {
+        try {
+            val prefs = nine.prefs
+            val lang = controller.lang
+            val launcher = intent
+            val normalLaunch = launcher == null ||
+                (launcher.action != Intent.ACTION_ASSIST && !launcher.getBooleanExtra(EXTRA_AUTO_LISTEN, false))
+            if (!prefs.profileDone) {
+                if (!onboardingAsked && normalLaunch && !isLocked()) {
+                    onboardingAsked = true
+                    startActivity(Intent(this, ProfileActivity::class.java).putExtra(ProfileActivity.EXTRA_FIRST_RUN, true))
+                }
+                return
+            }
+            val nowMs = System.currentTimeMillis()
+            if (prefs.introPending) {
+                prefs.introPending = false
+                prefs.lastGreetAt = nowMs
+                val p = prefs.persona
+                for (line in Greeter.intro(lang, p.h(lang), prefs.userName, prefs.partnerName)) nine.log.add(false, line)
+                return
+            }
+            val force = nine.log.entries.isEmpty()
+            if (!normalLaunch || (!force && nowMs - prefs.lastGreetAt < GREET_GAP_MS)) return
+            prefs.lastGreetAt = nowMs
+            nine.log.add(false, buildGreeting(lang, nowMs))
+        } catch (e: Exception) {
+            // sapaan tidak boleh membuat aplikasi gagal terbuka
+        }
+    }
+
+    private fun buildGreeting(lang: AppLang, nowMs: Long): String {
+        val prefs = nine.prefs
+        val today = java.time.LocalDate.now()
+        val st = nine.affinity.state(today)
+        val birth = prefs.birthDateOrNull()
+        val birthdayToday = birth != null && Greeter.isBirthday(birth, today) && prefs.birthdayGreetedYear != today.year
+        if (birthdayToday) prefs.birthdayGreetedYear = today.year
+        val daysAway = if (prefs.lastTalk > 0L) {
+            java.time.temporal.ChronoUnit.DAYS.between(
+                java.time.Instant.ofEpochMilli(prefs.lastTalk).atZone(java.time.ZoneId.systemDefault()).toLocalDate(), today
+            ).toInt().coerceAtLeast(0)
+        } else null
+        val hurt = prefs.lastInsultAt > 0L && nowMs - prefs.lastInsultAt < 24L * 3_600_000L
+        return Greeter.greet(
+            Greeter.Ctx(
+                now = java.time.LocalDateTime.now(),
+                lang = lang,
+                honorific = prefs.persona.h(lang),
+                name = prefs.userName,
+                level = st.level.number,
+                streak = st.streak,
+                daysAway = daysAway,
+                hurtRecently = hurt,
+                birthday = birthdayToday,
+                age = birth?.let { Greeter.ageOn(it, today) },
+                partner = prefs.partnerName,
+                seed = (nowMs / 1000L).toInt()
+            )
+        )
     }
 
     override fun onStop() {
@@ -752,6 +819,8 @@ open class MainActivity : AppCompatActivity(), AssistantController.Ui {
     }
 
     companion object {
+        /** Sapaan baru ditampilkan lagi bila Nine ditinggalkan lebih lama dari ini. */
+        private const val GREET_GAP_MS = 20L * 60_000L
         const val EXTRA_AUTO_LISTEN = "id.nine.assistant.AUTO_LISTEN"
         const val EXTRA_FROM_WAKE = "id.nine.assistant.FROM_WAKE"
         const val EXTRA_TOKEN = "id.nine.assistant.TOKEN"

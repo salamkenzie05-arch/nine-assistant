@@ -192,7 +192,11 @@ object Calc {
 
     /** Tanggal ("12-05-2026", "12/05"), nomor telepon ("0812-3456-789"), dan sejenisnya bukan perhitungan. */
     private fun looksLikeNonMath(t: String): Boolean {
-        if (Regex("""^\d+(?:-\d+)+$""").matches(t)) return true
+        // "12-05-2026", "0812-3456-7890" bukan hitungan; "2-5" atau "100-25" tetap pengurangan
+        if (Regex("""^\d+(?:-\d+)+$""").matches(t)) {
+            val groups = t.split('-').size
+            if (groups >= 3 || t.count { it.isDigit() } >= 7) return true
+        }
         // tanggal "21/11/2026" atau "12/05" (bulan dua digit); "10/4" dan "1/0" tetap pembagian
         if (Regex("""^\d{1,4}/\d{1,4}/\d{1,4}$""").matches(t)) return true
         if (Regex("""^(?:0?[1-9]|[12]\d|3[01])/(?:0[1-9]|1[0-2])$""").matches(t)) return true

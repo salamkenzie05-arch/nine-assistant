@@ -220,6 +220,11 @@ object FinanceParser {
     private val reQuestion = rx("""^(?:apa|apakah|kenapa|mengapa|siapa|kapan|dimana|di\s+mana|bagaimana|gimana|berapa|why|how|what|who|when|where|is|are|do|does|can|could)\b""")
     private val reFiller = rx("""\b(?:untuk|buat|dari|di|ke|for|on|from|dengan|seharga|sebesar|senilai|sebanyak|total|uang|duit|rp|sebagai|karena|sama|oleh|itu|ini|tadi|barusan|ya|dong|deh|nih|yaa|aja|saja|sebanyak|about|of|at|the|a|an|my)\b""")
 
+    /** Rencana ("mau beli kopi 18 ribu besok", "akan bayar listrik") bukan catatan transaksi. Diperiksa pada ucapan asli. */
+    private val rePlan = rx("""\b(?:mau|ingin|pengen|pingin|akan|rencana|rencananya|want\s+to|wanna|going\s+to|will|plan\s+to|planning\s+to|would\s+like\s+to)\s+(?:$EXP|$INC)\b""")
+
+    fun isPlan(original: String): Boolean = rePlan.containsMatchIn(original.lowercase())
+
     private fun start(text: String, re: Regex): Boolean {
         val lead = reLead.find(text) ?: return false
         return re.containsMatchIn(text.substring(lead.range.last + 1).trimStart())

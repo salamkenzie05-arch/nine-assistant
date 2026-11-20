@@ -285,6 +285,7 @@ class AssistantController(context: Context, private val ui: Ui) {
             // Dimarahi atau dihina: Nine sedih atau takut, tidak dilempar ke AI.
             val kind = Insults.detect(text)
             if (kind != Insults.Kind.NONE) {
+                prefs.lastInsultAt = System.currentTimeMillis()
                 val sfx = prefs.persona.sfx(lang)
                 val line = Insults.reply(kind, lang, sfx, (System.currentTimeMillis() % 7).toInt())
                 ui.onMoodHold(Insults.mood(kind), 4800)
