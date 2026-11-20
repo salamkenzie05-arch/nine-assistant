@@ -55,7 +55,8 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
         Command.CurrentTime, Command.CurrentDate, Command.Battery, Command.DeviceInfo, Command.Help,
         Command.WhoAreYou, Command.HowAreYou, Command.TodoList, Command.ReadNotes, Command.ReadMemory, Command.ShowAlarms,
         Command.AffinityStatus, Command.WhereAmI -> true
-        is Command.ShowAgenda -> true
+        is Command.ShowAgenda, is Command.Calculate, is Command.FinanceReport, is Command.FinanceList,
+        is Command.Entertain -> true
         else -> false
     }
 
@@ -63,6 +64,7 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
         return parseLanguage(raw)
             ?: parseReset(raw)
             ?: parseControl(raw)
+            ?: parseCalc(raw)
             ?: parseAffinity(raw)
             ?: parseLocation(raw)
             ?: parseRecorder(raw)
@@ -75,6 +77,10 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
             ?: parseFlashlight(raw)
             ?: parseSettings(raw)
             ?: parseVolume(norm)
+            ?: FinanceParser.parse(raw)
+            ?: parseCloseApps(raw)
+            ?: parseFun(raw)
+            ?: parseSetName(raw)
             ?: ExtraParser.parse(raw)
             ?: parseDeviceInfo(raw)
             ?: parseMemory(raw)
@@ -530,6 +536,9 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
         rx("""^(?:apa\s+)?(?:saja\s+)?(?:yang\s+)?(?:harus|perlu)\s+(?:saya|aku|gue)\s+(?:kerjakan|lakukan|selesaikan)(?:\s+hari\s+ini)?$"""),
         rx("""^(?:what(?:'s|\s+is|\s+are)\s+(?:on\s+)?my\s+$TODO_RX(?:\s+(?:today|for\s+today))?|(?:show|read|list|open|check)\s+(?:me\s+)?(?:my\s+)?$TODO_RX|my\s+$TODO_RX|what\s+do\s+i\s+(?:need|have)\s+to\s+do(?:\s+today)?)$""")
     )
+    private val reTodoWord = rx("""\b(?:to[\s-]?do|todos?|tugas|kerjaan|pekerjaan|checklist|daftar\s+tugas)\b""")
+    private val reTodoShowCue = rx("""^(?:tampilkan|tunjukkan|tunjukin|lihat(?:kan)?|munculkan|show|display|bacakan|baca|cek|buka|kasih\s+(?:lihat|tau)|apa|ada|what|read|list|my|what's)\b""")
+    private val reTodoEdit = rx("""\b(?:tambah(?:kan)?|buat(?:kan)?|bikin|hapus|buang|catat|masukkan|selesai(?:kan)?|beres|centang|ceklis|tandai|coret|add|remove|delete|clear|mark|done|finish|create|new|baru|kosongkan|bersihkan|ingatkan|ingat|remind|alarm|pengingat|jam|besok|lusa|nanti|depan)\b""")
     private val reTodoDone = listOf(
         rx("""^(?:tandai|centang|ceklis|checklist|selesaikan|coret)\s+(?:tugas\s+)?(.+?)(?:\s+(?:sudah\s+|sebagai\s+|jadi\s+)?(?:selesai|beres))?$"""),
         rx("""^(?:tugas\s+)(.+?)\s+(?:sudah\s+|udah\s+)?(?:selesai|beres)$"""),
@@ -563,6 +572,10 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
         if (reTodoClearDone.matches(raw)) return Command.TodoClearDone
         if (reTodoClearAll.matches(raw)) return Command.TodoClearAll
         for (r in reTodoList) if (r.matches(raw)) return Command.TodoList
+        // ucapan bebas: "tampilkan to do list hari ini yang sudah aku buat", "lihat tugasku dong"
+        if (raw.split(" ").size <= 9 && reTodoShowCue.containsMatchIn(raw) && reTodoWord.containsMatchIn(raw) && !reTodoEdit.containsMatchIn(raw.replace(Regex("""yang\s+sudah\s+(?:aku\s+|saya\s+|kamu\s+)?(?:buat|catat)""", RegexOption.IGNORE_CASE), ""))) {
+            return Command.TodoList
+        }
         for (r in reTodoAdd) {
             val m = r.find(raw) ?: continue
             val text = m.groupValues[1].trim().trim(',', '.', ':')
@@ -825,6 +838,7 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
     }
 
     private fun parseExternal(raw: String): Command? {
+        parseMaps(raw)?.let { return it }
         reUrl.find(raw)?.let { m ->
             val url = m.groupValues[1].lowercase()
                 .replace(Regex("\\s*\\b(?:dot|titik)\\b\\s*"), ".").replace(Regex("\\s*\\.\\s*"), ".").replace(" ", "")
@@ -858,7 +872,12 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
 
     // ------------------------------------------------------------------ affinity & lokasi
 
-    private val reAffinity = rx("""\b(?:streak|affinity|tingkat\s+kedekatan|level\s+kedekatan|level\s+(?:kita|aku|saya)|kedekatan\s+kita|seberapa\s+dekat\s+kita|how\s+close\s+are\s+we|our\s+level|my\s+level)\b""")
+    private val reAffinity = rx(
+        """\b(?:streak|affinity|afinitas|tingkat\s+kedekatan|level\s+kedekatan|""" +
+            """(?:status|progres|progress|kemajuan|poin|skor|score|xp|level)\s+(?:kedekatan|affinity|kita|hubungan(?:\s+kita)?)|""" +
+            """kedekatan\s+(?:kita|ku|saya|aku)|seberapa\s+dekat\s+(?:kita|aku|saya)|how\s+close\s+are\s+we|""" +
+            """(?:our|my)\s+(?:level|affinity|streak|xp)|level\s+(?:kita|aku|saya|ku)|level\s+berapa|sudah\s+level\s+berapa)\b"""
+    )
 
     private fun parseAffinity(raw: String): Command? = if (reAffinity.containsMatchIn(raw)) Command.AffinityStatus else null
 
@@ -888,6 +907,113 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
         if (!video && !photo) return null
         val timer = reCamTimer.find(norm)?.groupValues?.get(1)?.toIntOrNull()?.coerceIn(1, 30)
         return Command.Camera(video, reFront.containsMatchIn(norm), timer)
+    }
+
+
+    // ------------------------------------------------------------------ hitung, tutup aplikasi, hiburan, nama panggilan, peta
+
+    private fun parseCalc(raw: String): Command? = if (Calc.isMath(raw)) Command.Calculate(raw) else null
+
+    private val reCloseVerb = rx("""\b(?:tutup(?:kan|in)?|matikan|matiin|close|kill|hentikan|bersihkan|clear|stop|bunuh|akhiri|force\s*stop|exit|quit|singkirkan)\b""")
+    private val reCloseAll = rx("""\b(?:semua|seluruh|segala|all|every|setiap|tiap)\b""")
+    private val reCloseApps = rx("""\b(?:aplikasi|apk|app|apps|aplikasinya|program|recent|recents|latar\s+belakang|background)\b""")
+    private val reCloseSelf = rx("""\b(?:termasuk|including|include|dan\s+(?:kamu|dirimu|nine|diri\s*mu)|kamu\s+juga|nine\s+juga|dirimu|diri\s*mu|diri\s+kamu|yourself|itself|dirinya|dirinya\s+sendiri)\b""")
+    private val reCloseNotSelf = rx("""\b(?:kecuali|selain|except|but\s+not|without|jangan\s+(?:tutup\s+)?(?:kamu|nine|dirimu))\b""")
+
+    private fun parseCloseApps(raw: String): Command? {
+        if (raw.split(" ").size > 16) return null
+        if (!reCloseVerb.containsMatchIn(raw) || !reCloseAll.containsMatchIn(raw) || !reCloseApps.containsMatchIn(raw)) return null
+        val self = reCloseSelf.containsMatchIn(raw) && !reCloseNotSelf.containsMatchIn(raw)
+        return Command.CloseApps(self)
+    }
+
+    private val reGombal = rx("""\b(?:gombal(?:in|kan|an|nya)?|ngegombal|nge-?gombal|rayu(?:an|in|kan)?|kata[-\s]?kata\s+(?:cinta|manis|romantis|gombal)|pick\s*up\s*lines?|flirt(?:ing)?|sweet\s+talk|romantic\s+lines?)\b""")
+    private val rePantun = rx("""\b(?:pantun|berpantun|berpantunlah)\b""")
+    private val reWisdom = rx("""\b(?:kata[-\s]?kata\s+(?:bijak|mutiara|motivasi|semangat|inspirasi|hari\s+ini)|quotes?|nasihat|petuah|wisdom|motivasi|motivate\s+me|inspire\s+me|peribahasa|pepatah|bijak(?:an)?|words\s+of\s+wisdom)\b""")
+    private val reFunDefine = rx("""^(?:apa\s+(?:itu|arti|pengertian|maksud|bedanya)|what\s+(?:is|does)\s+(?:a|an|the)?|jelaskan|explain|siapa|sejarah)\b""")
+    private val reFunTopic = rx("""\b(?:tentang|soal|mengenai|about|regarding|bertema|tema)\b""")
+
+    private fun parseFun(raw: String): Command? {
+        if (raw.split(" ").size > 10 || reFunDefine.containsMatchIn(raw) || reFunTopic.containsMatchIn(raw)) return null
+        return when {
+            reGombal.containsMatchIn(raw) -> Command.Entertain(FunKind.GOMBAL)
+            rePantun.containsMatchIn(raw) -> Command.Entertain(FunKind.PANTUN)
+            reWisdom.containsMatchIn(raw) -> Command.Entertain(FunKind.WISDOM)
+            else -> null
+        }
+    }
+
+    private val reSetName = rx("""^(?:panggil|sebut|call)\s+(?:aku|saya|gue|gw|me)\s+(?:dengan\s+|sebagai\s+|pakai\s+|as\s+)?([^\d]{2,24})$""")
+
+    private fun parseSetName(raw: String): Command? {
+        val m = reSetName.find(raw) ?: return null
+        val name = m.groupValues[1].trim().trim('"', '\'', '.', ',')
+        if (name.isEmpty() || name.split(" ").size > 3) return null
+        if (Regex("""\b(?:nanti|besok|jam|lagi|dong|ya|sekarang|nya)\b""", RegexOption.IGNORE_CASE).containsMatchIn(name)) return null
+        return Command.SetCallName(name.split(" ").joinToString(" ") { w -> w.replaceFirstChar { it.uppercase() } })
+    }
+
+    // --- Google Maps
+    private val reNavStrong = rx("""\b(?:navigasi(?:kan)?|arahkan|antar(?:kan|in)?|pandu(?:kan)?|petunjuk\s+arah|rute|route|directions?|navigate|take\s+me|drive\s+me|cari(?:kan)?\s+(?:jalan|rute|arah)|tunjuk(?:kan|in)?\s+(?:jalan|arah|rute)|cara\s+(?:ke|menuju|pergi\s+ke)|how\s+(?:do\s+i\s+get|to\s+get)|bawa\s+(?:aku|saya|gue)\s+ke)\b""")
+    private val reMapsWord = rx("""\b(?:google\s*maps?|gmaps?|g-?maps?|maps?|peta)\b""")
+    private val reMapsApp = rx("""\b(?:google\s*maps?|gmaps?|g-?maps?|maps?)\b""")
+    private val reNavPreview = rx("""\b(?:rute|route|directions?|petunjuk\s+arah|cara\s+(?:ke|menuju|pergi\s+ke)|how\s+(?:do\s+i\s+get|to\s+get)|tunjuk(?:kan|in)?\s+(?:jalan|arah|rute)|cari(?:kan)?\s+(?:jalan|rute|arah))\b""")
+    private val reNavGo = rx("""\b(?:navigasi(?:kan)?|antar(?:kan|in)?|navigate|mulai|start|ayo|yuk|sekarang|langsung)\b""")
+    private val modeWalk = rx("""\b(?:jalan\s+kaki|berjalan(?:\s+kaki)?|walking|on\s+foot|by\s+foot|dengan\s+berjalan)\b""")
+    private val modeBike2 = rx("""\b(?:naik\s+motor|pakai\s+motor|pake\s+motor|dengan\s+motor|sepeda\s+motor|by\s+motorcycle|motorcycle|motorbike|two[-\s]?wheeler|bermotor)\b""")
+    private val modeCycle = rx("""\b(?:naik\s+sepeda|pakai\s+sepeda|pake\s+sepeda|dengan\s+sepeda|bersepeda|by\s+bike|cycling|bicycle)\b""")
+    private val modeTransit = rx("""\b(?:naik\s+(?:bus|kereta|angkot|transjakarta|krl|mrt|lrt|umum)|angkutan\s+umum|transportasi\s+umum|transit|public\s+transport(?:ation)?|by\s+(?:bus|train))\b""")
+    private val modeCar = rx("""\b(?:naik\s+mobil|pakai\s+mobil|pake\s+mobil|dengan\s+mobil|by\s+car|driving|nyetir|menyetir)\b""")
+    private val reAvoidTolls = rx("""\b(?:tanpa|hindari|menghindari|tidak\s+lewat|jangan\s+lewat|avoid|bebas)\s+(?:jalan\s+)?tol\b|\bno\s+tolls?\b|\bavoid\s+tolls?\b""")
+    private val reNavTail = rx("""(?:\s+(?:sekarang|dong|ya|aja|saja|please|tolong|dulu|nih|deh|yuk|sih|ya\s+nine|nine))+$""")
+
+    private fun parseMaps(raw: String): Command? {
+        val strong = reNavStrong.containsMatchIn(raw)
+        val maps = reMapsWord.containsMatchIn(raw)
+        if (!strong && !maps) return null
+        if (reSearchIn.containsMatchIn(raw)) return null
+        var origin: String? = null
+        var dest: String? = null
+        Regex("""\b(?:dari|from)\s+(.+?)\s+(?:ke|menuju|to)\s+(.+)$""", RegexOption.IGNORE_CASE).find(raw)?.let { m ->
+            origin = m.groupValues[1].trim()
+            dest = m.groupValues[2].trim()
+        }
+        if (dest == null) {
+            Regex("""\b(?:ke|menuju|to|tujuan(?:nya)?(?:\s+(?:ke|adalah))?|destination(?:\s+to)?)\s+(.+)$""", RegexOption.IGNORE_CASE).find(raw)?.let { m ->
+                dest = m.groupValues[1].trim()
+            }
+        }
+        if (dest == null && reMapsApp.containsMatchIn(raw)) {
+            Regex("""\b(?:google\s*maps?|gmaps?|g-?maps?|maps?)\s+(?:tujuan\s+)?(.+)$""", RegexOption.IGNORE_CASE).find(raw)?.let { m ->
+                dest = m.groupValues[1].trim()
+            }
+        }
+        var d = dest ?: return null
+        var mode: String? = null
+        for ((re, name) in listOf(modeWalk to "walking", modeBike2 to "two_wheeler", modeCycle to "bicycling", modeTransit to "transit", modeCar to "driving")) {
+            if (re.containsMatchIn(d) || re.containsMatchIn(raw)) {
+                if (mode == null) mode = name
+                d = re.replace(d, " ")
+                origin = origin?.let { re.replace(it, " ").trim() }
+            }
+        }
+        val tolls = reAvoidTolls.containsMatchIn(raw)
+        d = reAvoidTolls.replace(d, " ")
+        d = d.replace(Regex("\\s+"), " ").trim()
+        d = reNavTail.replaceFirst(d, "").trim().trim(',', '.', '!', '?')
+        d = d.replace(Regex("""^(?:ke|menuju|to|the)\s+""", RegexOption.IGNORE_CASE), "").trim()
+        if (d.isEmpty() || d.length > 80) return null
+        // "buka google maps dan ..." tanpa tujuan jelas dibiarkan untuk pembuka aplikasi
+        if (Regex("""^(?:dan|lalu|terus|and|then)\b""", RegexOption.IGNORE_CASE).containsMatchIn(d)) return null
+        val preview = reNavPreview.containsMatchIn(raw) && !reNavGo.containsMatchIn(raw)
+        return Command.Navigate(
+            destination = d,
+            drive = true,
+            mode = mode,
+            origin = origin?.ifEmpty { null },
+            avoidTolls = tolls,
+            preview = preview || origin != null
+        )
     }
 
     // ------------------------------------------------------------------ util untuk SlotFiller

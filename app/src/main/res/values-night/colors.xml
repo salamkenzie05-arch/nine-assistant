@@ -16,4 +16,6 @@
     <color name="nine_vignette_edge">#42C7861A</color>
     <color name="assist_bubble">#F70B0F18</color>
     <color name="assist_dim">#B3000000</color>
+    <color name="fin_income">#5BD08F</color>
+    <color name="fin_expense">#FF8A80</color>
 </resources>

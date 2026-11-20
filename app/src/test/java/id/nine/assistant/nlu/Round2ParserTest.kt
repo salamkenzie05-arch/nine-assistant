@@ -121,8 +121,6 @@ class Round2ParserTest {
         assertEquals(Command.AppSetting(NineSetting.EXIT_APP), p("keluar dari aplikasi"))
         assertEquals(Command.AppSetting(NineSetting.WAKE_OFF), p("matikan wake phrase"))
         assertEquals(Command.AppSetting(NineSetting.WAKE_ON), p("aktifkan wake phrase"))
-        assertEquals(Command.AppSetting(NineSetting.TOUCH_ON), p("nyalakan assistive touch"))
-        assertEquals(Command.AppSetting(NineSetting.TOUCH_OFF), p("matikan assistive touch"))
         assertEquals(Command.AppSetting(NineSetting.MUSIC_REACT_ON), p("dengarkan musik ini"))
         assertEquals(Command.AppSetting(NineSetting.MUSIC_REACT_OFF), p("matikan reaksi musik"))
     }

@@ -8,7 +8,6 @@ import android.bluetooth.BluetoothManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.res.Configuration
 import android.graphics.Path
 import android.graphics.Rect
 import android.media.AudioManager
@@ -28,10 +27,10 @@ import id.nine.assistant.nlu.SettingsTarget
 /**
  * Layanan aksesibilitas Nine. Android tidak mengizinkan aplikasi biasa menyalakan Wi-Fi/Bluetooth/mode pesawat/hotspot
  * atau menekan tombol di aplikasi lain; layanan ini melakukannya seperti jari pengguna: membuka Panel Cepat dan
- * mengetuk tombolnya, memilih lagu pertama di YouTube Music, serta menampilkan tombol melayang (seperti AssistiveTouch).
+ * mengetuk tombolnya, memilih lagu pertama di YouTube Music, serta menutup semua aplikasi di layar Recents.
  *
- * Layanan hanya bekerja saat dipanggil perintah (atau untuk menggambar tombol melayang). Ia tidak membaca layar
- * di luar tugas itu dan tidak mengirim apa pun ke internet.
+ * Layanan hanya bekerja saat dipanggil perintah. Ia tidak membaca layar di luar tugas itu dan tidak mengirim
+ * apa pun ke internet.
  */
 class NineAccessibilityService : AccessibilityService() {
 
@@ -40,7 +39,6 @@ class NineAccessibilityService : AccessibilityService() {
     private val main = Handler(Looper.getMainLooper())
     private var busy = false
     private var busyAt = 0L
-    private var touch: AssistiveTouch? = null
 
     /** Langkah terakhir otomasi (untuk diagnosis di pesan galat beta). */
     @Volatile
@@ -50,7 +48,6 @@ class NineAccessibilityService : AccessibilityService() {
     override fun onServiceConnected() {
         super.onServiceConnected()
         instance = this
-        refreshTouch()
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -59,35 +56,14 @@ class NineAccessibilityService : AccessibilityService() {
 
     override fun onInterrupt() {}
 
-    override fun onConfigurationChanged(newConfig: Configuration) {
-        super.onConfigurationChanged(newConfig)
-        touch?.reposition()
-    }
-
     override fun onUnbind(intent: Intent?): Boolean {
-        touch?.hide()
-        touch = null
         if (instance === this) instance = null
         return super.onUnbind(intent)
     }
 
     override fun onDestroy() {
-        touch?.hide()
-        touch = null
         if (instance === this) instance = null
         super.onDestroy()
-    }
-
-    /** Tampilkan atau sembunyikan tombol melayang sesuai pengaturan. */
-    fun refreshTouch() {
-        val want = (application as NineApp).prefs.assistiveTouch
-        if (want) {
-            if (touch == null) touch = AssistiveTouch(this)
-            touch?.show()
-        } else {
-            touch?.hide()
-            touch = null
-        }
     }
 
     // ------------------------------------------------------------------ simpul layar
@@ -923,13 +899,165 @@ class NineAccessibilityService : AccessibilityService() {
         return out.sortedBy { it.first }.map { it.second }
     }
 
-    // ------------------------------------------------------------------ tindakan global (tombol melayang)
+    // ------------------------------------------------------------------ tutup semua aplikasi (layar Recents)
 
-    fun goHome() = performGlobalAction(GLOBAL_ACTION_HOME)
-    fun goBack() = performGlobalAction(GLOBAL_ACTION_BACK)
-    fun showRecents() = performGlobalAction(GLOBAL_ACTION_RECENTS)
-    fun showNotifications() = performGlobalAction(GLOBAL_ACTION_NOTIFICATIONS)
-    fun lockScreen(): Boolean = if (Build.VERSION.SDK_INT >= 28) performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN) else false
+    /** Sapuan jari nyata dari (x1, y1) ke (x2, y2). [done] dipanggil di main thread. */
+    private fun swipe(x1: Float, y1: Float, x2: Float, y2: Float, done: (Boolean) -> Unit) {
+        var called = false
+        val cb: (Boolean) -> Unit = { ok ->
+            if (!called) {
+                called = true
+                done(ok)
+            }
+        }
+        val sent = try {
+            val path = Path().apply {
+                moveTo(x1, y1)
+                lineTo(x2, y2)
+            }
+            val stroke = GestureDescription.StrokeDescription(path, 0L, 260L)
+            dispatchGesture(
+                GestureDescription.Builder().addStroke(stroke).build(),
+                object : AccessibilityService.GestureResultCallback() {
+                    override fun onCompleted(gestureDescription: GestureDescription?) {
+                        cb(true)
+                    }
+
+                    override fun onCancelled(gestureDescription: GestureDescription?) {
+                        cb(false)
+                    }
+                },
+                main
+            )
+        } catch (e: Exception) {
+            false
+        }
+        if (!sent) cb(false)
+    }
+
+    /**
+     * Buka layar Recents lalu ketuk "Hapus semua"/"Tutup semua"/"Clear all". Hasil: DONE bila tombolnya diketuk,
+     * NOT_FOUND bila tidak ada tombol seperti itu di layar Recents perangkat ini, BUSY/FAILED bila tak bisa dijalankan.
+     * Setelah itu layar kembali ke Home. [done] dipanggil di main thread, tepat satu kali.
+     */
+    fun clearRecents(done: (Outcome) -> Unit) {
+        val now = SystemClock.uptimeMillis()
+        if (busy && now - busyAt < BUSY_MAX_MS) {
+            done(Outcome.BUSY)
+            return
+        }
+        busy = true
+        busyAt = now
+        lastStage = "recents-mulai"
+        var finished = false
+        val finish: (Outcome) -> Unit = { o ->
+            if (!finished) {
+                finished = true
+                busy = false
+                done(o)
+            }
+        }
+        main.postDelayed({
+            if (!finished) {
+                lastStage = "recents-waktu-habis"
+                finish(Outcome.FAILED)
+            }
+        }, RECENTS_MAX_MS)
+        try {
+            val opened = try {
+                performGlobalAction(GLOBAL_ACTION_RECENTS)
+            } catch (e: Exception) {
+                false
+            }
+            if (!opened) {
+                lastStage = "recents-tidak-terbuka"
+                finish(Outcome.FAILED)
+                return
+            }
+            RecentsTask { o ->
+                try {
+                    performGlobalAction(GLOBAL_ACTION_HOME)
+                } catch (e: Exception) {
+                    // abaikan
+                }
+                finish(o)
+            }.begin()
+        } catch (e: Exception) {
+            lastStage = "recents-error:${e.javaClass.simpleName}"
+            finish(Outcome.FAILED)
+        }
+    }
+
+    private inner class RecentsTask(val done: (Outcome) -> Unit) {
+        private var tries = 0
+        private var swipes = 0
+        private var finished = false
+
+        private fun end(o: Outcome) {
+            if (finished) return
+            finished = true
+            done(o)
+        }
+
+        private fun later(ms: Long, f: () -> Unit) {
+            main.postDelayed({
+                try {
+                    if (!finished) f()
+                } catch (e: Exception) {
+                    lastStage = "recents-error:${e.javaClass.simpleName}"
+                    end(Outcome.FAILED)
+                }
+            }, ms)
+        }
+
+        fun begin() {
+            lastStage = "recents-terbuka"
+            later(900) { seek() }
+        }
+
+        private fun button(): AccessibilityNodeInfo? {
+            for (r in roots()) {
+                val hit = find(r) { n ->
+                    val t = norm(n.text?.toString().orEmpty()).trim()
+                    val d = norm(n.contentDescription?.toString().orEmpty()).trim()
+                    (t.isNotEmpty() && CLEAR_ALL_RE.matches(t)) || (d.isNotEmpty() && CLEAR_ALL_RE.matches(d))
+                }
+                if (hit != null) return hit
+            }
+            return null
+        }
+
+        private fun seek() {
+            tries++
+            val b = button()
+            if (b != null) {
+                lastStage = "recents-tombol-ditemukan"
+                if (clickNode(b)) {
+                    lastStage = "recents-diketuk"
+                    later(500) { end(Outcome.DONE) }
+                } else {
+                    tapNode(b, 0.5f) { ok ->
+                        lastStage = if (ok) "recents-diketuk-gestur" else "recents-gagal-ketuk"
+                        later(500) { end(if (ok) Outcome.DONE else Outcome.FAILED) }
+                    }
+                }
+                return
+            }
+            if (tries >= RECENTS_TRIES) {
+                lastStage = "recents-tombol-tidak-ada"
+                end(Outcome.NOT_FOUND)
+                return
+            }
+            // Pada sebagian peluncur (mis. Pixel) tombol baru muncul setelah deretan kartu digeser ke ujungnya.
+            if (tries >= 3 && swipes < 3) {
+                swipes++
+                val (w, h) = screenSize()
+                swipe(w * 0.15f, h * 0.45f, w * 0.9f, h * 0.45f) { later(550) { seek() } }
+            } else {
+                later(450) { seek() }
+            }
+        }
+    }
 
     companion object {
         /** True di edisi Full (Nine-Full.apk): layanan aksesibilitas tersedia. */
@@ -938,6 +1066,9 @@ class NineAccessibilityService : AccessibilityService() {
         private const val MAX_FIND = 26
         private const val MAX_VERIFY = 14
         private const val BUSY_MAX_MS = 45_000L
+        private const val RECENTS_MAX_MS = 14_000L
+        private const val RECENTS_TRIES = 10
+        private val CLEAR_ALL_RE = Regex("""(?i)^(clear all|close all|dismiss all|hapus semua|tutup semua|bersihkan semua|singkirkan semua|tutup semua aplikasi|clear all apps)$""")
         private const val YTM = "com.google.android.apps.youtube.music"
 
         @Volatile
@@ -956,16 +1087,6 @@ class NineAccessibilityService : AccessibilityService() {
                 val c = ComponentName.unflattenFromString(s.trim())
                 c != null && c == me
             }
-        }
-
-        /** Terapkan pengaturan tombol melayang. False bila perlu layanan aksesibilitas tetapi belum aktif. */
-        fun applyTouch(ctx: Context): Boolean {
-            val svc = instance
-            if (svc != null) {
-                svc.refreshTouch()
-                return true
-            }
-            return !(ctx.applicationContext as NineApp).prefs.assistiveTouch
         }
     }
 }

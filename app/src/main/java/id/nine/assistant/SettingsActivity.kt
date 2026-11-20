@@ -138,16 +138,7 @@ class SettingsActivity : AppCompatActivity() {
         }
         renderWake()
 
-        // --- Tombol melayang, reaksi musik, layanan aksesibilitas
-        binding.switchTouch.isChecked = prefs.assistiveTouch
-        binding.switchTouch.setOnCheckedChangeListener { _, checked ->
-            prefs.assistiveTouch = checked
-            NineAccessibilityService.applyTouch(this)
-            if (checked && NineAccessibilityService.instance == null) {
-                Toast.makeText(this, R.string.a11y_help, Toast.LENGTH_LONG).show()
-            }
-            renderA11y()
-        }
+        // --- Reaksi musik, layanan aksesibilitas
         binding.switchMusic.isChecked = prefs.musicReact
         binding.switchMusic.setOnCheckedChangeListener { _, checked -> prefs.musicReact = checked }
         binding.btnA11y.setOnClickListener {
@@ -275,7 +266,6 @@ class SettingsActivity : AppCompatActivity() {
             binding.txtA11yStatus.setText(R.string.a11y_lite_status)
             binding.btnA11y.visibility = android.view.View.GONE
             binding.btnAppInfo.visibility = android.view.View.GONE
-            binding.switchTouch.isEnabled = false
             return
         }
         val on = NineAccessibilityService.instance != null || NineAccessibilityService.isEnabled(this)
@@ -285,7 +275,6 @@ class SettingsActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         renderA11y()
-        binding.switchTouch.isChecked = prefs.assistiveTouch && NineAccessibilityService.AVAILABLE
         renderInternet()
         renderWake()
         renderAlarms()

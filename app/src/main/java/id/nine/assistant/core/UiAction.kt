@@ -17,8 +17,7 @@ sealed class UiAction {
     /** Wake word dinyalakan/dimatikan lewat perintah. */
     data class WakeChanged(val on: Boolean) : UiAction()
 
-    /** Pengaturan tombol melayang / reaksi musik berubah: layar menyesuaikan. */
-    data object TouchChanged : UiAction()
+    /** Pengaturan reaksi musik berubah: layar menyesuaikan. */
     data object MusicReactChanged : UiAction()
 
     /** Nine menyanyi ([query] null = pilih sendiri). Dijalankan pengontrol lewat DroidSinger. */

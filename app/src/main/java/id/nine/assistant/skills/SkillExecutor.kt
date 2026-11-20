@@ -34,6 +34,7 @@ import id.nine.assistant.a11y.NineAccessibilityService
 import id.nine.assistant.audio.GuitarTuning
 import id.nine.assistant.audio.Songs
 import id.nine.assistant.call.CallControl
+import id.nine.assistant.nlu.FunKind
 import id.nine.assistant.nlu.MediaAction
 import id.nine.assistant.nlu.NineSetting
 import id.nine.assistant.wake.WakeWordService
@@ -43,6 +44,12 @@ import id.nine.assistant.recorder.RecorderService
 import id.nine.assistant.core.MemoryStore
 import id.nine.assistant.core.Prefs
 import id.nine.assistant.AlarmsActivity
+import id.nine.assistant.FinanceActivity
+import id.nine.assistant.nlu.Calc
+import id.nine.assistant.nlu.FinPeriod
+import id.nine.assistant.nlu.FinType
+import id.nine.assistant.nlu.FinanceCats
+import id.nine.assistant.nlu.FinanceMath
 import id.nine.assistant.alarm.AlarmMatch
 import id.nine.assistant.alarm.AlarmRingService
 import id.nine.assistant.alarm.AlarmScheduler
@@ -104,6 +111,7 @@ class SkillExecutor(
     private val contacts = ContactsLookup(ctx)
     private val calendar = CalendarSkill(ctx)
     private val todos = TodoStore(ctx)
+    private val finance = FinanceStore(ctx)
     private val affinity = Affinity(ctx)
     private val alarms = AlarmStore(ctx)
     private val location: LocationHelper get() = (ctx as NineApp).location
@@ -287,6 +295,22 @@ class SkillExecutor(
         is Command.Emote -> emote(cmd, lang)
         is Command.Tuner -> tuner(cmd, lang, denied)
         is Command.AppSetting -> appSetting(cmd, lang, denied)
+        is Command.Calculate -> calculate(cmd, lang)
+        is Command.FinanceAdd -> financeAdd(cmd, lang)
+        is Command.FinanceReport -> financeReport(cmd, lang)
+        is Command.FinanceList -> financeList(cmd, lang)
+        Command.FinanceUndo -> financeUndo(lang)
+        Command.FinanceClear -> financeClear(lang, confirmed)
+        Command.FinanceOpen -> SkillResult(
+            lang.t("Membuka catatan keuangan${s(lang)}.", "Opening your money log${s(lang)}."),
+            intent = Intent(ctx, FinanceActivity::class.java)
+        )
+        is Command.CloseApps -> closeApps(cmd, lang)
+        is Command.Entertain -> SkillResult(
+            FunBank.pick(cmd.kind, lang),
+            mood = if (cmd.kind == FunKind.GOMBAL) Mood.LOVE else Mood.HAPPY
+        )
+        is Command.SetCallName -> setCallName(cmd.name, lang)
     }
 
     // ------------------------------------------------------------ alarm, timer, pengingat
@@ -1710,32 +1734,6 @@ class SkillExecutor(
                 prefs.wakeEnabled = false
                 SkillResult(lang.t("Wake phrase saya matikan${s(lang)}.", "Wake phrase turned off${s(lang)}."), action = UiAction.WakeChanged(false))
             }
-            NineSetting.TOUCH_ON -> {
-                if (!NineAccessibilityService.AVAILABLE) {
-                    return SkillResult(
-                        lang.t(
-                            "Tombol melayang hanya ada di Nine edisi Full (Nine-Full.apk), karena butuh layanan aksesibilitas${s(lang)}.",
-                            "The floating button is only in the Full edition (Nine-Full.apk), because it needs the accessibility service${s(lang)}."
-                        )
-                    )
-                }
-                prefs.assistiveTouch = true
-                if (NineAccessibilityService.instance != null) {
-                    SkillResult(lang.t("Tombol melayang saya nyalakan${s(lang)}.", "Floating button on${s(lang)}."), action = UiAction.TouchChanged)
-                } else {
-                    SkillResult(
-                        lang.t(
-                            "Tombol melayang butuh layanan aksesibilitas Nine${s(lang)}. Aktifkan \"Nine\" di layar yang saya buka; tombolnya muncul otomatis setelah itu.",
-                            "The floating button needs the Nine accessibility service${s(lang)}. Turn on \"Nine\" on the screen I'm opening; the button appears right after."
-                        ),
-                        intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                    )
-                }
-            }
-            NineSetting.TOUCH_OFF -> {
-                prefs.assistiveTouch = false
-                SkillResult(lang.t("Tombol melayang saya matikan${s(lang)}.", "Floating button off${s(lang)}."), action = UiAction.TouchChanged)
-            }
             NineSetting.MUSIC_REACT_ON -> {
                 if (!has(Manifest.permission.RECORD_AUDIO)) {
                     if (Manifest.permission.RECORD_AUDIO in denied) {
@@ -1835,21 +1833,271 @@ class SkillExecutor(
     }
 
     private fun navigate(cmd: Command.Navigate, lang: AppLang): SkillResult {
-        val enc = Uri.encode(cmd.destination)
+        val dest = cmd.destination.trim()
+        val enc = Uri.encode(dest)
         val maps = "com.google.android.apps.maps"
+        val id = lang == AppLang.ID
+        val modeName = when (cmd.mode) {
+            "walking" -> lang.t("jalan kaki", "on foot")
+            "bicycling" -> lang.t("sepeda", "by bike")
+            "two_wheeler" -> lang.t("motor", "by motorbike")
+            "transit" -> lang.t("angkutan umum", "by public transport")
+            else -> null
+        }
+        val extras = ArrayList<String>()
+        if (modeName != null) extras += modeName
+        if (cmd.avoidTolls) extras += lang.t("hindari tol", "avoiding tolls")
+        cmd.origin?.let { extras += lang.t("dari $it", "from $it") }
+        val detail = if (extras.isEmpty()) "" else " (" + extras.joinToString(", ") + ")"
+
+        // Rute dengan titik awal, pratinjau rute, atau angkutan umum: tautan "dir" Google Maps.
+        if (cmd.origin != null || cmd.preview || cmd.mode == "transit") {
+            val travel = when (cmd.mode) {
+                "walking" -> "walking"
+                "bicycling" -> "bicycling"
+                "transit" -> "transit"
+                "two_wheeler" -> "two-wheeler"
+                else -> "driving"
+            }
+            val sb = StringBuilder("https://www.google.com/maps/dir/?api=1&destination=").append(enc)
+            cmd.origin?.let { sb.append("&origin=").append(Uri.encode(it)) }
+            sb.append("&travelmode=").append(travel)
+            if (cmd.drive && !cmd.preview && cmd.mode != "transit") sb.append("&dir_action=navigate")
+            if (cmd.avoidTolls) sb.append("&avoid=tolls")
+            val uri = Uri.parse(sb.toString())
+            return SkillResult(
+                if (cmd.preview || cmd.mode == "transit") {
+                    lang.t("Menampilkan rute ke $dest di Google Maps$detail${s(lang)}.", "Showing the route to $dest in Google Maps$detail${s(lang)}.")
+                } else {
+                    lang.t("Menyetel Google Maps ke $dest$detail${s(lang)}.", "Setting Google Maps to $dest$detail${s(lang)}.")
+                },
+                intent = Intent(Intent.ACTION_VIEW, uri).setPackage(maps),
+                fallback = Intent(Intent.ACTION_VIEW, uri)
+            )
+        }
         return if (cmd.drive) {
+            val code = when (cmd.mode) {
+                "walking" -> "w"
+                "bicycling" -> "b"
+                "two_wheeler" -> "l"
+                else -> "d"
+            }
+            val avoid = if (cmd.avoidTolls) "&avoid=t" else ""
             SkillResult(
-                lang.t("Navigasi ke ${cmd.destination}${s(lang)}. Hati-hati di jalan.", "Navigating to ${cmd.destination}${s(lang)}. Drive safely."),
-                intent = Intent(Intent.ACTION_VIEW, Uri.parse("google.navigation:q=$enc")).setPackage(maps),
+                if (id) "Menyetel navigasi Google Maps ke $dest$detail${s(lang)}. Hati-hati di jalan."
+                else "Setting Google Maps navigation to $dest$detail${s(lang)}. Drive safely.",
+                intent = Intent(Intent.ACTION_VIEW, Uri.parse("google.navigation:q=$enc&mode=$code$avoid")).setPackage(maps),
                 fallback = Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=$enc"))
             )
         } else {
             SkillResult(
-                lang.t("Mencari ${cmd.destination} di peta${s(lang)}.", "Looking up ${cmd.destination} on the map${s(lang)}."),
+                lang.t("Mencari $dest di peta${s(lang)}.", "Looking up $dest on the map${s(lang)}."),
                 intent = Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=$enc")),
                 fallback = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/maps/search/?api=1&query=$enc"))
             )
         }
+    }
+
+    // ------------------------------------------------------------ kalkulator, keuangan, tutup app, panggilan
+
+    private fun calculate(cmd: Command.Calculate, lang: AppLang): SkillResult {
+        val r = Calc.solve(cmd.text, lang)
+            ?: return SkillResult(
+                lang.t(
+                    "Maaf${s(lang)}, saya belum bisa menghitung itu. Coba tulis dengan angka, misalnya \"berapa 15% dari 240\" atau \"(3+4)*2^3\".",
+                    "My apologies${s(lang)}, I couldn't work that out. Try it with numbers, like \"what is 15% of 240\" or \"(3+4)*2^3\"."
+                )
+            )
+        if (r.error) return SkillResult(r.answer)
+        val glue = if (r.answer.firstOrNull()?.let { it.isDigit() || it == '-' } == true) " = " else ": "
+        return SkillResult(r.expression + glue + r.answer, mood = Mood.HAPPY)
+    }
+
+    private fun financeAdd(cmd: Command.FinanceAdd, lang: AppLang): SkillResult {
+        if (cmd.amount <= 0L) {
+            return SkillResult(lang.t("Nominalnya belum jelas${s(lang)}. Sebutkan jumlahnya, misalnya 25 ribu.", "I didn't catch the amount${s(lang)}. Say it like 25 thousand."))
+        }
+        val t = finance.add(cmd.type, cmd.amount, cmd.category, cmd.note)
+        val (from, to) = FinanceMath.range(FinPeriod.TODAY, LocalDate.now())
+        val today = FinanceMath.summarize(finance.all(), from, to)
+        val income = t.type == FinType.INCOME
+        val kind = if (income) lang.t("pemasukan", "income") else lang.t("pengeluaran", "expense")
+        val cat = FinanceCats.name(t.cat, lang)
+        val note = if (t.note.isBlank()) "" else ", ${t.note}"
+        val total = if (income) today.income else today.expense
+        return SkillResult(
+            lang.t(
+                "Dicatat: $kind ${FinanceMath.money(t.amount, lang)} ($cat$note). Total $kind hari ini ${FinanceMath.money(total, lang)}${s(lang)}.",
+                "Logged: $kind ${FinanceMath.money(t.amount, lang)} ($cat$note). Today's total $kind is ${FinanceMath.money(total, lang)}${s(lang)}."
+            )
+        )
+    }
+
+    private fun financeReport(cmd: Command.FinanceReport, lang: AppLang): SkillResult {
+        val (from, to) = FinanceMath.range(cmd.period, LocalDate.now())
+        val sum = FinanceMath.summarize(finance.all(), from, to)
+        val label = FinanceMath.label(cmd.period, lang)
+        if (sum.count == 0) {
+            return SkillResult(lang.t("Belum ada catatan keuangan $label${s(lang)}.", "There are no money entries for $label yet${s(lang)}."))
+        }
+        val money = { v: Long -> FinanceMath.money(v, lang) }
+        val top = sum.expenseByCat.firstOrNull()?.let {
+            lang.t(" Pengeluaran terbesar: ${FinanceCats.name(it.first, lang)} ${money(it.second)}.", " Biggest spending: ${FinanceCats.name(it.first, lang)} ${money(it.second)}.")
+        } ?: ""
+        val text = when (cmd.type) {
+            FinType.EXPENSE -> lang.t(
+                "Pengeluaran $label: ${money(sum.expense)} dari ${sum.count} catatan.$top",
+                "Spending $label: ${money(sum.expense)} across ${sum.count} entries.$top"
+            )
+            FinType.INCOME -> lang.t(
+                "Pemasukan $label: ${money(sum.income)}.",
+                "Income $label: ${money(sum.income)}."
+            )
+            null -> lang.t(
+                "Ringkasan $label: pemasukan ${money(sum.income)}, pengeluaran ${money(sum.expense)}, saldo ${money(sum.balance)}.$top",
+                "Summary $label: income ${money(sum.income)}, spending ${money(sum.expense)}, balance ${money(sum.balance)}.$top"
+            )
+        }
+        return SkillResult(text)
+    }
+
+    private fun financeList(cmd: Command.FinanceList, lang: AppLang): SkillResult {
+        val (from, to) = FinanceMath.range(cmd.period, LocalDate.now())
+        val label = FinanceMath.label(cmd.period, lang)
+        val rows = finance.all()
+            .filter { it.time >= from && it.time < to && (cmd.type == null || it.type == cmd.type) }
+            .sortedByDescending { it.time }
+        if (rows.isEmpty()) {
+            return SkillResult(lang.t("Belum ada catatan $label${s(lang)}.", "No entries for $label yet${s(lang)}."))
+        }
+        val shown = rows.take(8)
+        val lines = shown.mapIndexed { i, t ->
+            val sign = if (t.type == FinType.INCOME) "+" else "-"
+            val what = t.note.ifBlank { FinanceCats.name(t.cat, lang) }
+            "${i + 1}. $sign${FinanceMath.money(t.amount, lang)} · $what"
+        }.joinToString("\n")
+        val more = if (rows.size > shown.size) lang.t("\nDan ${rows.size - shown.size} lainnya; lihat semuanya di layar Keuangan.", "\nAnd ${rows.size - shown.size} more; see them all on the Money screen.") else ""
+        return SkillResult(lang.t("Catatan $label${s(lang)}:", "Entries for $label${s(lang)}:") + "\n" + lines + more)
+    }
+
+    private fun financeUndo(lang: AppLang): SkillResult {
+        val t = finance.undoLast()
+            ?: return SkillResult(lang.t("Belum ada catatan yang bisa dibatalkan${s(lang)}.", "There's no entry to undo yet${s(lang)}."))
+        val kind = if (t.type == FinType.INCOME) lang.t("pemasukan", "income") else lang.t("pengeluaran", "expense")
+        val note = if (t.note.isBlank()) "" else " (${t.note})"
+        return SkillResult(
+            lang.t(
+                "Catatan terakhir saya hapus: $kind ${FinanceMath.money(t.amount, lang)}$note${s(lang)}.",
+                "Removed the last entry: $kind ${FinanceMath.money(t.amount, lang)}$note${s(lang)}."
+            )
+        )
+    }
+
+    private fun financeClear(lang: AppLang, confirmed: Boolean): SkillResult {
+        val n = finance.all().size
+        if (n == 0) return SkillResult(lang.t("Catatan keuangan sudah kosong${s(lang)}.", "Your money log is already empty${s(lang)}."))
+        if (!confirmed) {
+            return SkillResult(
+                lang.t("Hapus SEMUA $n catatan keuangan? Ini tidak bisa dibatalkan. Katakan ya atau tidak.", "Delete ALL $n money entries? This can't be undone. Say yes or no."),
+                pending = Pending.Confirm(Command.FinanceClear)
+            )
+        }
+        finance.clear()
+        return SkillResult(lang.t("Semua catatan keuangan dihapus${s(lang)}.", "All money entries deleted${s(lang)}."))
+    }
+
+    /** Paket yang tidak boleh disentuh saat "tutup semua aplikasi": peluncur Home, telepon, dan Nine sendiri. */
+    private fun protectedPackages(): Set<String> {
+        val out = HashSet<String>()
+        out.add(ctx.packageName)
+        out.addAll(listOf("com.android.phone", "com.android.server.telecom", "com.google.android.dialer", "com.android.systemui"))
+        try {
+            @Suppress("DEPRECATION")
+            val homes = ctx.packageManager.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME), 0)
+            for (ri in homes) out.add(ri.activityInfo.packageName)
+        } catch (e: Exception) {
+            // abaikan
+        }
+        return out
+    }
+
+    private fun closeApps(cmd: Command.CloseApps, lang: AppLang): SkillResult {
+        // Langkah 1 (semua edisi): hentikan proses latar aplikasi lain. Android hanya mengizinkan ini untuk proses di latar.
+        try {
+            val am = ctx.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+            val skip = protectedPackages()
+            val seen = HashSet<String>()
+            for (ri in launcherApps()) {
+                val pkg = ri.activityInfo.packageName
+                if (pkg in skip || !seen.add(pkg)) continue
+                try {
+                    am.killBackgroundProcesses(pkg)
+                } catch (e: Exception) {
+                    // satu aplikasi gagal tidak menghentikan yang lain
+                }
+            }
+        } catch (e: Exception) {
+            // abaikan
+        }
+        val sfx = s(lang)
+        val self = cmd.includeSelf
+        val exit = if (self) UiAction.ExitApp else null
+        val bye = if (self) lang.t(" Sekarang giliran saya. Sampai jumpa.", " Now it's my turn. Goodbye.") else ""
+
+        val svc = NineAccessibilityService.instance
+        if (svc != null) {
+            // Langkah 2 (Nine-Full + aksesibilitas): buka layar Recents lalu ketuk "Tutup semua".
+            return SkillResult(
+                lang.t("Menutup semua aplikasi${sfx}.", "Closing all apps${sfx}."),
+                deferred = { done ->
+                    svc.clearRecents { o ->
+                        val text = when (o) {
+                            NineAccessibilityService.Outcome.DONE ->
+                                lang.t("Semua aplikasi sudah saya tutup${sfx}.$bye", "All apps are closed${sfx}.$bye")
+                            NineAccessibilityService.Outcome.NOT_FOUND ->
+                                lang.t(
+                                    "Proses latar aplikasi lain sudah saya hentikan${sfx}, tetapi tombol \"Tutup semua\" tidak ketemu di layar Recents HP ini, jadi kartunya belum terhapus.$bye",
+                                    "I stopped other apps' background processes${sfx}, but I couldn't find a \"Close all\" button on this phone's Recents screen, so the cards remain.$bye"
+                                )
+                            NineAccessibilityService.Outcome.BUSY ->
+                                lang.t("Saya masih mengerjakan tugas layar yang lain${sfx}. Coba lagi sebentar lagi.", "I'm still busy with another screen task${sfx}. Try again in a moment.")
+                            else ->
+                                lang.t("Proses latar sudah saya hentikan${sfx}, tetapi menutup lewat layar Recents gagal.$bye", "I stopped background processes${sfx}, but closing through the Recents screen failed.$bye")
+                        }
+                        done(text)
+                    }
+                },
+                action = exit
+            )
+        }
+        val why = if (NineAccessibilityService.AVAILABLE) {
+            lang.t(
+                " Untuk menutup semuanya lewat layar Recents, nyalakan layanan aksesibilitas Nine di Pengaturan.",
+                " To close everything through the Recents screen, turn on Nine's accessibility service in Settings."
+            )
+        } else {
+            lang.t(
+                " Android tidak mengizinkan aplikasi biasa menutup aplikasi yang sedang tampil; edisi Nine-Full dengan layanan aksesibilitas bisa menutup semuanya lewat Recents.",
+                " Android doesn't let a normal app close apps that are on screen; the Nine-Full edition with the accessibility service can close everything through Recents."
+            )
+        }
+        return SkillResult(
+            lang.t("Proses latar aplikasi lain sudah saya hentikan${sfx}.$why$bye", "I stopped other apps' background processes${sfx}.$why$bye"),
+            action = exit
+        )
+    }
+
+    private fun setCallName(raw: String, lang: AppLang): SkillResult {
+        val n = Prefs.cleanName(raw)
+        if (n.isBlank()) {
+            return SkillResult(lang.t("Mau saya panggil apa${s(lang)}?", "What would you like me to call you${s(lang)}?"))
+        }
+        prefs.honorificId = n
+        prefs.honorificEn = n
+        return SkillResult(
+            lang.t("Baik, mulai sekarang saya panggil Anda $n.", "Very well, I'll call you $n from now on."),
+            mood = Mood.HAPPY
+        )
     }
 
     /** Nomor lokal Indonesia ke format internasional untuk WhatsApp (0812… → 62812…). */

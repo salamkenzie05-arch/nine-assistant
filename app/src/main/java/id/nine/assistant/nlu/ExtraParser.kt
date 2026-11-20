@@ -172,7 +172,6 @@ object ExtraParser {
 
     private val reExit = rx("""^(?:keluar(?:\s+(?:dari\s+)?(?:aplikasi|app|nine))?(?:\s+(?:ini|dong|ya|aja|sekarang))*|tutup\s+(?:aplikasi|app|nine)(?:\s+(?:ini|dong|ya|aja|sekarang))*|exit(?:\s+(?:the\s+)?(?:app|nine))?|quit(?:\s+(?:the\s+)?(?:app|nine))?|close\s+(?:the\s+)?(?:app|nine)|tutup\s+diri|selesai(?:\s+(?:dulu|dong))?\s+nine)$""")
     private val reWake = rx("""\b(?:wake\s*(?:phrase|word)|frasa\s+(?:panggil(?:an)?|pemanggil|bangun)|kata\s+(?:panggil(?:an)?|pemanggil|bangun)|panggilan\s+suara|aktivasi\s+suara|hey\s+nine|hei\s+nine|deteksi\s+suara|mendengarkan\s+terus|always\s+listening)\b""")
-    private val reTouch = rx("""\b(?:assistive\s*touch|assistivetouch|tombol\s+(?:melayang|mengambang|bantu|virtual|asisten|nine|floating)|floating\s+(?:button|bubble)|bubble\s+nine|asisten\s+sentuh|tombol\s+sentuh)\b""")
     private val reMusicReact = rx("""\b(?:bereaksi|reaksi|react(?:ing)?|respon|menari|dance|dancing|joget|goyang)\b.*\b(?:musik|music|lagu|beat|ketukan|irama)\b|\b(?:musik|music|lagu|beat|irama)\b.*\b(?:bereaksi|reaksi|react|menari|dance|joget|goyang)\b|\bmode\s+(?:musik|music|disko|party|pesta)\b""")
     private val reTheme = rx("""\b(?:mode\s+(gelap|terang|dark|light|malam|siang)|(dark|light|night|day)\s+(?:mode|theme)|tema\s+(gelap|terang|dark|light|sistem|system|otomatis|auto|malam|siang)|theme\s+(dark|light|system|auto))\b|\b(?:ganti|ubah|pindah|set|switch|change|jadikan)\s+(?:the\s+)?(?:tema|theme|mode)\s*(?:aplikasi\s+|nine\s+|app\s+)?(?:ke|jadi|menjadi|to)?\s*(gelap|terang|dark|light|sistem|system|otomatis|auto|malam|siang|putih|hitam)\b""")
 
@@ -191,9 +190,6 @@ object ExtraParser {
         if (reExit.matches(raw)) return Command.AppSetting(NineSetting.EXIT_APP)
         val off = reOffVerb.containsMatchIn(raw) && !reOnVerb.containsMatchIn(raw)
         val onlyOn = reOnVerb.containsMatchIn(raw) && !reOffVerb.containsMatchIn(raw)
-        if (reTouch.containsMatchIn(raw)) {
-            return Command.AppSetting(if (off) NineSetting.TOUCH_OFF else NineSetting.TOUCH_ON)
-        }
         if (reWake.containsMatchIn(raw) && (off || onlyOn)) {
             return Command.AppSetting(if (off) NineSetting.WAKE_OFF else NineSetting.WAKE_ON)
         }

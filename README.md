@@ -33,8 +33,7 @@ Nine adalah asisten suara seperti Siri yang berjalan **sepenuhnya di perangkat**
 - **Tuner gitar 6 senar**: "tuning gitar" lalu petik senar mana saja (dikenali otomatis), atau "stem senar 3", "bunyikan senar 5" untuk nada acuan. Tampil di panel tuner dengan jarum cent.
 - **Reaksi musik**: saat layar Nine terbuka, wajah ikut bergoyang mengikuti ketukan, bass, dan nada musik yang terdengar lewat mikrofon (tidak direkam; bisa dimatikan di Pengaturan atau "matikan reaksi musik").
 - **Telepon masuk**: "angkat telepon" / "tolak telepon".
-- **Pengaturan lewat suara**: "ganti tema ke gelap", "ganti bahasa ke English", "matikan/nyalakan wake phrase", "keluar dari aplikasi", "nyalakan/matikan tombol melayang", serta Wi-Fi, Bluetooth, hotspot, mode pesawat.
-- **Tombol melayang** (seperti AssistiveTouch): tombol transparan yang bisa digeser, ketuk untuk panel (Nine, Home, Back, Recents, Notifikasi, Kunci layar, Volume, Pengaturan). Nyalakan di Pengaturan atau lewat suara.
+- **Pengaturan lewat suara**: "ganti tema ke gelap", "ganti bahasa ke English", "matikan/nyalakan wake phrase", "keluar dari aplikasi", serta Wi-Fi, Bluetooth, hotspot, mode pesawat.
 - **Kedekatan** baru mencapai level tertinggi setelah **90 hari pemakaian** (hari berbeda saat kamu bicara dengan Nine), seberapa banyak pun XP-nya.
 - **Tombol power**: layar Nine kini transparan, hanya dengan vinyet emas Nine di tepi dan cahaya tepi berwarna Nine (dominan emas, sedikit aksen biru-kehijauan); jawaban Nine beralas kartu semi-solid agar terbaca tanpa selubung gradasi, dan tidak lagi membuat layar "nyangkut" setelah Nine membuka aplikasi lain.
 
@@ -44,7 +43,6 @@ Nine adalah asisten suara seperti Siri yang berjalan **sepenuhnya di perangkat**
 |---|---|---|
 | Pemasangan | Langsung, tanpa trik | Bisa diblokir Google Play Protect (lihat bawah) |
 | Layanan aksesibilitas | Tidak ada | Ada |
-| Tombol melayang (AssistiveTouch) | Tidak ada | Ada |
 | Pilih & putar lagu otomatis di YouTube Music | Hanya membuka hasil pencarian | Ada (beta) |
 | Wi-Fi/Bluetooth/hotspot/mode pesawat lewat suara | Membuka panel pengaturannya saja | Ada (beta; mengetuk ubin Panel Cepat, cadangan halaman pengaturan) |
 | Semua fitur lain (suara, alarm, ingatan, tuner, telepon, widget, dll.) | Ada | Ada |
@@ -108,7 +106,7 @@ Internet hanya dipakai untuk mengunduh model. Percakapan, suara, dan catatan tid
 | `skills/` | Eksekusi perintah perangkat, kontak, catatan |
 | `speech/` | Pengenal suara on-device, `DroidVoice` (suara droid sintetis), `DroidSinger` (nyanyian) |
 | `audio/` | Deteksi nada (YIN) + tuner gitar, analisis ketukan musik, daftar lagu |
-| `a11y/` | Layanan aksesibilitas: ubin pengaturan cepat, YouTube Music, tombol melayang. Kode aslinya ada di `src/full/`; `src/lite/` berisi stub kosong dengan API sama (`AVAILABLE = false`) |
+| `a11y/` | Layanan aksesibilitas: ubin pengaturan cepat, YouTube Music, tutup semua aplikasi. Kode aslinya ada di `src/full/`; `src/lite/` berisi stub kosong dengan API sama (`AVAILABLE = false`) |
 | `call/` | Terima/tolak telepon masuk |
 | `ui/` | `NineOrbView`, `EdgeGlowView`, daftar pesan |
 | `widget/` | Widget orb (kecil dan 4x4) dan "Hari ini"; frame wajah dibuat `tools/face_sphere.py` |

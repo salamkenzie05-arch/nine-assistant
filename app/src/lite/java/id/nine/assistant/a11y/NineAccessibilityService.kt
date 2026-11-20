@@ -20,6 +20,10 @@ class NineAccessibilityService private constructor() {
     @Suppress("UNUSED_PARAMETER")
     fun playFirstSong(query: String = "") {}
 
+    fun clearRecents(done: (Outcome) -> Unit) {
+        done(Outcome.FAILED)
+    }
+
     /** Selalu kosong di edisi ringan. */
     val lastStage: String = ""
 
@@ -31,8 +35,5 @@ class NineAccessibilityService private constructor() {
 
         @Suppress("UNUSED_PARAMETER")
         fun isEnabled(ctx: Context): Boolean = false
-
-        @Suppress("UNUSED_PARAMETER")
-        fun applyTouch(ctx: Context): Boolean = true
     }
 }

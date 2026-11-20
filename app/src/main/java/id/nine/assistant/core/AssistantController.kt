@@ -380,7 +380,10 @@ class AssistantController(context: Context, private val ui: Ui) {
         res.deferred?.let { work ->
             log.add(false, res.reply)
             setState(State.THINKING)
-            work { text -> reply(text, listenAfter = false) }
+            val after = res.action
+            work { text ->
+                if (after != null) reply(text, listenAfter = false) { ui.onAction(after) } else reply(text, listenAfter = false)
+            }
             return
         }
 

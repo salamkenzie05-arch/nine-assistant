@@ -16,8 +16,11 @@ enum class MediaAction { PLAY, PAUSE, NEXT, PREVIOUS }
 /** Pengaturan Nine sendiri yang bisa diubah lewat suara. */
 enum class NineSetting {
     THEME_LIGHT, THEME_DARK, THEME_SYSTEM, WAKE_ON, WAKE_OFF, EXIT_APP,
-    TOUCH_ON, TOUCH_OFF, MUSIC_REACT_ON, MUSIC_REACT_OFF
+    MUSIC_REACT_ON, MUSIC_REACT_OFF
 }
+
+/** Hiburan yang Nine bawakan sendiri (tanpa AI): gombal, pantun, kata bijak. */
+enum class FunKind { GOMBAL, PANTUN, WISDOM }
 
 enum class VolumeAction { UP, DOWN, MUTE, UNMUTE, SET, MAX }
 
@@ -165,8 +168,26 @@ sealed class Command {
     // --- Aplikasi eksternal
     /** [app] "youtube", "youtube music", "spotify", atau null (= YouTube Music). */
     data class PlayMedia(val query: String, val app: String?) : Command()
-    /** [drive] true = langsung mulai navigasi; false = tampilkan lokasinya di peta. */
-    data class Navigate(val destination: String, val drive: Boolean = true) : Command()
+    /**
+     * [drive] true = langsung mulai navigasi; false = tampilkan lokasinya di peta.
+     * [mode]: "driving", "two_wheeler" (motor), "bicycling", "walking", "transit"; null = mobil.
+     * [origin] = titik awal bila disebut ("dari A ke B"); [preview] true = tampilkan rute dulu (tanpa langsung mulai).
+     */
+    data class Navigate(
+        val destination: String,
+        val drive: Boolean = true,
+        val mode: String? = null,
+        val origin: String? = null,
+        val avoidTolls: Boolean = false,
+        val preview: Boolean = false
+    ) : Command() {
+        override fun toString(): String =
+            "Navigate(destination=$destination, drive=$drive" +
+                (if (mode != null) ", mode=$mode" else "") +
+                (if (origin != null) ", origin=$origin" else "") +
+                (if (avoidTolls) ", avoidTolls=true" else "") +
+                (if (preview) ", preview=true" else "") + ")"
+    }
     data class WebSearch(val query: String) : Command()
     data class OpenUrl(val url: String) : Command()
     data class WhatsApp(val target: String, val body: String?) : Command()
@@ -174,6 +195,27 @@ sealed class Command {
     // --- Kamera & perekam
     data class Camera(val video: Boolean, val front: Boolean, val timerSeconds: Int?) : Command()
     data class RecordAudio(val start: Boolean) : Command()
+
+    // --- Hitung
+    /** [text] = ucapan perhitungan apa adanya; dihitung oleh [Calc]. */
+    data class Calculate(val text: String) : Command()
+
+    // --- Keuangan (pengeluaran & pemasukan)
+    data class FinanceAdd(val type: FinType, val amount: Long, val category: String, val note: String) : Command()
+    data class FinanceReport(val period: FinPeriod, val type: FinType? = null) : Command()
+    data class FinanceList(val period: FinPeriod, val type: FinType? = null) : Command()
+    data object FinanceUndo : Command()
+    data object FinanceClear : Command()
+    data object FinanceOpen : Command()
+
+    /** Tutup semua aplikasi yang sedang berjalan; [includeSelf] true = Nine ikut menutup dirinya. */
+    data class CloseApps(val includeSelf: Boolean) : Command()
+
+    /** Gombal, pantun, atau kata bijak. */
+    data class Entertain(val kind: FunKind) : Command()
+
+    /** Ubah panggilan pengguna ("panggil aku Bos"). */
+    data class SetCallName(val name: String) : Command()
 
     // --- Affinity & lokasi
     data object AffinityStatus : Command()

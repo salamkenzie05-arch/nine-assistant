@@ -145,11 +145,7 @@ class Prefs(context: Context) {
         get() = sp.getLong("last_talk", 0L)
         set(value) = sp.edit().putLong("last_talk", value).apply()
 
-    // --- Tombol melayang (assistive touch) & reaksi musik
-    /** Tombol melayang seperti AssistiveTouch iPhone; butuh layanan aksesibilitas Nine aktif. */
-    var assistiveTouch: Boolean
-        get() = sp.getBoolean("assistive_touch", false)
-        set(value) = sp.edit().putBoolean("assistive_touch", value).apply()
+    // --- Reaksi musik
 
     /** Wajah Nine bereaksi pada beat/bass/nada musik yang terdengar lewat mikrofon (hanya saat layar Nine terbuka). */
     var musicReact: Boolean
@@ -176,6 +172,14 @@ class Prefs(context: Context) {
     val persona: Persona get() = Persona(honorificId, honorificEn)
 
     companion object {
+        /**
+         * Bersihkan nama/panggilan dari pengguna: hanya huruf, angka, spasi, titik, tanda hubung, dan apostrof.
+         * Teks ini ikut ditaruh di instruksi AI, jadi karakter lain (kutip, baris baru, dll.) dibuang.
+         */
+        fun cleanName(raw: String, max: Int = 24): String =
+            raw.filter { it.isLetterOrDigit() || it == ' ' || it == '.' || it == '-' || it == '\'' }
+                .replace(Regex("\\s+"), " ").trim().take(max).trim()
+
         const val DEFAULT_GEMINI_MODEL = "gemini-flash-latest"
     }
 }

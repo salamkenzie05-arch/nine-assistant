@@ -163,7 +163,7 @@
     <string name="memory_empty">Nothing remembered yet.</string>
     <string name="memory_clear_confirm">Delete everything Nine remembers about you?</string>
     <string name="memory_help">Nine remembers lasting things you tell it (name, likes, family, habits) and uses them in later conversations. Everything stays on this phone only. Say \"remember that …\" to save something right away, or \"forget …\" to remove it. This is memory, not retraining of the model.</string>
-    <string name="a11y_description">Lets Nine switch Wi-Fi, Bluetooth, airplane mode and hotspot on or off through Quick Settings, play a chosen song in YouTube Music, and show a floating AssistiveTouch-style button. Nine only acts when you ask; screen content is not read beyond those tasks, stored, or sent to the internet.</string>
+    <string name="a11y_description">Lets Nine switch Wi-Fi, Bluetooth, airplane mode and hotspot on or off through Quick Settings, play a chosen song in YouTube Music, and close all apps from the Recents screen. Nine only acts when you ask; screen content is not read beyond those tasks, stored, or sent to the internet.</string>
     <string name="sec_a11y">Floating button &amp; phone control</string>
     <string name="a11y_help">Nine\'s accessibility service (optional) lets Nine switch Wi-Fi, Bluetooth, airplane mode and hotspot on or off, pick and play a song in YouTube Music, and show a floating button. Android 13+: if \"Nine\" is greyed out in the accessibility list, open App info, tap the ⋮ menu and choose \"Allow restricted settings\".</string>
     <string name="a11y_button">Open accessibility settings</string>
@@ -171,10 +171,16 @@
     <string name="a11y_status_on">Accessibility service: on ✓</string>
     <string name="a11y_lite_status">Lite edition: the floating button, automatic song playback and direct Wi-Fi/Bluetooth switching are only in the Full edition (Nine-Full.apk; Play Protect scanning must be switched off briefly while installing).</string>
     <string name="a11y_status_off">Accessibility service: not enabled yet</string>
-    <string name="touch_switch">Floating button (AssistiveTouch style)</string>
     <string name="music_switch">Nine reacts to music</string>
     <string name="music_help">While the Nine screen is open, Nine listens to music through the microphone and its face moves with the beat, bass and tone. Audio is never recorded or stored.</string>
     <string name="widget_orb_white_desc">White Nine orb: tap to talk</string>
     <string name="widget_orb_large_white_desc">Large white Nine orb 4×4: tap to talk</string>
     <string name="widget_today_white_desc">Nine white · today\'s tasks</string>
+    <string name="fin_title">Money</string>
+    <string name="fin_p_today">Today</string>
+    <string name="fin_p_week">This week</string>
+    <string name="fin_p_month">This month</string>
+    <string name="fin_p_all">All</string>
+    <string name="fin_empty">No entries in this period yet. Tell Nine: \"spent 18 thousand on coffee\" or \"salary 5 million\".</string>
+    <string name="fin_delete">Delete</string>
 </resources>

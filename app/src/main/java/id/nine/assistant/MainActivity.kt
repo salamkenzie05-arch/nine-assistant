@@ -240,7 +240,6 @@ open class MainActivity : AppCompatActivity(), AssistantController.Ui {
         NotificationManagerCompat.from(this).cancel(WakeWordService.ALERT_ID)
         if (nine.prefs.wakeEnabled && !RecorderService.recording) WakeWordService.pause(this)
         renderRecording()
-        NineAccessibilityService.applyTouch(this)
         syncAudio()
     }
 
@@ -695,7 +694,6 @@ open class MainActivity : AppCompatActivity(), AssistantController.Ui {
                 finishAndRemoveTask()
             }
             is UiAction.Tuner -> if (action.start) startTuner(action.string) else stopTuner()
-            UiAction.TouchChanged -> NineAccessibilityService.applyTouch(this)
             UiAction.MusicReactChanged -> syncAudio()
             is UiAction.WakeChanged -> applyWake(action.on)
             is UiAction.Sing, is UiAction.Tone -> Unit // ditangani pengontrol

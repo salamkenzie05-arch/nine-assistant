@@ -679,16 +679,6 @@
                     android:text="@string/a11y_appinfo_button" />
 
                 <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/switchTouch"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:minHeight="48dp"
-                    android:text="@string/touch_switch"
-                    android:textColor="@color/nine_on_bg"
-                    android:textSize="15sp" />
-
-                <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/switchMusic"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
