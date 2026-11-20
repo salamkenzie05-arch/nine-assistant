@@ -1,5 +1,7 @@
 # Nine: asisten pribadi offline untuk Android
 
+> **Versi BETA (3.1).** Nine masih dalam pengujian. Bagian yang memakai layanan aksesibilitas (Wi-Fi/Bluetooth otomatis, putar lagu otomatis di YouTube Music) belum teruji di semua HP; bila gagal, Nine menampilkan kode galat singkat "(beta, kode: …)" supaya mudah dilaporkan.
+
 Nine adalah asisten suara seperti Siri yang berjalan **sepenuhnya di perangkat**. Kepribadiannya tenang, sangat sopan, dan sedikit jenaka, seperti kepala pelayan yang juga insinyur jenius. Nine mengerti dan menjawab dalam **Bahasa Indonesia** dan **English**, dan bersuara seperti droid kecil (bip, kicau, dan siulan elektronik).
 
 - **Perintah perangkat** (cepat, berbasis aturan): alarm, timer, pengingat, **acara kalender** (tambah, pindah, hapus & baca agenda), **daftar tugas harian**, buka aplikasi dan pengaturan, YouTube Music (bawaan untuk "putar lagu"; Spotify tetap bisa bila disebut, mis. "putar … di Spotify")/YouTube/Maps/WhatsApp/Google, kamera, perekam suara, senter, volume, baterai/jam/tanggal, catatan, telepon, SMS.
@@ -10,6 +12,16 @@ Nine adalah asisten suara seperti Siri yang berjalan **sepenuhnya di perangkat**
 - **Widget layar utama**: orb Nine berbentuk bola 3D (tepi tanpa garis, tanpa bayangan di bawahnya), warnanya **mengikuti tema Nine di aplikasi** (Terang/Gelap/Ikuti sistem); tiap ukuran (2×2, 4×4, Hari ini) juga punya **versi putih** yang selalu putih dan ekspresinya ikut keadaan (dicas, baterai lemah, malam, baru diajak bicara). Ukuran kecil dan **4x4**, serta "Hari ini" (tugas yang belum selesai). Gerak mata memakai frame 70 ms yang diperhalus, jadi melirik dan berkedipnya mulus.
 - **Otak AI: Gemma 4 E2B** (Google, Apache-2.0) lewat LiteRT-LM, memakai GPU HP dan otomatis pindah ke CPU bila GPU gagal. Untuk obrolan dan pertanyaan bebas, jawabannya mulai diucapkan per kalimat sebelum seluruh jawaban selesai dibuat.
 - **Wajah Nine**: dua mata ekspresif ala robot meja yang berkedip, melirik, mengikuti jari, senang saat dielus, kesal bila diketuk berkali-kali, kaget lalu senang saat dicas, lesu saat baterai lemah, mengantuk saat lama diam, dan bereaksi pada percakapan (mendengar, berpikir, berbicara, senang, bingung, sedih). Bilah atas hanya "NINE"; ketuk untuk menu (alarm, tugas, pengaturan, bahasa, tema).
+
+### Baru di 3.1 (beta)
+
+- **Layar tombol power lebih rapi**: latarnya diredam rata (satu warna, tanpa gradasi) di atas vinyet emas Nine, kartu jawaban hampir solid, dan riwayatnya hanya menampilkan tanya-jawab terakhir dengan tinggi mengikuti isi (maks. ±45% layar), jadi gelembung tidak lagi terpotong di tengah kalimat.
+- **Reaksi musik lebih terasa**: saat ada musik, mata Nine melonjak (melebar, naik) pada setiap ketukan dan bergoyang mengikuti bass; cahaya tepi layar menyala menurut bass, berdenyut dan berputar menyentak pada tiap ketukan.
+- **Wi-Fi, Bluetooth, mode pesawat (edisi Full)**: Nine memeriksa keadaan sebenarnya dari sistem sebelum dan sesudah mengetuk, jadi tidak mengetuk bila sudah sesuai dan tahu bila belum berhasil. Urutannya: ketuk tombol Panel Cepat, lalu sentuhan nyata bila klik biasa gagal, lalu halaman pengaturannya sebagai cadangan.
+- **Putar lagu di YouTube Music (edisi Full)**: setelah hasil pencarian terbuka, Nine memilih tab Lagu dan mengetuk hasil pertama (klik, lalu sentuhan nyata), dan **mendengarkan apakah musik benar-benar berbunyi**; bila belum, mencoba baris kedua dan perintah "putar dari pencarian". Bila semuanya gagal, muncul pemberitahuan singkat agar kamu mengetuk lagunya sendiri.
+- **Label BETA** di samping judul NINE dan pada nomor versi.
+
+> Catatan jujur: perubahan otomasi aksesibilitas ini **belum bisa diuji di perangkat sungguhan** oleh pembuatnya (hanya dikompilasi dan diuji logikanya di CI). Tampilan Samsung One UI dan YouTube Music berubah-ubah; laporkan kode galat bila masih gagal. Setelah memperbarui ke Nine-Full ini, bila layanan aksesibilitas Nine mati sendiri, nyalakan lagi di Pengaturan > Aksesibilitas (izin "sentuhan" ditambahkan).
 
 ### Baru di 2.7
 
@@ -33,8 +45,8 @@ Nine adalah asisten suara seperti Siri yang berjalan **sepenuhnya di perangkat**
 | Pemasangan | Langsung, tanpa trik | Bisa diblokir Google Play Protect (lihat bawah) |
 | Layanan aksesibilitas | Tidak ada | Ada |
 | Tombol melayang (AssistiveTouch) | Tidak ada | Ada |
-| Pilih & putar lagu otomatis di YouTube Music | Hanya membuka hasil pencarian | Ada |
-| Wi-Fi/Bluetooth/hotspot/mode pesawat lewat suara | Membuka panel pengaturannya saja | Ada (mengetuk ubin Panel Cepat) |
+| Pilih & putar lagu otomatis di YouTube Music | Hanya membuka hasil pencarian | Ada (beta) |
+| Wi-Fi/Bluetooth/hotspot/mode pesawat lewat suara | Membuka panel pengaturannya saja | Ada (beta; mengetuk ubin Panel Cepat, cadangan halaman pengaturan) |
 | Semua fitur lain (suara, alarm, ingatan, tuner, telepon, widget, dll.) | Ada | Ada |
 
 Kedua edisi memakai tanda tangan yang sama, jadi **Full bisa menimpa Nine** (dan sebaliknya) tanpa kehilangan data.

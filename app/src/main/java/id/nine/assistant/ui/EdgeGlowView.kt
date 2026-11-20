@@ -10,6 +10,8 @@ import android.graphics.SweepGradient
 import android.os.SystemClock
 import android.util.AttributeSet
 import android.view.View
+import id.nine.assistant.audio.BeatAnalyzer
+import kotlin.math.max
 import kotlin.math.min
 
 /** Cahaya berpendar di sepanjang tepi layar saat Nine mendengarkan, berpikir, atau berbicara. */
@@ -62,6 +64,38 @@ class EdgeGlowView @JvmOverloads constructor(
         targetLevel = value.coerceIn(0f, 1f)
     }
 
+    // --- reaksi musik (diisi lewat setMusic dari main thread)
+    private var musicUntil = 0L
+    private var musicLevel = 0f
+    private var musicBass = 0f
+    private var beatPulse = 0f
+
+    /**
+     * Umpan analisis musik: cahaya tepi menyala menurut bass, berdenyut pada setiap ketukan (lebih tebal,
+     * lebih terang, putarannya menyentak). Berhenti sendiri bila umpan berhenti.
+     */
+    fun setMusic(f: BeatAnalyzer.Frame) {
+        val now = SystemClock.uptimeMillis()
+        if (!f.music) {
+            if (now > musicUntil) musicLevel = 0f
+            return
+        }
+        musicUntil = now + 900L
+        musicLevel += (f.level.coerceIn(0f, 1f) - musicLevel) * 0.35f
+        musicBass += (f.bass.coerceIn(0f, 1f) - musicBass) * 0.5f
+        if (f.beat) beatPulse = 1f
+        invalidate()
+    }
+
+    /** Hentikan reaksi musik segera. */
+    fun clearMusic() {
+        musicUntil = 0L
+        musicLevel = 0f
+        musicBass = 0f
+        beatPulse = 0f
+        invalidate()
+    }
+
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         gradient = SweepGradient(w / 2f, h / 2f, colors, stops)
@@ -72,10 +106,16 @@ class EdgeGlowView @JvmOverloads constructor(
         val now = SystemClock.uptimeMillis()
         val dt = if (lastFrame == 0L) 0.016f else ((now - lastFrame) / 1000f).coerceIn(0f, 0.05f)
         lastFrame = now
-        current += (target - current) * min(1f, dt * 5f)
+        val music = now < musicUntil && musicLevel > 0.02f
+        if (!music && musicLevel > 0f) musicLevel = max(0f, musicLevel - dt * 2f)
+        beatPulse = max(0f, beatPulse - dt * 4.5f)
+        val a = if (music) (musicLevel * 1.6f).coerceIn(0f, 1f) else 0f
+        // Saat musik: dasar menyala menurut bass, ditambah lonjakan tiap ketukan; keadaan lain tetap berlaku.
+        val eff = if (music) max(target, (0.30f + 0.40f * musicBass * a + 0.30f * beatPulse).coerceAtMost(1f)) else target
+        current += (eff - current) * min(1f, dt * (if (music) 16f else 5f))
         level += (targetLevel - level) * min(1f, dt * 10f)
-        angle = (angle + spin * dt) % 360f
-        if (current < 0.01f && target == 0f) {
+        angle = (angle + (spin + (if (music) 30f + 150f * beatPulse + 60f * musicBass else 0f)) * dt) % 360f
+        if (current < 0.01f && target == 0f && !music) {
             current = 0f
             return
         }
@@ -87,7 +127,7 @@ class EdgeGlowView @JvmOverloads constructor(
         // Garis berada tepat di tepi layar; separuh lebarnya terlihat ke dalam.
         rect.set(0f, 0f, width.toFloat(), height.toFloat())
         val corner = 44f * density
-        val boost = 1f + level * 0.8f
+        val boost = 1f + level * 0.8f + beatPulse * 0.7f * a
         for (i in LAYER_WIDTH.indices) {
             paint.strokeWidth = LAYER_WIDTH[i] * density * boost
             paint.alpha = (255 * LAYER_ALPHA[i] * current).toInt().coerceIn(0, 255)

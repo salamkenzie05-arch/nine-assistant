@@ -18,21 +18,44 @@
             android:layout_height="56dp"
             android:layout_marginTop="4dp">
 
-            <TextView
-                android:id="@+id/txtTitle"
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
                 android:layout_gravity="center"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="@string/cd_menu"
-                android:fontFamily="@font/nine_light"
-                android:gravity="center"
-                android:letterSpacing="0.35"
-                android:paddingStart="20dp"
-                android:paddingEnd="12dp"
-                android:text="NINE"
-                android:textColor="@color/nine_on_bg"
-                android:textSize="22sp" />
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/txtTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/cd_menu"
+                    android:fontFamily="@font/nine_light"
+                    android:gravity="center"
+                    android:letterSpacing="0.35"
+                    android:paddingStart="20dp"
+                    android:paddingEnd="6dp"
+                    android:text="NINE"
+                    android:textColor="@color/nine_on_bg"
+                    android:textSize="22sp" />
+
+                <TextView
+                    android:id="@+id/txtBeta"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:background="@drawable/bg_beta_badge"
+                    android:letterSpacing="0.12"
+                    android:paddingStart="6dp"
+                    android:paddingTop="1dp"
+                    android:paddingEnd="6dp"
+                    android:paddingBottom="1dp"
+                    android:text="BETA"
+                    android:textColor="@color/nine_gold"
+                    android:textSize="9sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
         </FrameLayout>
 
         <!-- Kartu aktivasi otak AI -->
@@ -95,7 +118,7 @@
         </LinearLayout>
 
         <!-- Riwayat, dengan gradasi tepi yang memakai warna latar (bukan efek fading bawaan) -->
-        <FrameLayout
+        <id.nine.assistant.ui.MaxHeightFrameLayout
             android:id="@+id/listFrame"
             android:layout_width="match_parent"
             android:layout_height="0dp"
@@ -123,7 +146,7 @@
                 android:layout_height="20dp"
                 android:layout_gravity="bottom"
                 android:background="@drawable/fade_bottom" />
-        </FrameLayout>
+        </id.nine.assistant.ui.MaxHeightFrameLayout>
 
         <!-- Transkrip langsung -->
         <TextView

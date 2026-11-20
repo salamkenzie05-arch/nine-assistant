@@ -311,6 +311,7 @@ class NineFaceView @JvmOverloads constructor(
     private var musicBright = 0.5f
     private var beatPulse = 0f
     private var musicSway = 0f
+    private var eyePunch = 0f
 
     private var t = 0f
     private var lastFrame = 0L
@@ -401,12 +402,12 @@ class NineFaceView @JvmOverloads constructor(
         if (mode == Mode.IDLE && musicOn(now) && !touching) {
             val a = (musicLevel * 1.6f).coerceIn(0f, 1f)
             tl.happy = maxOf(tl.happy, 0.25f + 0.5f * musicTreble * a); tr.happy = tl.happy
-            tl.sy = 1f + 0.16f * musicBass * a; tr.sy = tl.sy
-            tl.sx = 1f + 0.06f * musicMid * a; tr.sx = tl.sx
+            tl.sy = 1f + 0.22f * musicBass * a; tr.sy = tl.sy
+            tl.sx = 1f + 0.10f * musicMid * a; tr.sx = tl.sx
             tl.lid = 0f; tr.lid = 0f
-            tGazeX = sin(musicSway) * 0.7f
-            tGazeY = -0.05f - 0.25f * musicBass * a
-            tFaceTilt = sin(musicSway * 0.5f) * 5f * a
+            tGazeX = sin(musicSway) * 0.85f
+            tGazeY = -0.05f - 0.3f * musicBass * a
+            tFaceTilt = sin(musicSway * 0.5f) * 6f * a
         }
         if (touching && interactive) {
             val r = faceRadius()
@@ -618,7 +619,9 @@ class NineFaceView @JvmOverloads constructor(
         scanPaint.shader?.setLocalMatrix(scanMatrix)
         val blink = blinkFactor(now)
         val sep = r * 0.37f
-        val ey = cy - r * 0.04f
+        // Ketukan musik: mata "melonjak" (melebar, meninggi, naik sedikit) lalu kembali, langsung tanpa penghalusan.
+        eyePunch = if (mAmt > 0f && !touching) beatPulse * (0.5f + 0.5f * mAmt) else 0f
+        val ey = cy - r * 0.04f - r * 0.04f * eyePunch
         val gx = gazeX * r * 0.17f
         val gy = gazeY * r * 0.13f
         drawEye(canvas, cx - sep + gx, ey + gy, r, left, blink, isLeft = true, color = eyeColor)
@@ -695,8 +698,8 @@ class NineFaceView @JvmOverloads constructor(
             canvas.drawPath(chevFill, scanPaint)
             return
         }
-        val w = baseW * e.sx
-        val h = (baseH * e.sy * blink).coerceAtLeast(baseH * 0.07f)
+        val w = baseW * e.sx * (1f + 0.20f * eyePunch)
+        val h = (baseH * e.sy * blink * (1f + 0.28f * eyePunch)).coerceAtLeast(baseH * 0.07f)
         rect.set(ex - w / 2f, ey - h / 2f, ex + w / 2f, ey + h / 2f)
         val rad = min(w, h) * 0.34f
         eyePath.reset()

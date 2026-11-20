@@ -23,5 +23,6 @@
     <!-- Overlay asisten (transparan; vinyet berwarna emas Nine, tanpa gradasi putih/hitam) -->
     <color name="nine_vignette_clear">#00C7861A</color>
     <color name="nine_vignette_edge">#33C7861A</color>
-    <color name="assist_bubble">#EBFFFFFF</color>
+    <color name="assist_bubble">#F7FFFFFF</color>
+    <color name="assist_dim">#A60B0F18</color>
 </resources>

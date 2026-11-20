@@ -74,23 +74,27 @@ open class MainActivity : AppCompatActivity(), AssistantController.Ui {
 
     private val logListener = object : ConversationLog.Listener {
         override fun onAdded(index: Int) {
-            adapter.notifyItemInserted(index)
-            binding.list.scrollToPosition(index)
+            adapter.onLogAdded(index)
+            scrollToLatest()
         }
 
         override fun onChanged(index: Int) {
-            adapter.notifyItemChanged(index)
-            binding.list.scrollToPosition(index)
+            adapter.onLogChanged(index)
+            scrollToLatest()
         }
 
         override fun onRemoved(index: Int) {
-            adapter.notifyItemRemoved(index)
+            adapter.onLogRemoved(index)
         }
 
         override fun onCleared() {
-            @Suppress("NotifyDataSetChanged")
-            adapter.notifyDataSetChanged()
+            adapter.onLogCleared()
         }
+    }
+
+    private fun scrollToLatest() {
+        val last = adapter.itemCount - 1
+        if (last >= 0) binding.list.scrollToPosition(last)
     }
 
     private val modelListener = ModelManager.Listener { renderModel(it) }
@@ -322,11 +326,15 @@ open class MainActivity : AppCompatActivity(), AssistantController.Ui {
         // musik
         val wantMusic = nine.prefs.musicReact && !tunerActive && can
         if (wantMusic) {
-            val r = reactor ?: MusicReactor(this) { f -> binding.orb.setMusic(f) }.also { reactor = it }
+            val r = reactor ?: MusicReactor(this) { f ->
+                binding.orb.setMusic(f)
+                binding.edgeGlow.setMusic(f)
+            }.also { reactor = it }
             if (!r.isRunning && !r.start()) ticker.postDelayed(syncRetry, 1500)
         } else {
             reactor?.stop()
             binding.orb.clearMusic()
+            binding.edgeGlow.clearMusic()
         }
     }
 

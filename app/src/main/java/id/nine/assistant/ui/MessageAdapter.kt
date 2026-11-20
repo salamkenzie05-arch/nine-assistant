@@ -7,6 +7,7 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import id.nine.assistant.R
 import id.nine.assistant.core.ConversationLog
+import id.nine.assistant.core.HistoryWindow
 
 /** Menampilkan riwayat dari [ConversationLog]: ucapan pengguna kecil di kanan, jawaban Nine besar di kiri. */
 class MessageAdapter(private val log: ConversationLog) : RecyclerView.Adapter<MessageAdapter.VH>() {
@@ -15,7 +16,42 @@ class MessageAdapter(private val log: ConversationLog) : RecyclerView.Adapter<Me
         val text: TextView = root.findViewById(R.id.text)
     }
 
-    override fun getItemViewType(position: Int): Int = if (log.entries[position].fromUser) 1 else 0
+    private val window = HistoryWindow(log)
+
+    /** Layar asisten: tampilkan hanya tanya-jawab terakhir (lihat [HistoryWindow]). */
+    fun setWindowed(on: Boolean) {
+        window.enable(on)
+        @Suppress("NotifyDataSetChanged")
+        notifyDataSetChanged()
+    }
+
+    fun onLogAdded(index: Int) {
+        if (window.onAdded()) {
+            @Suppress("NotifyDataSetChanged")
+            notifyDataSetChanged()
+        } else if (index >= window.start) notifyItemInserted(index - window.start)
+    }
+
+    fun onLogChanged(index: Int) {
+        if (index >= window.start) notifyItemChanged(index - window.start)
+    }
+
+    fun onLogRemoved(index: Int) {
+        if (window.onRemoved(index)) {
+            @Suppress("NotifyDataSetChanged")
+            notifyDataSetChanged()
+        } else if (index >= window.start) notifyItemRemoved(index - window.start)
+    }
+
+    fun onLogCleared() {
+        window.onCleared()
+        @Suppress("NotifyDataSetChanged")
+        notifyDataSetChanged()
+    }
+
+    private fun entry(position: Int) = log.entries[window.start + position]
+
+    override fun getItemViewType(position: Int): Int = if (entry(position).fromUser) 1 else 0
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
         val layout = if (viewType == 1) R.layout.item_message_user else R.layout.item_message_nine
@@ -26,7 +62,7 @@ class MessageAdapter(private val log: ConversationLog) : RecyclerView.Adapter<Me
     var bubbles = false
 
     override fun onBindViewHolder(holder: VH, position: Int) {
-        val e = log.entries[position]
+        val e = entry(position)
         holder.text.text = if (e.text.isEmpty() && !e.fromUser) "…" else e.text
         if (!e.fromUser) {
             val d = holder.text.resources.displayMetrics.density
@@ -40,5 +76,5 @@ class MessageAdapter(private val log: ConversationLog) : RecyclerView.Adapter<Me
         }
     }
 
-    override fun getItemCount(): Int = log.entries.size
+    override fun getItemCount(): Int = window.count
 }

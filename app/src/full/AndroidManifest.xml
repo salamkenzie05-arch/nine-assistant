@@ -5,6 +5,10 @@
   Edisi ringan (Nine.apk) tidak memilikinya dan bisa dipasang langsung.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Hanya membaca keadaan Wi-Fi/Bluetooth (untuk memastikan hasil ketukan); keduanya izin biasa, bukan izin berbahaya. -->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+
     <application>
         <!-- Layanan aksesibilitas (opsional, dinyalakan pengguna): Panel Cepat, YouTube Music, tombol melayang. -->
         <service

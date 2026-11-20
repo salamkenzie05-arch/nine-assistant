@@ -17,7 +17,11 @@ class NineAccessibilityService private constructor() {
         done(Outcome.FAILED)
     }
 
-    fun playFirstSong() {}
+    @Suppress("UNUSED_PARAMETER")
+    fun playFirstSong(query: String = "") {}
+
+    /** Selalu kosong di edisi ringan. */
+    val lastStage: String = ""
 
     companion object {
         /** False di edisi ringan: fitur yang butuh aksesibilitas hanya ada di Nine-Full.apk. */

@@ -716,7 +716,7 @@ class SkillExecutor(
             return SkillResult(
                 lang.t("Baik${s(lang)}, saya ${if (on) "nyalakan" else "matikan"} $name.", "Very well${s(lang)}, $verb $name."),
                 deferred = { done ->
-                    svc.toggle(cmd.target, on) { outcome -> done(toggleText(outcome, name, on, lang)) }
+                    svc.toggle(cmd.target, on) { outcome -> done(toggleText(outcome, name, on, lang, svc.lastStage)) }
                 }
             )
         }
@@ -756,7 +756,7 @@ class SkillExecutor(
         return SkillResult(reply, intent = intent, fallback = fallback)
     }
 
-    private fun toggleText(o: NineAccessibilityService.Outcome, name: String, on: Boolean, lang: AppLang): String {
+    private fun toggleText(o: NineAccessibilityService.Outcome, name: String, on: Boolean, lang: AppLang, stage: String): String {
         val state = if (on) lang.t("menyala", "on") else lang.t("mati", "off")
         return when (o) {
             NineAccessibilityService.Outcome.DONE -> lang.t("$name sekarang $state${s(lang)}.", "$name is now $state${s(lang)}.")
@@ -766,16 +766,16 @@ class SkillExecutor(
                 "I tapped the $name tile${s(lang)}. Please check that it's $state."
             )
             NineAccessibilityService.Outcome.NOT_FOUND -> lang.t(
-                "Maaf${s(lang)}, saya tidak menemukan tombol $name di Panel Cepat. Tambahkan tombolnya ke Panel Cepat lalu coba lagi.",
-                "Sorry${s(lang)}, I couldn't find a $name tile in Quick Settings. Add it to Quick Settings and try again."
+                "Maaf${s(lang)}, saya tidak menemukan tombol $name di Panel Cepat maupun halaman pengaturannya. Tambahkan tombolnya ke Panel Cepat lalu coba lagi. (beta, kode: $stage)",
+                "Sorry${s(lang)}, I couldn't find a $name tile in Quick Settings or its settings page. Add it to Quick Settings and try again. (beta, code: $stage)"
             )
             NineAccessibilityService.Outcome.BUSY -> lang.t(
                 "Saya sedang mengerjakan pengaturan lain${s(lang)}. Coba lagi sebentar lagi.",
                 "I'm in the middle of another setting${s(lang)}. Try again in a moment."
             )
             NineAccessibilityService.Outcome.FAILED -> lang.t(
-                "Maaf${s(lang)}, saya gagal mengubah $name. Layar mungkin terkunci atau panel tidak bisa dibuka.",
-                "Sorry${s(lang)}, I couldn't change $name. The screen may be locked or the panel wouldn't open."
+                "Maaf${s(lang)}, saya gagal mengubah $name. Pastikan layar terbuka kuncinya, lalu coba lagi. (beta, kode: $stage)",
+                "Sorry${s(lang)}, I couldn't change $name. Make sure the screen is unlocked, then try again. (beta, code: $stage)"
             )
         }
     }
@@ -1800,10 +1800,13 @@ class SkillExecutor(
                     } else null
                     if (svc != null && hasApp) {
                         SkillResult(
-                            lang.t("Memutar \"$q\" di YouTube Music${s(lang)}.", "Playing \"$q\" on YouTube Music${s(lang)}."),
+                            lang.t(
+                                "Mencari \"$q\" di YouTube Music, lalu saya putar hasil pertamanya${s(lang)} (beta).",
+                                "Searching YouTube Music for \"$q\" and playing the first result${s(lang)} (beta)."
+                            ),
                             intent = primary,
                             fallback = second,
-                            afterLaunch = { svc.playFirstSong() }
+                            afterLaunch = { svc.playFirstSong(q) }
                         )
                     } else {
                         SkillResult(

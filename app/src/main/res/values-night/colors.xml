@@ -14,5 +14,6 @@
     <color name="nine_outline">#3A4254</color>
     <color name="nine_outline_variant">#252B38</color>
     <color name="nine_vignette_edge">#42C7861A</color>
-    <color name="assist_bubble">#EB0B0F18</color>
+    <color name="assist_bubble">#F70B0F18</color>
+    <color name="assist_dim">#B3000000</color>
 </resources>

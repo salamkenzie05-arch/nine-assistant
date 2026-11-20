@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.widget.LinearLayout
 import id.nine.assistant.core.AssistantController
 import id.nine.assistant.service.AssistSession
@@ -32,19 +33,21 @@ class AssistActivity : MainActivity() {
         binding.topBar.visibility = View.GONE
         binding.modelCard.visibility = View.GONE
 
-        // Panel riwayat dibatasi agar ada ruang kosong di atas: ketuk di sana untuk menutup.
+        // Panel riwayat mengikuti isinya (maksimal ~45% layar) dan hanya memuat tanya-jawab terakhir,
+        // jadi gelembung tidak terpotong; ruang kosong di atas: ketuk untuk menutup.
         val h = resources.displayMetrics.heightPixels
         (binding.listFrame.layoutParams as LinearLayout.LayoutParams).apply {
-            height = (h * 0.36f).toInt()
+            height = LinearLayout.LayoutParams.WRAP_CONTENT
             weight = 0f
             binding.listFrame.layoutParams = this
         }
+        binding.listFrame.maxHeightPx = (h * 0.45f).toInt()
+        binding.list.layoutParams = binding.list.layoutParams.apply { height = ViewGroup.LayoutParams.WRAP_CONTENT }
         binding.root.setOnClickListener { closeOverlay() }
 
-        // Tanpa selubung, teks dibuat terbaca dengan alas kartu/pil semi-solid.
+        // Teks dibuat terbaca dengan alas kartu/pil hampir solid (tanpa gradasi).
         adapter.bubbles = true
-        @Suppress("NotifyDataSetChanged")
-        adapter.notifyDataSetChanged()
+        adapter.setWindowed(true)
         val d = resources.displayMetrics.density
         binding.txtStatus.apply {
             setBackgroundResource(R.drawable.bg_assist_pill)
