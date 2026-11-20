@@ -33,7 +33,8 @@ class MessyTest {
     @Test
     fun smallTypos() {
         same("matikan bluetoth", "matikan bluetooth")
-        same("buka yutub", "buka youtube")
+        // Nama aplikasi salah ketik tetap OpenApp; pencocokan mirip-mirip dilakukan saat dijalankan (findApps).
+        assertTrue(p("buka yutub") is Command.OpenApp)
     }
 
     @Test
