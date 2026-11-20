@@ -1625,7 +1625,12 @@ class SkillExecutor(
     private fun sing(cmd: Command.Sing, lang: AppLang): SkillResult {
         val song = Songs.find(cmd.song)
         val title = song?.let { if (lang == AppLang.ID) it.titleId else it.titleEn }
-        val text = if (title != null) {
+        val text = if (song?.id == "bardroid") {
+            lang.t(
+                "Baik${s(lang)}. Melodi asli Cantina Band berhak cipta, jadi saya nyanyikan lagu bergaya bar droid karangan saya sendiri. Hanya nada, tanpa lirik.",
+                "Very well${s(lang)}. The original Cantina Band melody is copyrighted, so here's a bar-droid style tune of my own. Notes only, no lyrics."
+            )
+        } else if (title != null) {
             lang.t(
                 "Baik${s(lang)}, saya nyanyikan \"$title\" dengan suara saya sendiri. Hanya melodinya, tanpa lirik.",
                 "Very well${s(lang)}. Here is \"$title\" in my own voice, melody only, no lyrics."

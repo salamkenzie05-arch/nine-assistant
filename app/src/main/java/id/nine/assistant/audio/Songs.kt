@@ -76,6 +76,16 @@ object Songs {
             "lamb", "Mary Punya Domba Kecil", "Mary Had a Little Lamb",
             listOf("mary had a little lamb", "little lamb", "mary", "domba kecil"), 112,
             "E4 D4 C4 D4 | E4 E4 E4:2 | D4 D4 D4:2 | E4 G4 G4:2 | E4 D4 C4 D4 | E4 E4 E4 E4 | D4 D4 E4 D4 | C4:4"
+        ),
+        // KARANGAN SENDIRI bergaya musik bar droid (swing, D dorian). BUKAN melodi "Cantina Band" dari Star Wars,
+        // yang berhak cipta; sengaja tidak ditulis di sini. Alias "cantina" hanya mengarahkan ke lagu ini.
+        Song(
+            "bardroid", "Lagu Bar Droid (karangan Nine)", "Bar Droid Tune (original by Nine)",
+            listOf("cantina", "cantina band", "star wars", "starwars", "bar droid", "lagu bar", "lagu cantina"), 132,
+            "A3:.5 C4:.5 D4:1 R:.5 F4:.5 E4:.5 D4:.5 | C4:1 A3:1 R:.5 D4:.5 E4:1 | F4:.5 G4:.5 A4:1 G4:.5 F4:.5 E4:.5 D4:.5 | E4:2 R:1 A3:.5 C4:.5 | " +
+                "D4:.5 F4:.5 A4:1 R:.5 C5:.5 A4:.5 G4:.5 | F4:1 D4:1 R:.5 E4:.5 F4:1 | G4:.5 A4:.5 Bb4:1 A4:.5 G4:.5 F4:.5 E4:.5 | D4:3 R:1 | " +
+                "F4:.5 A4:.5 C5:1 A4:.5 F4:.5 A4:1 | G4:.5 Bb4:.5 D5:1 Bb4:.5 G4:.5 Bb4:1 | A4:.5 C5:.5 E5:1 D5:.5 C5:.5 A4:.5 G4:.5 | F4:1 E4:1 D4:2 | " +
+                "A3:.5 C4:.5 D4:1 R:.5 F4:.5 E4:.5 D4:.5 | C4:1 A3:1 R:.5 D4:.5 E4:1 | F4:.5 G4:.5 A4:1 G4:.5 F4:.5 E4:.5 D4:.5 | D4:4"
         )
     )
 

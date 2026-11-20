@@ -9,6 +9,17 @@ plugins {
 val ciVersionCode = (findProperty("versionCode") as String?)?.toIntOrNull() ?: 1
 
 android {
+    testOptions {
+        unitTests.all {
+            // Tampilkan pesan galat tes langsung di log CI (satu-satunya tempat tes dijalankan).
+            it.testLogging {
+                events("failed")
+                exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+                showCauses = true
+                showStackTraces = false
+            }
+        }
+    }
     namespace = "id.nine.assistant"
     compileSdk = 36
 
@@ -17,7 +28,7 @@ android {
         minSdk = 26
         targetSdk = 35
         versionCode = ciVersionCode
-        versionName = "3.1.$ciVersionCode-beta"
+        versionName = "3.3.$ciVersionCode-beta"
 
         ndk {
             // Galaxy S23 dan hampir semua HP modern: 64-bit ARM. Memperkecil APK.
