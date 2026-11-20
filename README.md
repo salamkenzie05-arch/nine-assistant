@@ -10,8 +10,22 @@ Nine adalah asisten suara seperti Siri yang berjalan **sepenuhnya di perangkat**
 - **Mode internet (opsional)**: Gemini + Google Search untuk pertanyaan terkini (cuaca, berita, kurs). Butuh API key gratis dari Google AI Studio; otomatis kembali ke Gemma saat offline.
 - **Wake word** "hey nine" (bisa diubah), dideteksi offline dengan Vosk.
 - **Widget layar utama**: orb Nine berbentuk bola 3D (tepi tanpa garis, tanpa bayangan di bawahnya), warnanya **mengikuti tema Nine di aplikasi** (Terang/Gelap/Ikuti sistem); tiap ukuran (2×2, 4×4, Hari ini) juga punya **versi putih** yang selalu putih dan ekspresinya ikut keadaan (dicas, baterai lemah, malam, baru diajak bicara). Ukuran kecil dan **4x4**, serta "Hari ini" (tugas yang belum selesai). Gerak mata memakai frame 70 ms yang diperhalus, jadi melirik dan berkedipnya mulus.
-- **Otak AI: Gemma 4 E2B** (Google, Apache-2.0) lewat LiteRT-LM, memakai GPU HP dan otomatis pindah ke CPU bila GPU gagal. Untuk obrolan dan pertanyaan bebas, jawabannya mulai diucapkan per kalimat sebelum seluruh jawaban selesai dibuat.
+- **Otak AI: Gemma 4 E2B** (Google, Apache-2.0) lewat LiteRT-LM, berjalan di CPU secara default (GPU bisa dipilih di Pengaturan; otomatis kembali ke CPU bila GPU gagal). Untuk obrolan dan pertanyaan bebas, jawabannya mulai diucapkan per kalimat sebelum seluruh jawaban selesai dibuat.
 - **Wajah Nine**: dua mata ekspresif ala robot meja yang berkedip, melirik, mengikuti jari, senang saat dielus, kesal bila diketuk berkali-kali, kaget lalu senang saat dicas, lesu saat baterai lemah, mengantuk saat lama diam, dan bereaksi pada percakapan (mendengar, berpikir, berbicara, senang, bingung, sedih). Bilah atas hanya "NINE"; ketuk untuk menu (alarm, tugas, pengaturan, bahasa, tema).
+
+### Baru di 3.3 (beta)
+
+- **Kalkulator** untuk hitungan sampai rumit (kurung, pangkat, akar, persen, fungsi, "dua ratus lima puluh ribu dikali tiga"); kalimat seperti tanggal atau nomor telepon tidak dianggap hitungan.
+- **Catatan keuangan**: "catat pengeluaran makan 25 ribu", "gajian 5 juta", laporan harian/mingguan/bulanan per kategori, urungkan, dan layar Keuangan. Hanya Rupiah. Data berupa JSON di penyimpanan pribadi aplikasi (tanpa jaringan, tidak ikut cadangan), **tidak dienkripsi** di disk.
+- **Google Maps otomatis**: tujuan, moda (mobil/motor/jalan/sepeda/transit), "hindari tol", dan titik awal; rute langsung dimulai.
+- **Tutup semua aplikasi**: mematikan proses latar aplikasi lain yang diizinkan Android, dan di **Nine-Full.apk** juga mengosongkan layar Recents; "termasuk Nine" menutup Nine juga. Android tidak membolehkan aplikasi biasa menutup aplikasi yang sedang di layar.
+- **Profil pengguna** saat pertama dibuka (nama, panggilan, tanggal lahir, pasangan opsional), bisa diubah di Pengaturan → Profil. Ulang tahun diucapkan sekali di harinya. Nama pasangan dan tanggal lahir **tidak** dikirim ke mode internet.
+- **Sapaan beragam** menurut waktu, suasana hati, dan level kedekatan Nine; "status affinity" menampilkan level, persen progres, dan hari pemakaian.
+- **Gombal, pantun, kata bijak**, serta lagu bar droid (melodi karangan sendiri bergaya bar luar angkasa; **bukan** melodi Cantina Band yang berhak cipta).
+- **Kirim gambar**: tombol **+** di kolom ketik. Gambar dikecilkan, metadata (termasuk lokasi) dibuang, dibaca model AI offline, lalu dihapus. Hanya jalan bila model terpasang mampu membaca gambar; bila tidak, Nine mengatakannya.
+- **Kalimat berantakan** (urutan kata acak, kata pengisi, salah ketik kecil) dicoba dipahami lewat parser cadangan.
+- **Lebih ringan**: AI default di CPU (GPU bisa dinyalakan di Pengaturan), animasi dibatasi ±30 fps saat AI bekerja, aliran teks dibatasi, dan memori dilepas saat sistem kekurangan. Ini perbaikan terbaik-yang-bisa, **belum diukur di HP**.
+- **Assistive Touch dihapus**.
 
 ### Baru di 3.1 (beta)
 
@@ -89,7 +103,7 @@ Internet hanya dipakai untuk mengunduh model. Percakapan, suara, dan catatan tid
 - Terima/tolak telepon butuh izin **Telepon** dan hanya lewat perintah suara: Nine tidak otomatis menyebut siapa yang menelepon.
 - Nyanyian adalah melodi bersuara droid, tanpa lirik. Reaksi musik memakai mikrofon hanya saat layar Nine terbuka dan Nine sedang diam; layar kunci dan aplikasi lain tidak diawasi.
 - Pengingat lebih dari 24 jam dibuka di Kalender, karena alarm Android hanya berlaku 24 jam ke depan.
-- Kunci tanda tangan `app/nine-sideload.jks` sengaja ada di repo agar setiap build CI bisa memperbarui aplikasi. Kunci itu bukan rahasia; jangan pakai untuk Play Store.
+- Kunci tanda tangan `app/nine-sideload.jks` (beserta passwordnya) sengaja ada di repo **publik** agar setiap build CI bisa memperbarui aplikasi. Artinya siapa pun bisa membuat APK yang ditandatangani kunci yang sama; pasang APK hanya dari rilis repo ini. Jangan pakai untuk Play Store. Untuk memutarnya, buat kunci baru dan simpan sebagai rahasia CI; pengguna lama harus pasang ulang sekali.
 - Wake word memakai model bahasa Inggris, jadi frasanya harus kata-kata Inggris. Layar Nine hanya bisa muncul dari latar belakang bila Nine dijadikan asisten digital default atau diberi izin "tampil di atas aplikasi lain"; selain itu muncul notifikasi untuk diketuk.
 - Gemma/Gemini belum memutuskan tindakan HP lewat function calling; mereka menulis perintah yang lalu dijalankan parser. Tindakan berisiko (telepon, WhatsApp, membuka situs, merekam, menghapus) yang diusulkan AI selalu dikonfirmasi dulu.
 - Alarm yang dibuat di aplikasi Jam tidak bisa dinyalakan/dimatikan/dihapus oleh aplikasi lain; itu sebabnya Nine punya alarm sendiri.

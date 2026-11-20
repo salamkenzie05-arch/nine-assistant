@@ -2185,6 +2185,12 @@ class SkillExecutor(
             "• \"Catat beli susu\" / \"Baca catatan\"\n" +
             "• \"Ingat bahwa ulang tahun ibu 3 Mei\" / \"Apa yang kamu ingat tentang aku?\" / \"Lupakan ulang tahun ibu\"\n" +
             "• \"Telepon Budi\" / \"Kirim pesan ke Ibu isinya aku pulang telat\"\n" +
+            "• \"Hitung 15% dari 2,4 juta\" / \"akar 144 + 3 pangkat 4\"\n" +
+            "• \"Catat pengeluaran makan siang 25 ribu\" / \"Gajian 5 juta\" / \"Laporan keuangan bulan ini\"\n" +
+            "• \"Navigasi ke Monas naik motor\" (langsung memulai rute di Google Maps)\n" +
+            "• \"Tutup semua aplikasi\" / \"Tutup semua termasuk Nine\"\n" +
+            "• \"Gombalin dong\" / \"Pantun\" / \"Kata bijak\" / \"Nyanyi lagu bar droid\"\n" +
+            "• \"Panggil saya Tuan\" / \"Status affinity\" / tombol + di kolom ketik untuk kirim gambar\n" +
             "• \"Ganti bahasa ke Inggris\" / \"Lupakan percakapan\"",
         "Here are some things I can do:\n" +
             "• Chat or ask me anything (needs the AI brain in Settings)\n" +
@@ -2203,6 +2209,12 @@ class SkillExecutor(
             "• \"Take a note: buy milk\" / \"Read my notes\"\n" +
             "• \"Remember that my mom's birthday is May 3\" / \"What do you remember about me?\" / \"Forget my mom's birthday\"\n" +
             "• \"Call Bob\" / \"Send a message to Mom saying I'll be late\"\n" +
+            "• \"Calculate 15% of 2.4 million\" / \"sqrt 144 + 3 to the power 4\"\n" +
+            "• \"Log expense lunch 25 thousand\" / \"Got paid 5 million\" / \"Finance report this month\"\n" +
+            "• \"Navigate to the airport by motorbike\" (starts the route in Google Maps)\n" +
+            "• \"Close all apps\" / \"Close everything including Nine\"\n" +
+            "• \"Flirt with me\" / \"Pantun\" / \"A wise quote\" / \"Sing the bar droid song\"\n" +
+            "• \"Call me Sir\" / \"Affinity status\" / the + button in the typing bar sends an image\n" +
             "• \"Switch language to Indonesian\" / \"Forget our conversation\""
     )
 }
