@@ -1,6 +1,7 @@
 package id.nine.assistant
 
 import android.Manifest
+import android.app.NotificationManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -92,7 +93,7 @@ class SettingsActivity : AppCompatActivity() {
         binding.editGeminiModel.setText(if (prefs.geminiModel == Prefs.DEFAULT_GEMINI_MODEL) "" else prefs.geminiModel)
         binding.editCity.setText(prefs.city)
         binding.switchInternet.setOnCheckedChangeListener { _, checked ->
-            prefs.geminiKey = binding.editGeminiKey.text.toString()
+            saveKeys()
             prefs.internetMode = checked
             renderInternet()
         }
@@ -103,7 +104,41 @@ class SettingsActivity : AppCompatActivity() {
                 // tidak ada browser
             }
         }
+        // --- Penyedia otak online: Gemini atau Claude
+        binding.editClaudeKey.setText(prefs.claudeKey)
+        binding.editClaudeModel.setText(if (prefs.claudeModel == Prefs.DEFAULT_CLAUDE_MODEL) "" else prefs.claudeModel)
+        binding.groupProvider.check(if (prefs.onlineProvider == "claude") R.id.providerClaude else R.id.providerGemini)
+        binding.groupProvider.setOnCheckedChangeListener { _, id ->
+            saveKeys()
+            prefs.onlineProvider = if (id == R.id.providerClaude) "claude" else "gemini"
+            renderInternet()
+        }
+        binding.btnGetClaudeKey.setOnClickListener {
+            try {
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://platform.claude.com/settings/keys")))
+            } catch (e: Exception) {
+                // tidak ada browser
+            }
+        }
         renderInternet()
+
+        // --- Alarm
+        binding.groupAlarmEngine.check(if (prefs.nineAlarms) R.id.alarmEngineNine else R.id.alarmEngineClock)
+        binding.groupAlarmEngine.setOnCheckedChangeListener { _, id ->
+            prefs.alarmEngine = if (id == R.id.alarmEngineClock) "clock" else "nine"
+            renderAlarms()
+        }
+        binding.btnManageAlarms.setOnClickListener { startActivity(Intent(this, AlarmsActivity::class.java)) }
+        binding.btnFullScreen.setOnClickListener {
+            if (Build.VERSION.SDK_INT >= 34) {
+                try {
+                    startActivity(Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, Uri.parse("package:$packageName")))
+                } catch (e: Exception) {
+                    // abaikan
+                }
+            }
+        }
+        renderAlarms()
 
         // --- Wake word
         binding.switchWake.isChecked = prefs.wakeEnabled
@@ -232,7 +267,23 @@ class SettingsActivity : AppCompatActivity() {
         super.onResume()
         renderInternet()
         renderWake()
+        renderAlarms()
         populateCalendars()
+    }
+
+    private fun saveKeys() {
+        prefs.geminiKey = binding.editGeminiKey.text.toString()
+        prefs.claudeKey = binding.editClaudeKey.text.toString()
+    }
+
+    private fun renderAlarms() {
+        binding.btnManageAlarms.visibility = if (prefs.nineAlarms) View.VISIBLE else View.GONE
+        val canFull = if (Build.VERSION.SDK_INT >= 34) {
+            getSystemService(NotificationManager::class.java).canUseFullScreenIntent()
+        } else true
+        binding.btnFullScreen.visibility = if (prefs.nineAlarms) View.VISIBLE else View.GONE
+        binding.btnFullScreen.isEnabled = !canFull
+        binding.btnFullScreen.setText(if (canFull) R.string.alarm_fullscreen_ok else R.string.alarm_fullscreen)
     }
 
     private val locPermission =
@@ -278,8 +329,9 @@ class SettingsActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
-        prefs.geminiKey = binding.editGeminiKey.text.toString()
+        saveKeys()
         prefs.geminiModel = binding.editGeminiModel.text.toString()
+        prefs.claudeModel = binding.editClaudeModel.text.toString()
         prefs.city = binding.editCity.text.toString()
         val phrase = binding.editWakePhrase.text.toString().trim()
         if (phrase.isNotEmpty() && phrase != prefs.wakePhrases) {
@@ -338,12 +390,19 @@ class SettingsActivity : AppCompatActivity() {
     private fun size(b: Long): String = Formatter.formatShortFileSize(this, b)
 
     private fun renderInternet() {
-        val g = nine.gemini
+        val claude = prefs.onlineProvider == "claude"
+        binding.geminiFields.visibility = if (claude) View.GONE else View.VISIBLE
+        binding.claudeFields.visibility = if (claude) View.VISIBLE else View.GONE
+        val noKey = if (claude) {
+            prefs.claudeKey.isBlank() && binding.editClaudeKey.text.isNullOrBlank()
+        } else {
+            prefs.geminiKey.isBlank() && binding.editGeminiKey.text.isNullOrBlank()
+        }
         binding.txtInternetStatus.setText(
             when {
                 !prefs.internetMode -> R.string.internet_status_off
-                prefs.geminiKey.isBlank() && binding.editGeminiKey.text.isNullOrBlank() -> R.string.internet_status_nokey
-                g.isOnline() -> R.string.internet_status_online
+                noKey -> R.string.internet_status_nokey
+                nine.online.isOnline() -> R.string.internet_status_online
                 else -> R.string.internet_status_offline
             }
         )

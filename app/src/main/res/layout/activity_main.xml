@@ -11,82 +11,28 @@
         android:layout_height="match_parent"
         android:orientation="vertical">
 
-        <!-- Bilah atas -->
-        <LinearLayout
+        <!-- Bilah atas: hanya NINE di tengah (ketuk untuk menu) -->
+        <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingStart="24dp"
-            android:paddingTop="12dp"
-            android:paddingEnd="8dp">
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="@font/nine_light"
-                    android:letterSpacing="0.35"
-                    android:text="NINE"
-                    android:textColor="@color/nine_on_bg"
-                    android:textSize="22sp" />
-
-                <TextView
-                    android:id="@+id/txtBrain"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textColor="@color/nine_gold"
-                    android:textSize="12sp" />
-            </LinearLayout>
+            android:layout_height="56dp"
+            android:layout_marginTop="4dp">
 
             <TextView
-                android:id="@+id/txtAffinity"
+                android:id="@+id/txtTitle"
                 android:layout_width="wrap_content"
-                android:layout_height="32dp"
-                android:layout_marginEnd="4dp"
-                android:background="@drawable/bg_user_pill"
-                android:contentDescription="@string/affinity_title"
+                android:layout_height="match_parent"
+                android:layout_gravity="center"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/cd_menu"
+                android:fontFamily="@font/nine_light"
                 android:gravity="center"
-                android:paddingStart="10dp"
-                android:paddingEnd="10dp"
-                android:textColor="@color/nine_gold"
-                android:textSize="13sp"
-                android:textStyle="bold" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnLang"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="wrap_content"
-                android:layout_height="48dp"
-                android:minWidth="48dp"
-                android:contentDescription="@string/cd_language"
-                android:text="ID"
-                android:textColor="@color/nine_on_bg" />
-
-
-            <ImageButton
-                android:id="@+id/btnTheme"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="@string/cd_theme"
-                android:src="@drawable/ic_theme"
-                app:tint="@color/nine_on_bg" />
-
-            <ImageButton
-                android:id="@+id/btnSettings"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="@string/settings"
-                android:src="@drawable/ic_settings"
-                app:tint="@color/nine_on_bg" />
-        </LinearLayout>
+                android:letterSpacing="0.35"
+                android:paddingStart="20dp"
+                android:paddingEnd="12dp"
+                android:text="NINE"
+                android:textColor="@color/nine_on_bg"
+                android:textSize="22sp" />
+        </FrameLayout>
 
         <!-- Kartu aktivasi otak AI -->
         <LinearLayout
@@ -249,7 +195,7 @@
             android:layout_width="match_parent"
             android:layout_height="200dp">
 
-            <id.nine.assistant.ui.NineOrbView
+            <id.nine.assistant.ui.NineFaceView
                 android:id="@+id/orb"
                 android:layout_width="190dp"
                 android:layout_height="190dp"

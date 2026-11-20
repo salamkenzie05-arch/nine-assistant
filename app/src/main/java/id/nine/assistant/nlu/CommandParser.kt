@@ -122,28 +122,122 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
     // ------------------------------------------------------------------ alarm
 
     private val reAlarmWord = rx("""\b(?:alarm|alarms|bangunkan|bangunin|wake\s+me(?:\s+up)?)\b""")
-    private val reShowAlarm = rx("""(?:lihat|tampilkan|buka|tunjukkan|show|open|view|list|check|cek|hapus|matikan|batalkan|cancel|delete|remove|turn\s+off|disable)\s+(?:semua\s+|daftar\s+|my\s+|all\s+|the\s+|aplikasi\s+|app\s+)*alarms?\b|what\s+alarms|alarm\s+apa\s+saja""")
+    private val reShowAlarm = rx("""^(?:lihat|tampilkan|tunjukkan|show|view|list|check|cek|bacakan|baca|read)\s+(?:semua\s+|daftar\s+|my\s+|all\s+|the\s+|me\s+)*alarms?\b(?:\s+(?:saya|ku|aku|apa\s+saja))?$|what\s+alarms|alarm\s+apa\s+saja|^(?:my\s+)?alarms?(?:\s+(?:saya|ku|aku))?$|^(?:daftar|list\s+of)\s+alarms?(?:\s+(?:saya|ku|aku))?$|^(?:do\s+i\s+have\s+any|ada)\s+alarms?\b""")
+    private val reOpenAlarmApp = rx("""^(?:buka|bukakan|open|launch|go\s+to)\s+(?:aplikasi\s+|app\s+|the\s+|my\s+|menu\s+|layar\s+|daftar\s+)*alarms?(?:\s+(?:app|aplikasi|screen|list))?$|^(?:open|buka)\s+(?:the\s+)?(?:alarm\s+)?(?:clock|jam)\s+(?:app|aplikasi)?\s*alarms?$""")
     private val reForNum = rx("""\bfor\s+(?=\d{1,2}(?:[.:]\d{2})?\b(?!\s*(?:minutes?|mins?|hours?|hrs?|seconds?|secs?|menit|jam|detik)))""")
     private val reWake = rx("""\b(?:bangunkan|bangunin|wake\s+me)\b""")
     private val reCmdWords = rx("""\b(?:alarm|alarms|set|pasang|setel|atur|buat|bikin|tambah|tambahkan|an|a|for|untuk|me|up|wake|bangunkan|bangunin|aku|saya|please|tolong|the|my|dong|at|jam|pukul)\b""")
 
+    /** Kata kerja untuk mengubah alarm yang sudah ada. */
+    private val reAlarmOp = rx("""^(matikan|nonaktifkan|disable|turn\s+off|switch\s+off|shut\s+off|batalkan|cancel|stop|hentikan|diamkan|silence|dismiss|nyalakan(?:\s+lagi)?|hidupkan(?:\s+lagi)?|aktifkan(?:\s+lagi|\s+kembali)?|enable|turn\s+on|switch\s+on|re-?enable|hapus|delete|remove|buang|hilangkan|clear|erase)\s+(.*)$""")
+    private val reAlarmOpTail = rx("""^(?:turn|switch)\s+(.*\balarms?\b.*?)\s+(off|on)$""")
+    private enum class AlarmOp { OFF, ON, DELETE }
+
+    private fun opOf(verb: String): AlarmOp {
+        val v = verb.lowercase()
+        return when {
+            v.startsWith("hapus") || v.startsWith("delete") || v.startsWith("remove") || v.startsWith("buang") ||
+                v.startsWith("hilangkan") || v.startsWith("clear") || v.startsWith("erase") -> AlarmOp.DELETE
+            v.startsWith("nyala") || v.startsWith("hidup") || v.startsWith("aktif") || v.startsWith("enable") ||
+                v.endsWith(" on") || v.startsWith("re") -> AlarmOp.ON
+            else -> AlarmOp.OFF
+        }
+    }
+
+    private val reRefAll = rx("""\b(?:semua|seluruh|all|every|everything)\b""")
+    private val reRefLast = rx("""\b(?:tadi|terakhir|barusan|itu|that|last|latest|(?:i\s+)?just\s+(?:set|made|created|added)|baru\s+(?:saja\s+|aja\s+)?(?:di)?(?:pasang|buat|bikin|setel))\b""")
+    private val reRefNext = rx("""\b(?:berikutnya|selanjutnya|terdekat|next|upcoming|besok\s+pagi|tomorrow\s+morning)\b""")
+    private val reRefIndex = rx("""\b(?:nomor|no\.?|number|#)\s*(\d{1,2})\b|\b(?:yang\s+)?(pertama|kedua|ketiga|keempat|kelima|first|second|third|fourth|fifth)\b""")
+    private val reRefFiller = rx("""\b(?:alarms?|semua|seluruh|all|every|everything|my|the|saya|ku|aku|yang|untuk|for|at|on|jam|pukul|di|pada|tadi|terakhir|barusan|itu|that|last|latest|berikutnya|selanjutnya|terdekat|next|upcoming|lagi|kembali|again|please|tolong|dong|nomor|no|number|one|ini|this|of|mine|set|besok|tomorrow|hari\s+ini|today|i|just|made|created|added|baru|saja|aja|dipasang|dibuat|pagi|siang|sore|malam|morning|afternoon|evening|night|tonight)\b""")
+
+    private fun alarmRef(text: String): AlarmRef {
+        val t = text.trim()
+        val all = reRefAll.containsMatchIn(t)
+        val last = !all && reRefLast.containsMatchIn(t)
+        val next = !all && reRefNext.containsMatchIn(t)
+        var index: Int? = null
+        reRefIndex.find(t)?.let { m ->
+            index = m.groupValues[1].toIntOrNull() ?: Ordinals.parse(m.groupValues[2])
+        }
+        var rest = if (index != null) reRefIndex.replace(t, " ") else t
+        var hour: Int? = null
+        var minute: Int? = null
+        var amb = false
+        val tp = if (Regex("\\d").containsMatchIn(rest)) TimeParser.parse(rest) else null
+        if (tp != null && tp.spec.hour != null) {
+            hour = tp.spec.hour
+            minute = tp.spec.minute
+            amb = tp.spec.ambiguous
+            rest = tp.remainder
+        }
+        val label = reRefFiller.replace(rest, " ").replace(Regex("[^\\p{L}\\p{N}\\s'-]"), " ").replace(Regex("\\s+"), " ").trim()
+            .takeIf { it.length >= 2 }
+        return AlarmRef(all = all, hour = hour, minute = minute, ambiguous = amb, label = label, last = last && hour == null, next = next && hour == null, index = index)
+    }
+
+    private fun parseAlarmOp(norm: String): Command? {
+        var verb: String
+        var rest: String
+        val m = reAlarmOp.find(norm)
+        if (m != null) {
+            verb = m.groupValues[1]
+            rest = m.groupValues[2]
+        } else {
+            val t = reAlarmOpTail.find(norm) ?: return null
+            verb = "turn " + t.groupValues[2]
+            rest = t.groupValues[1]
+        }
+        if (!Regex("""\balarms?\b""", RegexOption.IGNORE_CASE).containsMatchIn(rest)) return null
+        // "hapus alarm" setelah kata kerja lain, mis. "matikan semua alarm besok pagi"
+        val ref = alarmRef(rest)
+        return when (opOf(verb)) {
+            AlarmOp.DELETE -> Command.AlarmDelete(ref)
+            AlarmOp.ON -> Command.AlarmToggle(ref, true)
+            AlarmOp.OFF -> Command.AlarmToggle(ref, false)
+        }
+    }
+
     private fun parseAlarm(norm: String, now: LocalDateTime): Command? {
         if (!reAlarmWord.containsMatchIn(norm)) return null
+        if (reOpenAlarmApp.matches(norm)) return Command.OpenAlarms
         if (reShowAlarm.containsMatchIn(norm)) return Command.ShowAlarms
+        parseAlarmOp(norm)?.let { return it }
+        // Pengulangan: "setiap hari", "hari kerja", "every monday"
+        val rep = RepeatDays.extract(norm)
+        val text = rep?.second ?: norm
         // "set alarm for 7" -> "set alarm at 7"
-        val n2 = reForNum.replace(norm, "at ")
+        val n2 = reForNum.replace(text, "at ")
         val tp = TimeParser.parse(n2)
         val label = if (tp != null) labelFrom(tp.remainder) else labelFrom(n2)
         var spec = tp?.spec
-        if (spec != null && spec.ambiguous && reWake.containsMatchIn(norm) && spec.hour != null) {
-            // "bangunkan aku jam 5" = pagi hari
-            spec = spec.copy(hour = spec.hour % 12, ambiguous = false)
+        if (spec != null && spec.ambiguous && spec.hour != null && (reWake.containsMatchIn(norm) || rep != null)) {
+            // "bangunkan aku jam 5" / "alarm setiap hari jam 6" = pagi hari (kecuali jam 1–3 dan 12)
+            val h = spec.hour
+            val hh = if (reWake.containsMatchIn(norm) || h in 4..11) h % 12 else if (h == 12) 12 else h + 12
+            spec = spec.copy(hour = hh, ambiguous = false)
+        }
+        if (rep != null) {
+            val s = spec
+            if (s?.hour == null) return Command.NeedInfo(Pending.AlarmTime(label))
+            val at = nextOn(rep.first, s.hour, s.minute, now)
+            return Command.SetAlarm(at, label, rep.first)
         }
         val at = spec?.resolve(now)
         if (spec == null || !spec.isKnown || at == null) {
             return Command.NeedInfo(Pending.AlarmTime(label))
         }
         return Command.SetAlarm(at, label)
+    }
+
+    /** Kejadian pertama jam [h]:[m] pada salah satu [days] setelah [now]. */
+    private fun nextOn(days: Set<java.time.DayOfWeek>, h: Int, m: Int, now: LocalDateTime): LocalDateTime {
+        var d = now.toLocalDate()
+        repeat(8) {
+            val t = d.atTime(h % 24, m)
+            if (d.dayOfWeek in days && t.isAfter(now)) return t
+            d = d.plusDays(1)
+        }
+        return now.toLocalDate().plusDays(1).atTime(h % 24, m)
     }
 
     private fun labelFrom(remainder: String): String? {
@@ -530,8 +624,41 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
         return null
     }
 
+    private val reDelVerb = rx("""^(?:hapus(?:kan)?|batalkan|cancel|delete|remove|buang|hilangkan|clear)\s+(.+)$""")
+    private val reCalCue = rx("""\b(?:acara|jadwal|agenda|events?|janji(?:\s+temu)?|rapat|meetings?|appointments?|pengingat|reminders?|kalend[ae]r|calend[ae]rs?)\b""")
+    private val reFromCal = rx("""\s*\b(?:dari|from|di|in|on)\s+(?:dalam\s+)?(?:my\s+|the\s+)?(?:kalend[ae]r|calend[ae]rs?)(?:\s+(?:saya|ku|aku))?\b""")
+    private val reKindWords = rx("""\b(?:acara|jadwal|agenda|events?|janji\s+temu|janji|pengingat|reminders?|kalend[ae]r|calend[ae]rs?|my|the|saya|ku|aku|yang|ada|di|pada|on|at|for|untuk|tentang|about|called|bernama|berjudul|judulnya|an?)\b""")
+
+    /** "hapus acara rapat RNPS besok", "batalkan meeting dengan Budi jam 3", "delete the dentist appointment". */
+    private fun parseDeleteEvent(raw: String, now: LocalDateTime): Command? {
+        val m = reDelVerb.find(raw) ?: return null
+        var rest = m.groupValues[1]
+        if (!reCalCue.containsMatchIn(rest)) return null
+        rest = reFromCal.replace(rest, " ")
+        val norm = NumberWords.normalize(rest)
+        val tp = TimeParser.parse(norm)
+        var date: java.time.LocalDate? = null
+        var hour: Int? = null
+        var minute: Int? = null
+        var amb = false
+        var q = norm
+        if (tp != null && (tp.spec.hasDay || tp.spec.hour != null)) {
+            if (tp.spec.hasDay) date = tp.spec.resolveDate(now)
+            if (tp.spec.hour != null) {
+                hour = tp.spec.hour
+                minute = tp.spec.minute
+                amb = tp.spec.ambiguous
+            }
+            q = tp.remainder
+        }
+        q = reKindWords.replace(q, " ").replace(Regex("\\s+"), " ").trim().trim(',', '.', ':', '"', '\'')
+        if (q.isEmpty() && date == null && hour == null) return null
+        return Command.DeleteEvent(q, date, hour, minute, amb)
+    }
+
     private fun parseCalendar(raw: String, now: LocalDateTime): Command? {
         parseEventFollowUp(raw)?.let { return it }
+        parseDeleteEvent(raw, now)?.let { return it }
         // 1) "tambahkan rapat ke kalender besok jam 9"
         for (r in reEventToCalendar) {
             val m = r.find(raw) ?: continue

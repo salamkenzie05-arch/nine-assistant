@@ -6,7 +6,7 @@
     android:minHeight="110dp"
     android:minResizeWidth="180dp"
     android:minResizeHeight="80dp"
-    android:previewImage="@drawable/ic_widget_orb"
+    android:previewImage="@drawable/face_light_neutral"
     android:previewLayout="@layout/widget_today"
     android:resizeMode="horizontal|vertical"
     android:targetCellWidth="4"

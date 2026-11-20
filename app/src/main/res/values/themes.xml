@@ -27,6 +27,19 @@
         <item name="android:textAllCaps">true</item>
     </style>
 
+    <style name="Nine.MenuRow" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">56dp</item>
+        <item name="android:layout_marginTop">4dp</item>
+        <item name="android:background">?attr/selectableItemBackground</item>
+        <item name="android:drawablePadding">16dp</item>
+        <item name="android:drawableTint">@color/nine_gold</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:paddingStart">8dp</item>
+        <item name="android:textColor">@color/nine_on_bg</item>
+        <item name="android:textSize">16sp</item>
+    </style>
+
     <style name="Nine.Body" parent="">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>

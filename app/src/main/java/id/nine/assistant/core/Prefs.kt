@@ -72,7 +72,7 @@ class Prefs(context: Context) {
 
     /** Enkripsi ulang rahasia yang masih tersimpan polos dari versi lama. */
     fun migrateSecrets() {
-        for (k in listOf("gemini_key", "hf_token")) {
+        for (k in listOf("gemini_key", "hf_token", "claude_key")) {
             val v = sp.getString(k, "") ?: ""
             if (v.isNotEmpty() && !SecureStore.isEncrypted(v)) sp.edit().putString(k, SecureStore.encrypt(v)).apply()
         }
@@ -130,9 +130,38 @@ class Prefs(context: Context) {
         get() = sp.getLong("last_event", -1L)
         set(value) = sp.edit().putLong("last_event", value).apply()
 
+    /** Kapan terakhir pengguna berbicara dengan Nine (untuk ekspresi widget). */
+    var lastTalk: Long
+        get() = sp.getLong("last_talk", 0L)
+        set(value) = sp.edit().putLong("last_talk", value).apply()
+
+    // --- Alarm
+    /** "nine" = alarm milik Nine (bisa dinyalakan/dimatikan/dihapus lewat suara); "clock" = aplikasi Jam bawaan. */
+    var alarmEngine: String
+        get() = sp.getString("alarm_engine", "nine") ?: "nine"
+        set(value) = sp.edit().putString("alarm_engine", value).apply()
+
+    val nineAlarms: Boolean get() = alarmEngine != "clock"
+
+    // --- Otak online
+    /** "gemini" atau "claude". */
+    var onlineProvider: String
+        get() = sp.getString("online_provider", "gemini") ?: "gemini"
+        set(value) = sp.edit().putString("online_provider", value).apply()
+
+    /** API key Claude (Anthropic), disimpan terenkripsi (Android Keystore). */
+    var claudeKey: String
+        get() = SecureStore.decrypt(sp.getString("claude_key", "") ?: "")
+        set(value) = sp.edit().putString("claude_key", SecureStore.encrypt(value.trim())).apply()
+
+    var claudeModel: String
+        get() = (sp.getString("claude_model", null) ?: "").ifBlank { DEFAULT_CLAUDE_MODEL }
+        set(value) = sp.edit().putString("claude_model", value.trim()).apply()
+
     val persona: Persona get() = Persona(honorificId, honorificEn)
 
     companion object {
         const val DEFAULT_GEMINI_MODEL = "gemini-flash-latest"
+        const val DEFAULT_CLAUDE_MODEL = "claude-sonnet-5-5"
     }
 }

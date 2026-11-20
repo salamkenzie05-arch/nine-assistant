@@ -2,6 +2,7 @@ package id.nine.assistant.nlu
 
 import id.nine.assistant.core.AppLang
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDateTime
 
@@ -43,7 +44,7 @@ class CommandParserTest {
         check("pasang alarm jam 8 kurang 10 pagi", "SetAlarm(time=2026-11-21T07:50, label=null)")
         check("set alarm for 7 o'clock tonight", "SetAlarm(time=2026-11-20T19:00, label=null)")
         check("Hai asisten, pasang alarm jam 6 sore", "SetAlarm(time=2026-11-20T18:00, label=null)")
-        check("buka aplikasi alarm", "ShowAlarms")
+        check("buka aplikasi alarm", "OpenAlarms")
         check("alarm 5 menit lagi", "SetAlarm(time=2026-11-20T11:19, label=null)")
         check("Pasang alarm jam 07.00 pagi", "SetAlarm(time=2026-11-21T07:00, label=null)")
         check("Set an alarm for 6.30 a.m.", "SetAlarm(time=2026-11-21T06:30, label=null)")
@@ -325,4 +326,88 @@ class CommandParserTest {
         assertEquals("23", NumberWords.normalize("dua puluh tiga"))
     }
 
+    private fun ref(
+        all: Boolean = false, hour: Int? = null, minute: Int? = null, amb: Boolean = false, label: String? = null,
+        last: Boolean = false, next: Boolean = false, index: Int? = null
+    ) = AlarmRef(all, hour, minute, amb, label, last, next, index).toString()
+
+    @Test
+    fun alarmOnOffDelete() {
+        check("matikan alarm jam 6", "AlarmToggle(ref=${ref(hour = 6, minute = 0, amb = true)}, on=false)")
+        check("matikan alarm jam 6 pagi", "AlarmToggle(ref=${ref(hour = 6, minute = 0)}, on=false)")
+        check("turn off my 6am alarm", "AlarmToggle(ref=${ref(hour = 6, minute = 0)}, on=false)")
+        check("turn the 7:30 alarm off", "AlarmToggle(ref=${ref(hour = 7, minute = 30, amb = true)}, on=false)")
+        check("nyalakan lagi alarm gym", "AlarmToggle(ref=${ref(label = "gym")}, on=true)")
+        check("enable all alarms", "AlarmToggle(ref=${ref(all = true)}, on=true)")
+        check("matikan semua alarm", "AlarmToggle(ref=${ref(all = true)}, on=false)")
+        check("hapus alarm jam 7", "AlarmDelete(ref=${ref(hour = 7, minute = 0, amb = true)})")
+        check("hapus semua alarm", "AlarmDelete(ref=${ref(all = true)})")
+        check("delete the alarm i just set", "AlarmDelete(ref=${ref(last = true)})")
+        check("hapus alarm tadi", "AlarmDelete(ref=${ref(last = true)})")
+        check("matikan alarm", "AlarmToggle(ref=${ref()}, on=false)")
+        check("stop alarm", "AlarmToggle(ref=${ref()}, on=false)")
+        check("matikan alarm berikutnya", "AlarmToggle(ref=${ref(next = true)}, on=false)")
+        check("batalkan alarm besok pagi", "AlarmToggle(ref=${ref(next = true)}, on=false)")
+        check("hapus alarm nomor 2", "AlarmDelete(ref=${ref(index = 2)})")
+        check("hapus alarm yang kedua", "AlarmDelete(ref=${ref(index = 2)})")
+        check("alarm apa saja", "ShowAlarms")
+        check("what alarms do i have", "ShowAlarms")
+    }
+
+    @Test
+    fun alarmRepeat() {
+        check("pasang alarm setiap hari jam 6", "SetAlarm(time=2026-11-21T06:00, label=null, repeat=1234567)")
+        check("alarm hari kerja jam 5.30 pagi", "SetAlarm(time=2026-11-23T05:30, label=null, repeat=12345)")
+        check("set an alarm every monday and wednesday at 7 am for gym", "SetAlarm(time=2026-11-23T07:00, label=gym, repeat=13)")
+        check("alarm tiap sabtu jam 8", "SetAlarm(time=2026-11-21T08:00, label=null, repeat=6)")
+        check("pasang alarm akhir pekan jam 9", "SetAlarm(time=2026-11-21T09:00, label=null, repeat=67)")
+        check("wake me up at 6 on weekdays", "SetAlarm(time=2026-11-23T06:00, label=null, repeat=12345)")
+        check("alarm setiap hari jam 8 malam", "SetAlarm(time=2026-11-20T20:00, label=null, repeat=1234567)")
+    }
+
+    @Test
+    fun deleteEvents() {
+        check("hapus acara rapat RNPS", "DeleteEvent(query=rapat RNPS, date=null, hour=null, minute=null, ambiguous=false)")
+        check("hapus rapat besok", "DeleteEvent(query=rapat, date=2026-11-21, hour=null, minute=null, ambiguous=false)")
+        check("batalkan meeting dengan Budi jam 3", "DeleteEvent(query=meeting dengan Budi, date=null, hour=3, minute=0, ambiguous=true)")
+        check("delete the dentist appointment tomorrow", "DeleteEvent(query=dentist appointment, date=2026-11-21, hour=null, minute=null, ambiguous=false)")
+        check("hapus jadwal rapat tim tanggal 25 desember", "DeleteEvent(query=rapat tim, date=2026-12-25, hour=null, minute=null, ambiguous=false)")
+        check("hapus pengingat minum obat", "DeleteEvent(query=minum obat, date=null, hour=null, minute=null, ambiguous=false)")
+        check("remove lunch with Sarah from my calendar", "DeleteEvent(query=lunch with Sarah, date=null, hour=null, minute=null, ambiguous=false)")
+        check("hapus acara besok jam 10", "DeleteEvent(query=, date=2026-11-21, hour=10, minute=0, ambiguous=true)")
+        check("hapus acara ulang tahun mama di kalender", "DeleteEvent(query=ulang tahun mama, date=null, hour=null, minute=null, ambiguous=false)")
+        // tetap ke perintah lama
+        check("hapus acara tadi", "DeleteLastEvent")
+        check("hapus semua catatan", "ClearNotes")
+        check("hapus tugas beli susu", "TodoRemove(ref=beli susu)")
+    }
+
+    @Test
+    fun chooseOption() {
+        val p = Pending.Choose(
+            listOf(Choice("Rapat RNPS — Sabtu 09.00", Command.DeleteLastEvent), Choice("Rapat tim — Senin 10.00", Command.ShowAlarms)),
+            all = Command.Help
+        )
+        slot(p, "yang kedua", "ShowAlarms")
+        slot(p, "nomor 1", "DeleteLastEvent")
+        slot(p, "2", "ShowAlarms")
+        slot(p, "the first one", "DeleteLastEvent")
+        slot(p, "rapat tim", "ShowAlarms")
+        slot(p, "yang jam 10", "ShowAlarms")
+        slot(p, "yang jam sembilan", "DeleteLastEvent")
+        slot(p, "terakhir", "ShowAlarms")
+        slot(p, "semua", "Help")
+        slot(p, "rapat", "NotAnAnswer")
+        slot(p, "tidak jadi", "Cancelled")
+    }
+
+    @Test
+    fun eventMatching() {
+        assertTrue(EventMatch.score("meeting dengan Budi", "Sync Budi") > 0)
+        assertTrue(EventMatch.score("rapat RNPS", "RNPS Agreement") > 0)
+        assertTrue(EventMatch.score("rapat", "Meeting tim") > 0)
+        assertTrue(EventMatch.score("dentis", "Dentist") > 0)
+        assertTrue(EventMatch.score("ulang tahun mama", "Ulang tahun papa") == 0)
+        assertTrue(EventMatch.score("ulang tahun mama", "Ulang Tahun Mama") > EventMatch.score("ulang tahun", "Ulang Tahun Mama"))
+    }
 }

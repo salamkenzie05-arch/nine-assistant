@@ -1,6 +1,7 @@
 package id.nine.assistant.nlu
 
 import id.nine.assistant.core.AppLang
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
 
@@ -24,14 +25,48 @@ sealed class Pending {
     data object AppName : Pending()
     data class EventTime(val title: String) : Pending()
     data object TodoText : Pending()
+    /** Pengguna memilih salah satu [options] ("yang kedua", "nomor 1", atau sebagian judulnya). [all] = pilihan "semua". */
+    data class Choose(val options: List<Choice>, val all: Command? = null) : Pending()
+}
+
+/** Satu pilihan dalam [Pending.Choose]. */
+data class Choice(val label: String, val command: Command)
+
+/**
+ * Rujukan ke alarm Nine: "alarm jam 6", "alarm gym", "semua alarm", "alarm tadi", "alarm berikutnya", "alarm nomor 2".
+ * Semua kosong = tidak disebut (Nine memilih sendiri atau bertanya).
+ */
+data class AlarmRef(
+    val all: Boolean = false,
+    val hour: Int? = null,
+    val minute: Int? = null,
+    val ambiguous: Boolean = false,
+    val label: String? = null,
+    val last: Boolean = false,
+    val next: Boolean = false,
+    val index: Int? = null,
+    /** Id alarm yang sudah pasti (hasil memilih). */
+    val id: Int? = null
+) {
+    val isEmpty: Boolean get() = !all && hour == null && label == null && !last && !next && index == null && id == null
 }
 
 /** Hasil pemahaman bahasa alami: apa yang diminta pengguna. */
 sealed class Command {
-    data class SetAlarm(val time: LocalDateTime, val label: String?) : Command()
+    /** [repeat] kosong = sekali saja. */
+    data class SetAlarm(val time: LocalDateTime, val label: String?, val repeat: Set<DayOfWeek> = emptySet()) : Command() {
+        override fun toString(): String =
+            "SetAlarm(time=$time, label=$label" + (if (repeat.isEmpty()) "" else ", repeat=" + RepeatDays.code(repeat)) + ")"
+    }
     data class SetTimer(val seconds: Int, val label: String?) : Command()
     data class SetReminder(val text: String, val at: LocalDateTime) : Command()
+    /** Bacakan daftar alarm. */
     data object ShowAlarms : Command()
+    /** Buka layar daftar alarm. */
+    data object OpenAlarms : Command()
+    /** Nyalakan ([on] true) atau matikan alarm. Mematikan juga menghentikan alarm yang sedang berbunyi. */
+    data class AlarmToggle(val ref: AlarmRef, val on: Boolean) : Command()
+    data class AlarmDelete(val ref: AlarmRef) : Command()
 
     data class OpenApp(val query: String) : Command()
     data class OpenSettings(val target: SettingsTarget, val turnOn: Boolean?) : Command()
@@ -72,6 +107,17 @@ sealed class Command {
     /** Geser acara terakhir sekian detik (positif = diundur, negatif = dimajukan). */
     data class ShiftLastEvent(val seconds: Int) : Command()
     data object DeleteLastEvent : Command()
+    /** Hapus acara yang judulnya cocok dengan [query] (boleh kosong bila [date] disebut), pada [date]/jam tertentu bila disebut. */
+    data class DeleteEvent(val query: String, val date: LocalDate?, val hour: Int?, val minute: Int?, val ambiguous: Boolean = false) : Command()
+    /** Acara yang sudah dipastikan; [beginMillis] = waktu mulai kejadian (untuk acara berulang hanya kejadian ini yang dihapus). */
+    data class DeleteEventInstance(
+        val eventId: Long,
+        val title: String,
+        val begin: LocalDateTime,
+        val beginMillis: Long,
+        val allDay: Boolean,
+        val recurring: Boolean
+    ) : Command()
 
     // --- Daftar tugas harian
     data class TodoAdd(val text: String) : Command()

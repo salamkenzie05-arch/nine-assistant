@@ -90,6 +90,40 @@ class SlotFiller(private val parser: CommandParser) {
 
             is Pending.TodoText ->
                 SlotOutcome.Resolved(Command.TodoAdd(text.trim()))
+
+            is Pending.Choose -> choose(p, text)
         }
+    }
+
+    private val reAll = Regex("""^(?:semua(?:nya)?|semuanya\s+saja|all(?:\s+of\s+them)?|both|keduanya|dua-?duanya)\b.*$""", RegexOption.IGNORE_CASE)
+
+    private fun words(s: String): List<String> =
+        s.lowercase().replace(Regex("[^\\p{L}\\p{N}\\s:.]"), " ").split(Regex("\\s+"))
+            .map { it.trim('.', ':') }.filter { it.length >= 2 || (it.length == 1 && it[0].isDigit()) }
+
+    /** Kata [w] ada di [label]; angka jam ("9") cocok dengan "09.00" / "9:30". */
+    private fun hit(label: String, w: String): Boolean {
+        if (w.all { it.isDigit() } && w.length <= 2) {
+            return Regex("""(?<!\d)0?${w.toInt()}(?:[.:]\d{2})""").containsMatchIn(label) || Regex("""(?<![\d.:])$w(?![\d.:])""").containsMatchIn(label)
+        }
+        return label.contains(w) || label.contains(w.replace('.', ':')) || label.contains(w.replace(':', '.'))
+    }
+
+    private fun choose(p: Pending.Choose, text: String): SlotOutcome {
+        val t = text.trim()
+        if (p.all != null && reAll.matches(t)) return SlotOutcome.Resolved(p.all)
+        (Ordinals.parse(t) ?: Ordinals.parse(NumberWords.normalize(t)))?.let { n ->
+            val i = if (n == -1) p.options.size - 1 else n - 1
+            p.options.getOrNull(i)?.let { return SlotOutcome.Resolved(it.command) }
+        }
+        // "yang jam 10" / "yang rapat RNPS": cocokkan dengan teks pilihan
+        val ignore = setOf("yang", "itu", "the", "one", "jam", "pukul", "at", "acara", "alarm", "saja", "aja")
+        val ws = words(NumberWords.normalize(t)).filter { it !in ignore }
+        if (ws.isEmpty()) return SlotOutcome.NotAnAnswer
+        val hits = p.options.filter { c ->
+            val label = c.label.lowercase()
+            ws.all { w -> hit(label, w) }
+        }
+        return if (hits.size == 1) SlotOutcome.Resolved(hits[0].command) else SlotOutcome.NotAnAnswer
     }
 }

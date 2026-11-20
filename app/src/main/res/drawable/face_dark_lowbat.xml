@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Dibuat oleh gen_faces.py: wajah Nine untuk widget. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:pathData="M8,54a46,46 0 1,0 92,0a46,46 0 1,0 -92,0Z" android:fillColor="#0E1014" />
+    <path android:pathData="M8,54a46,46 0 1,0 92,0a46,46 0 1,0 -92,0Z" android:fillColor="#00000000" android:strokeColor="#73C7861A" android:strokeWidth="0.9" />
+    <path android:pathData="M19.26,57.35a17.72,17.72 0 1,0 35.44,0a17.72,17.72 0 1,0 -35.44,0Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="radial" android:centerX="36.98" android:centerY="57.35" android:gradientRadius="17.72">
+                <item android:offset="0" android:color="#70F2B245" />
+                <item android:offset="0.55" android:color="#30F2B245" />
+                <item android:offset="1" android:color="#00F2B245" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path android:pathData="M44.57,49.63L44.57,50.24L44.57,50.84L44.57,51.44L44.57,52.05L44.57,52.65L44.57,53.25L44.57,53.86L44.57,54.46L44.57,55.07L44.57,55.67L44.57,56.27L44.57,56.88L44.57,57.48L44.57,58.08L44.57,58.69L44.57,59.29L44.57,59.9L44.57,60.5L44.51,61.31L44.32,62.09L44.01,62.84L43.58,63.53L43.06,64.15L42.44,64.67L41.75,65.1L41,65.41L40.22,65.6L39.41,65.66L38.8,65.66L38.19,65.66L37.59,65.66L36.98,65.66L36.37,65.66L35.77,65.66L35.16,65.66L34.55,65.66L33.74,65.6L32.96,65.41L32.21,65.1L31.52,64.67L30.9,64.15L30.38,63.53L29.95,62.84L29.64,62.09L29.45,61.31L29.39,60.5L29.39,59.9L29.39,59.29L29.39,58.69L29.39,58.08L29.39,57.48L29.39,56.88L29.39,56.27L29.39,55.67L29.39,55.07L29.39,54.46L29.39,53.86L29.39,53.25L29.39,52.83L30.02,52.67L30.66,52.52L31.29,52.36L31.92,52.2L32.55,52.04L33.19,51.89L33.82,51.73L34.45,51.57L35.08,51.41L35.72,51.26L36.35,51.1L36.98,50.94L37.61,50.78L38.25,50.62L38.88,50.47L39.51,50.31L40.14,50.15L40.78,49.99L41.41,49.84L42.04,49.68L42.67,49.52L43.31,49.36L43.94,49.21L44.57,49.05Z" android:fillColor="#F2B245" />
+    <path android:pathData="M53.3,57.35a17.72,17.72 0 1,0 35.44,0a17.72,17.72 0 1,0 -35.44,0Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="radial" android:centerX="71.02" android:centerY="57.35" android:gradientRadius="17.72">
+                <item android:offset="0" android:color="#70F2B245" />
+                <item android:offset="0.55" android:color="#30F2B245" />
+                <item android:offset="1" android:color="#00F2B245" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path android:pathData="M78.61,53.25L78.61,53.86L78.61,54.46L78.61,55.07L78.61,55.67L78.61,56.27L78.61,56.88L78.61,57.48L78.61,58.08L78.61,58.69L78.61,59.29L78.61,59.9L78.61,60.5L78.55,61.31L78.36,62.09L78.05,62.84L77.62,63.53L77.1,64.15L76.48,64.67L75.79,65.1L75.04,65.41L74.26,65.6L73.45,65.66L72.84,65.66L72.23,65.66L71.63,65.66L71.02,65.66L70.41,65.66L69.81,65.66L69.2,65.66L68.59,65.66L67.78,65.6L67,65.41L66.25,65.1L65.56,64.67L64.94,64.15L64.42,63.53L63.99,62.84L63.68,62.09L63.49,61.31L63.43,60.5L63.43,59.9L63.43,59.29L63.43,58.69L63.43,58.08L63.43,57.48L63.43,56.88L63.43,56.27L63.43,55.67L63.43,55.07L63.43,54.46L63.43,53.86L63.43,53.25L63.43,52.65L63.43,52.05L63.43,51.44L63.43,50.84L63.43,50.24L63.43,49.63L63.43,49.05L64.06,49.21L64.69,49.36L65.33,49.52L65.96,49.68L66.59,49.84L67.22,49.99L67.86,50.15L68.49,50.31L69.12,50.47L69.75,50.62L70.39,50.78L71.02,50.94L71.65,51.1L72.28,51.26L72.92,51.41L73.55,51.57L74.18,51.73L74.82,51.89L75.45,52.04L76.08,52.2L76.71,52.36L77.35,52.52L77.98,52.67L78.61,52.83Z" android:fillColor="#F2B245" />
+    <path android:pathData="M50.2,78.4H57.04A0.76,0.76 0 0,1 57.8,79.16V82.2A0.76,0.76 0 0,1 57.04,82.96H50.2A0.76,0.76 0 0,1 49.45,82.2V79.16A0.76,0.76 0 0,1 50.2,78.4Z" android:fillColor="#00000000" android:strokeColor="#9AA0AE" android:strokeWidth="0.81" />
+    <path android:pathData="M58.05,79.77L58.81,79.77L58.81,81.59L58.05,81.59Z" android:fillColor="#9AA0AE" />
+    <path android:pathData="M50.2,79.16L52.23,79.16L52.23,82.2L50.2,82.2Z" android:fillColor="#E5484D" />
+</vector>

@@ -6,8 +6,6 @@
     <string name="hint_input">Ketik pesan untuk Nine…</string>
     <string name="cd_send">Kirim</string>
     <string name="cd_mic">Bicara dengan Nine</string>
-    <string name="cd_language">Ganti bahasa</string>
-    <string name="cd_theme">Ganti tema terang/gelap</string>
     <string name="cd_keyboard">Ketik</string>
         <string name="status_idle">Ketuk orb untuk bicara</string>
     <string name="status_listening">Mendengarkan…</string>
@@ -74,8 +72,8 @@
     <string name="widget_today_desc">Nine · tugas hari ini</string>
 
     <string name="sec_internet">Mode internet (lebih pintar)</string>
-    <string name="internet_switch">Gunakan Gemini + Google Search bila online</string>
-    <string name="internet_help">Pertanyaan bebas dijawab Gemini (Google) dengan pencarian web, jadi bisa menjawab cuaca, berita, kurs, dan hal terbaru. Butuh API key gratis dari Google AI Studio. Saat offline, Nine otomatis kembali ke Gemma di HP. Perintah HP (alarm, kalender, tugas, aplikasi) tetap diproses di perangkat.</string>
+    <string name="internet_switch">Gunakan otak online (Gemini atau Claude) bila ada internet</string>
+    <string name="internet_help">Pertanyaan bebas dijawab otak online dengan pencarian web, jadi Nine bisa menjawab cuaca, berita, kurs, dan hal terbaru. Pilih penyedianya: Gemini (API key gratis dari Google AI Studio) atau Claude (API key berbayar dari Claude Console). Saat offline, Nine otomatis kembali ke Gemma di HP. Perintah HP (alarm, kalender, tugas, aplikasi) tetap diproses di perangkat.</string>
     <string name="gemini_key_hint">API key Gemini (AIza…)</string>
     <string name="gemini_get_key">Dapatkan API key gratis</string>
     <string name="city_hint">Kota Anda (opsional, untuk cuaca), mis. Jakarta</string>
@@ -83,7 +81,7 @@
     <string name="internet_status_nokey">Isi API key untuk mengaktifkan.</string>
     <string name="internet_status_online">Aktif · terhubung ke internet.</string>
     <string name="internet_status_offline">Aktif · sedang tidak ada internet, memakai Gemma offline.</string>
-    <string name="brain_online">Online · Gemini + Google Search</string>
+    <string name="brain_online">Online · %1$s + pencarian web</string>
 
     <string name="variant_e2b">Gemma 4 E2B · 2,6 GB · cepat</string>
     <string name="variant_e4b">Gemma 4 E4B · 3,7 GB · lebih pintar, sedikit lebih lambat</string>
@@ -119,17 +117,6 @@
     <string name="model_import_short">Impor file</string>
     <string name="advanced">Lanjutan</string>
 
-    <string name="affinity_title">Kedekatan dengan Nine</string>
-    <string name="affinity_levels">9 level</string>
-    <string name="affinity_level_fmt">Lv %1$d</string>
-    <string name="affinity_streak_fmt">🔥 Streak %1$d hari · terbaik %2$d</string>
-    <string name="affinity_xp_fmt">%1$d XP · %2$d XP lagi menuju %3$s</string>
-    <string name="affinity_xp_max">%1$d XP · level tertinggi tercapai</string>
-    <string name="affinity_how">Bicara dengan Nine setiap hari untuk menjaga streak. Interaksi pertama tiap hari memberi XP terbesar, ditambah bonus sesuai panjang streak. Setiap level nantinya membuka kejutan kecil.</string>
-    <string name="affinity_locked">terkunci · %1$d XP · kejutan segera hadir</string>
-    <string name="affinity_unlocked">terbuka</string>
-    <string name="affinity_levelup">Naik ke level %1$d: %2$s!</string>
-    <string name="affinity_levelup_line">Kita naik ke level %1$d dari 9: %2$s. Terima kasih sudah mengandalkan saya.</string>
 
     <string name="rec_channel">Perekam suara Nine</string>
     <string name="rec_notif_title">Nine sedang merekam</string>
@@ -145,4 +132,35 @@
 
     <string name="widget_orb_dark_desc">Orb Nine gelap: ketuk untuk bicara</string>
     <string name="unlock_reason">Buka kunci untuk melanjutkan perintah Nine</string>
+
+    <string name="cd_menu">Menu Nine</string>
+    <string name="menu_lang">Bahasa</string>
+    <string name="menu_theme">Tema</string>
+    <string name="alarms_title">Alarm</string>
+    <string name="alarms_clock_app">Aplikasi Jam</string>
+    <string name="alarms_exact_permission">Izinkan alarm tepat waktu</string>
+    <string name="alarms_empty">Belum ada alarm. Ketuk Tambah alarm, atau katakan ke Nine: \"pasang alarm setiap hari kerja jam 6 pagi\".</string>
+    <string name="alarm_add">Tambah alarm</string>
+    <string name="alarm_edit">Ubah jam alarm</string>
+    <string name="alarm_toggle">Nyalakan atau matikan alarm</string>
+    <string name="alarm_delete">Hapus alarm</string>
+    <string name="alarm_stop">Matikan</string>
+    <string name="alarm_snooze">Tunda</string>
+    <string name="alarm_snooze_fmt">Tunda %1$d menit</string>
+    <string name="alarm_default_label">Alarm</string>
+    <string name="alarm_channel">Alarm Nine</string>
+    <string name="sec_alarm">Alarm</string>
+    <string name="alarm_engine_nine">Alarm Nine · bisa dinyalakan, dimatikan, dihapus lewat suara</string>
+    <string name="alarm_engine_clock">Aplikasi Jam bawaan HP</string>
+    <string name="alarm_help">Alarm Nine berbunyi tepat waktu walau HP tidur, tampil di layar kunci, dan bisa diatur lewat suara (\"matikan alarm jam 6\", \"hapus alarm gym\"). Alarm yang dibuat di aplikasi Jam tidak bisa diubah oleh aplikasi lain.</string>
+    <string name="alarm_manage">Kelola alarm</string>
+    <string name="alarm_fullscreen">Izinkan layar penuh saat alarm berbunyi</string>
+    <string name="alarm_fullscreen_ok">Layar penuh alarm: diizinkan ✓</string>
+    <string name="provider_label">Penyedia otak online</string>
+    <string name="provider_gemini">Gemini (Google)</string>
+    <string name="provider_claude">Claude (Anthropic)</string>
+    <string name="claude_key_hint">API key Claude (sk-ant-…)</string>
+    <string name="claude_get_key">Dapatkan API key Claude</string>
+    <string name="claude_model_hint">Model Claude (kosong = claude-sonnet-5-5)</string>
+    <string name="claude_help">Claude dipakai lewat Claude API dengan API key dari Claude Console. Biayanya per pemakaian dan terpisah dari langganan Claude Pro/Max. Untuk Sonnet 5.5 sekitar US$2 per sejuta token masuk dan US$10 per sejuta token keluar; pencarian web US$10 per 1.000 pencarian. Percakapan dan konteks (tugas, acara, kota) dikirim ke Anthropic saat mode ini dipakai.</string>
 </resources>

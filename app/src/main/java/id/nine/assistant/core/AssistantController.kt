@@ -6,8 +6,8 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
 import id.nine.assistant.NineApp
-import id.nine.assistant.llm.GeminiClient
 import id.nine.assistant.llm.LlmBrain
+import id.nine.assistant.llm.OnlineBrain
 import id.nine.assistant.llm.TextClean
 import id.nine.assistant.nlu.Command
 import id.nine.assistant.nlu.CommandParser
@@ -47,6 +47,8 @@ class AssistantController(context: Context, private val ui: Ui) {
         fun onRecordingChanged() {}
         /** True bila layar sedang terkunci (Nine dipanggil di atas layar kunci). */
         fun isLocked(): Boolean = false
+        /** Ekspresi wajah Nine sesuai hasil percakapan. */
+        fun onMood(mood: Mood) {}
     }
 
     private data class Retry(val command: Command, val confirmed: Boolean)
@@ -56,7 +58,8 @@ class AssistantController(context: Context, private val ui: Ui) {
     val prefs: Prefs = nine.prefs
     private val log = nine.log
     private val brain = nine.brain
-    private val gemini = nine.gemini
+    /** Otak online pilihan pengguna (bisa berganti di Pengaturan). */
+    private val online: OnlineBrain get() = nine.online
     private val parser = CommandParser()
     private val filler = SlotFiller(parser)
     private val executor = SkillExecutor(app, NoteStore(app), prefs)
@@ -105,7 +108,7 @@ class AssistantController(context: Context, private val ui: Ui) {
         set(value) {
             prefs.lang = value
             brain.reset()
-            gemini.reset()
+            online.reset()
             ui.onLanguageChanged(value)
         }
 
@@ -233,6 +236,7 @@ class AssistantController(context: Context, private val ui: Ui) {
     private fun handleUtterance(text: String) {
         setState(State.THINKING)
         log.add(true, text)
+        prefs.lastTalk = System.currentTimeMillis()
         try {
             ui.onAffinity(nine.affinity.record())
         } catch (e: Exception) {
@@ -244,10 +248,12 @@ class AssistantController(context: Context, private val ui: Ui) {
             pending = null
             when (val outcome = filler.fill(p, text)) {
                 is SlotOutcome.Resolved -> {
-                    execute(outcome.command, confirmed = p is Pending.Confirm)
+                    // Memilih dari daftar ("yang kedua") sudah merupakan keputusan; tidak perlu ditanya lagi.
+                    execute(outcome.command, confirmed = p is Pending.Confirm || p is Pending.Choose)
                     return
                 }
                 SlotOutcome.Cancelled -> {
+                    ui.onMood(Mood.NEUTRAL)
                     reply(lang.t("Baik${prefs.persona.sfx(lang)}, dibatalkan.", "Very well${prefs.persona.sfx(lang)}, cancelled."), listenAfter = false)
                     return
                 }
@@ -264,6 +270,7 @@ class AssistantController(context: Context, private val ui: Ui) {
         Command.Thanks, Command.WhoAreYou, Command.HowAreYou, Command.Help, is Command.SwitchLanguage,
         is Command.NeedInfo, Command.AffinityStatus -> true
         is Command.Camera -> true // kamera aman tersedia di layar kunci
+        is Command.AlarmToggle -> true // mematikan alarm yang berbunyi harus bisa dari layar kunci
         else -> false
     }
 
@@ -274,6 +281,9 @@ class AssistantController(context: Context, private val ui: Ui) {
         is Command.OpenUrl -> lang.t("membuka ${c.url}", "open ${c.url}")
         is Command.RecordAudio -> if (c.start) lang.t("mulai merekam suara", "start recording audio") else null
         is Command.SendSms -> lang.t("menyiapkan SMS ke ${c.target}", "prepare a text to ${c.target}")
+        is Command.DeleteEvent -> lang.t("menghapus acara ${c.query.ifBlank { "itu" }}", "delete the event ${c.query.ifBlank { "you mentioned" }}")
+        is Command.DeleteLastEvent -> lang.t("menghapus acara terakhir", "delete the last event")
+        is Command.AlarmDelete -> lang.t("menghapus alarm", "delete the alarm")
         else -> null
     }
 
@@ -306,7 +316,7 @@ class AssistantController(context: Context, private val ui: Ui) {
         res.newLang?.let { lang = it }
         if (res.resetChat) {
             brain.reset()
-            gemini.reset()
+            online.reset()
         }
 
         if (res.stopSpeaking) {
@@ -334,7 +344,7 @@ class AssistantController(context: Context, private val ui: Ui) {
             )
             return
         }
-        if (chat != null && (gemini.isUsable() || brain.isUsable)) {
+        if (chat != null && (online.isUsable() || brain.isUsable)) {
             if (ui.isLocked()) {
                 // Jawaban AI memakai konteks pribadi (tugas, acara, lokasi): minta buka kunci dulu.
                 reply(lang.t("Buka kunci HP dulu${prefs.persona.sfx(lang)}.", "Please unlock your phone first${prefs.persona.sfx(lang)}."), listenAfter = false)
@@ -359,6 +369,7 @@ class AssistantController(context: Context, private val ui: Ui) {
             }
         }
         pending = nextPending
+        ui.onMood(moodFor(cmd, text, nextPending))
         if (res.startRecording) {
             reply(text, listenAfter = false) {
                 RecorderService.start(app)
@@ -471,9 +482,36 @@ class AssistantController(context: Context, private val ui: Ui) {
         return x.length < 4 && "CMD:".startsWith(x)
     }
 
+    /** Ekspresi wajah untuk hasil perintah. */
+    private fun moodFor(cmd: Command, reply: String, next: Pending?): Mood {
+        val low = reply.lowercase()
+        return when {
+            cmd == Command.Thanks || cmd == Command.AffinityStatus -> Mood.LOVE
+            cmd == Command.Greeting || cmd == Command.HowAreYou || cmd == Command.WhoAreYou -> Mood.HAPPY
+            low.startsWith("maaf") || low.startsWith("sorry") || low.startsWith("my apologies") || low.startsWith("i'm afraid") ||
+                low.contains("tidak menemukan") || low.contains("couldn't find") || low.contains("gagal") -> Mood.SAD
+            cmd is Command.Unknown -> Mood.CONFUSED
+            next != null -> Mood.CURIOUS
+            cmd is Command.StopSpeaking || cmd is Command.ResetChat -> Mood.NEUTRAL
+            else -> Mood.HAPPY
+        }
+    }
+
+    /** Ekspresi wajah untuk jawaban AI. */
+    private fun moodForText(text: String): Mood {
+        val low = text.lowercase()
+        return when {
+            Regex("""\b(?:maaf|sayangnya|sorry|apologies|unfortunately|sadly|tidak bisa|can't|cannot)\b""").containsMatchIn(low) -> Mood.SAD
+            Regex("""\b(?:selamat|hebat|bagus|luar biasa|senang|great|wonderful|excellent|splendid|congratulations|delighted|glad)\b""").containsMatchIn(low) -> Mood.HAPPY
+            low.trimEnd().endsWith("?") -> Mood.CURIOUS
+            else -> Mood.NEUTRAL
+        }
+    }
+
     private fun askAi(question: String) {
         val l = lang
-        val online = gemini.isUsable()
+        val ai = online
+        val online = ai.isUsable()
         setState(State.THINKING)
         when {
             online -> ui.onPartial(l.t("Mencari jawaban…", "Looking that up…"))
@@ -486,13 +524,13 @@ class AssistantController(context: Context, private val ui: Ui) {
         val context = deviceContext(l)
         val index = log.add(false, "")
         val raw = StringBuilder()
-        val splitter = TextClean.SentenceSplitter()
+        var splitter = TextClean.SentenceSplitter()
         val speak = prefs.speakReplies
         if (speak) output.beginStream(l) { setState(State.SPEAKING) }
         val gen = ++askGen
         var holding = true // menahan keluaran sampai jelas ini bukan "CMD:"
 
-        val sink = object : GeminiClient.Callback {
+        val sink = object : OnlineBrain.Callback {
             override fun onChunk(text: String) {
                 if (gen != askGen) return
                 raw.append(text)
@@ -534,6 +572,7 @@ class AssistantController(context: Context, private val ui: Ui) {
                     return
                 }
                 log.update(index, cleaned)
+                ui.onMood(moodForText(cleaned))
                 val followUp = cleaned.trimEnd().endsWith("?")
                 if (speak) {
                     if (holding) {
@@ -556,9 +595,10 @@ class AssistantController(context: Context, private val ui: Ui) {
                 cancelAi = null
                 ui.onPartial("")
                 output.stop()
+                ui.onMood(if (message == "no_model") Mood.CONFUSED else Mood.SAD)
                 val text = if (message == "no_model") {
                     prefs.persona.didNotUnderstand(l, question)
-                } else if (message.contains("Gemini")) {
+                } else if (message.contains("Gemini") || message.contains("Claude")) {
                     message
                 } else {
                     l.t(
@@ -586,17 +626,31 @@ class AssistantController(context: Context, private val ui: Ui) {
                 } else {
                     onError(
                         l.t(
-                            "Tidak bisa terhubung ke Gemini ($reason) dan otak AI offline belum diunduh.",
-                            "I couldn't reach Gemini ($reason) and the offline AI brain isn't downloaded."
+                            "Tidak bisa terhubung ke ${ai.displayName} ($reason) dan otak AI offline belum diunduh.",
+                            "I couldn't reach ${ai.displayName} ($reason) and the offline AI brain isn't downloaded."
                         )
                     )
                 }
             }
+
+            override fun onReset() {
+                if (gen != askGen) return
+                // Pengantar "saya cari dulu…" dibuang; jawaban sebenarnya menyusul.
+                raw.setLength(0)
+                splitter = TextClean.SentenceSplitter()
+                holding = true
+                log.update(index, "")
+                if (speak) {
+                    output.stop()
+                    output.beginStream(l) { setState(State.SPEAKING) }
+                }
+                ui.onPartial(l.t("Mencari jawaban…", "Looking that up…"))
+            }
         }
 
         if (online) {
-            gemini.ask(question, l, history, context, sink)
-            cancelAi = { gemini.cancel() }
+            ai.ask(question, l, history, context, sink)
+            cancelAi = { ai.cancel() }
         } else {
             brainJob = brain.ask(gemmaMessage(question, l, userIndex), l, sink)
             cancelAi = { brain.cancel() }

@@ -77,49 +77,132 @@
                     android:textColor="@color/nine_on_bg"
                     android:textSize="15sp" />
 
-                <com.google.android.material.textfield.TextInputLayout
-                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
+                <TextView
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:hint="@string/gemini_key_hint"
-                    app:endIconMode="password_toggle">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/editGeminiKey"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:importantForAutofill="no"
-                        android:inputType="textPassword"
-                        android:maxLines="1"
-                        android:textSize="15sp" />
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnGetKey"
-                    style="@style/Widget.Material3.Button.TextButton"
-                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:text="@string/gemini_get_key"
-                    android:textColor="@color/nine_gold" />
+                    android:text="@string/provider_label"
+                    android:textColor="@color/nine_gold"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
 
-                <com.google.android.material.textfield.TextInputLayout
-                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
+                <RadioGroup
+                    android:id="@+id/groupProvider"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:hint="@string/gemini_model_hint">
+                    android:orientation="horizontal">
+                    <RadioButton android:id="@+id/providerGemini" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:minHeight="44dp" android:text="@string/provider_gemini" android:textColor="@color/nine_on_bg" android:textSize="15sp" />
+                    <RadioButton android:id="@+id/providerClaude" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:minHeight="44dp" android:text="@string/provider_claude" android:textColor="@color/nine_on_bg" android:textSize="15sp" />
+                </RadioGroup>
 
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/editGeminiModel"
+                <LinearLayout
+                    android:id="@+id/geminiFields"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:importantForAutofill="no"
-                        android:inputType="text"
-                        android:maxLines="1"
-                        android:textSize="15sp" />
-                </com.google.android.material.textfield.TextInputLayout>
+                        android:layout_marginTop="12dp"
+                        android:hint="@string/gemini_key_hint"
+                        app:endIconMode="password_toggle">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/editGeminiKey"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:importantForAutofill="no"
+                            android:inputType="textPassword"
+                            android:maxLines="1"
+                            android:textSize="15sp" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnGetKey"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/gemini_get_key"
+                        android:textColor="@color/nine_gold" />
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:hint="@string/gemini_model_hint">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/editGeminiModel"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:importantForAutofill="no"
+                            android:inputType="text"
+                            android:maxLines="1"
+                            android:textSize="15sp" />
+                    </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/claudeFields"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <TextView
+                        style="@style/Nine.Body"
+                        android:layout_marginTop="4dp"
+                        android:text="@string/claude_help"
+                        android:textSize="12sp" />
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:hint="@string/claude_key_hint"
+                        app:endIconMode="password_toggle">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/editClaudeKey"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:importantForAutofill="no"
+                            android:inputType="textPassword"
+                            android:maxLines="1"
+                            android:textSize="15sp" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnGetClaudeKey"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/claude_get_key"
+                        android:textColor="@color/nine_gold" />
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:hint="@string/claude_model_hint">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/editClaudeModel"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:importantForAutofill="no"
+                            android:inputType="text"
+                            android:maxLines="1"
+                            android:textSize="15sp" />
+                    </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
 
                 <com.google.android.material.textfield.TextInputLayout
                     style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
@@ -553,6 +636,46 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:text="@string/calendar_access" />
+            </LinearLayout>
+
+            <TextView style="@style/Nine.SectionTitle" android:text="@string/sec_alarm" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_card"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    style="@style/Nine.Body"
+                    android:text="@string/alarm_help"
+                    android:textSize="13sp" />
+
+                <RadioGroup
+                    android:id="@+id/groupAlarmEngine"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp">
+                    <RadioButton android:id="@+id/alarmEngineNine" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="44dp" android:text="@string/alarm_engine_nine" android:textColor="@color/nine_on_bg" android:textSize="15sp" />
+                    <RadioButton android:id="@+id/alarmEngineClock" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="44dp" android:text="@string/alarm_engine_clock" android:textColor="@color/nine_on_bg" android:textSize="15sp" />
+                </RadioGroup>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnManageAlarms"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/alarm_manage" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnFullScreen"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/alarm_fullscreen"
+                    android:textColor="@color/nine_gold" />
             </LinearLayout>
 
             <TextView style="@style/Nine.SectionTitle" android:text="@string/sec_look" />

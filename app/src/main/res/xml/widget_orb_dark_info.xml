@@ -6,10 +6,10 @@
     android:minHeight="110dp"
     android:minResizeWidth="40dp"
     android:minResizeHeight="40dp"
-    android:previewImage="@drawable/ic_widget_orb_dark"
+    android:previewImage="@drawable/face_dark_neutral"
     android:previewLayout="@layout/widget_orb_dark"
     android:resizeMode="horizontal|vertical"
     android:targetCellWidth="2"
     android:targetCellHeight="2"
-    android:updatePeriodMillis="0"
+    android:updatePeriodMillis="1800000"
     android:widgetCategory="home_screen" />

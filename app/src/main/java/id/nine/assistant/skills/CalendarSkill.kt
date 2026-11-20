@@ -5,6 +5,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.provider.CalendarContract
+import id.nine.assistant.nlu.EventMatch
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -238,6 +239,118 @@ class CalendarSkill(context: Context) {
     /** Buka acara di aplikasi Kalender. */
     fun viewIntent(eventId: Long): Intent =
         Intent(Intent.ACTION_VIEW, ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, eventId))
+
+    /** Satu kejadian acara yang cocok dengan pencarian. */
+    data class Found(
+        val eventId: Long,
+        val title: String,
+        val start: LocalDateTime,
+        val beginMillis: Long,
+        val allDay: Boolean,
+        val recurring: Boolean,
+        val writable: Boolean,
+        val calendarName: String,
+        val score: Int
+    )
+
+    /**
+     * Cari acara untuk dihapus. [query] = kata dari ucapan (boleh kosong), [date]/[hour] menyaring bila disebut.
+     * Acara berulang hanya muncul sekali (kejadian terdekat).
+     */
+    fun findEvents(
+        query: String,
+        date: LocalDate?,
+        hour: Int?,
+        minute: Int?,
+        ambiguous: Boolean,
+        now: LocalDateTime
+    ): List<Found> {
+        val zone = ZoneId.systemDefault()
+        val keys = EventMatch.keyTokens(query)
+        val softWords = EventMatch.tokens(query).filter { it.length >= 4 && it !in keys }
+        val (from, to) = when {
+            date != null -> date.atStartOfDay(zone).toInstant().toEpochMilli() to date.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+            keys.isEmpty() -> now.minusHours(2).atZone(zone).toInstant().toEpochMilli() to now.plusDays(14).atZone(zone).toInstant().toEpochMilli()
+            else -> now.minusHours(6).atZone(zone).toInstant().toEpochMilli() to now.plusDays(180).atZone(zone).toInstant().toEpochMilli()
+        }
+        val b = CalendarContract.Instances.CONTENT_URI.buildUpon()
+        ContentUris.appendId(b, from)
+        ContentUris.appendId(b, to)
+        val proj = arrayOf(
+            CalendarContract.Instances.EVENT_ID,
+            CalendarContract.Instances.TITLE,
+            CalendarContract.Instances.BEGIN,
+            CalendarContract.Instances.ALL_DAY,
+            CalendarContract.Instances.RRULE,
+            CalendarContract.Instances.RDATE,
+            CalendarContract.Instances.CALENDAR_ACCESS_LEVEL,
+            CalendarContract.Instances.CALENDAR_DISPLAY_NAME,
+            CalendarContract.Instances.VISIBLE
+        )
+        val byEvent = LinkedHashMap<Long, Found>()
+        resolver.query(b.build(), proj, null, null, CalendarContract.Instances.BEGIN + " ASC")?.use { c ->
+            while (c.moveToNext()) {
+                if (!c.isNull(8) && c.getInt(8) != 1) continue
+                val id = c.getLong(0)
+                if (byEvent.containsKey(id)) continue // kejadian terdekat saja
+                val title = c.getString(1) ?: ""
+                val allDay = c.getInt(3) == 1
+                val begin = c.getLong(2)
+                val z: ZoneId = if (allDay) ZoneOffset.UTC else zone
+                val start = Instant.ofEpochMilli(begin).atZone(z).toLocalDateTime()
+                if (hour != null) {
+                    if (allDay) continue
+                    val hOk = if (ambiguous) start.hour % 12 == hour % 12 else start.hour == hour
+                    if (!hOk || start.minute != (minute ?: 0)) continue
+                }
+                val score = when {
+                    keys.isNotEmpty() -> EventMatch.score(query, title)
+                    date != null || hour != null -> 1
+                    // hanya kata umum ("hapus rapat"): judul harus memuat kata itu
+                    softWords.any { title.lowercase().contains(it) } -> 1
+                    else -> 0
+                }
+                if (score <= 0) continue
+                val recurring = !c.getString(4).isNullOrBlank() || !c.getString(5).isNullOrBlank()
+                val writable = c.getInt(6) >= CalendarContract.Calendars.CAL_ACCESS_CONTRIBUTOR
+                byEvent[id] = Found(id, title.ifBlank { "(tanpa judul)" }, start, begin, allDay, recurring, writable, c.getString(7) ?: "", score)
+            }
+        }
+        return byEvent.values.sortedWith(compareByDescending<Found> { it.score }.thenBy { it.beginMillis })
+    }
+
+    /** Batalkan satu kejadian dari acara berulang (kejadian lain tetap ada). */
+    fun cancelInstance(eventId: Long, beginMillis: Long): Boolean = try {
+        val values = ContentValues().apply {
+            put(CalendarContract.Events.ORIGINAL_INSTANCE_TIME, beginMillis)
+            put(CalendarContract.Events.STATUS, CalendarContract.Events.STATUS_CANCELED)
+        }
+        val uri = ContentUris.withAppendedId(CalendarContract.Events.CONTENT_EXCEPTION_URI, eventId)
+        resolver.insert(uri, values) != null
+    } catch (e: Exception) {
+        false
+    }
+
+    /** Masih adakah kejadian acara [eventId] yang mulai pada [beginMillis]? */
+    fun instanceExists(eventId: Long, beginMillis: Long): Boolean = try {
+        val b = CalendarContract.Instances.CONTENT_URI.buildUpon()
+        ContentUris.appendId(b, beginMillis - 60_000)
+        ContentUris.appendId(b, beginMillis + 60_000)
+        resolver.query(
+            b.build(),
+            arrayOf(CalendarContract.Instances.EVENT_ID, CalendarContract.Instances.BEGIN, CalendarContract.Instances.STATUS),
+            null, null, null
+        )?.use { c ->
+            var found = false
+            while (c.moveToNext()) {
+                val canceled = !c.isNull(2) && c.getInt(2) == CalendarContract.Events.STATUS_CANCELED
+                if (c.getLong(0) == eventId && c.getLong(1) == beginMillis && !canceled) found = true
+            }
+            found
+        } ?: false
+    } catch (e: Exception) {
+        false
+    }
 
     /** Acara pada tanggal tertentu (termasuk acara berulang), urut waktu mulai. */
     fun eventsOn(date: LocalDate): List<Event> {

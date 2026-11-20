@@ -1,8 +1,6 @@
 package id.nine.assistant.llm
 
 import android.content.Context
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
 import android.os.Handler
 import android.os.Looper
 import id.nine.assistant.core.AppLang
@@ -19,7 +17,7 @@ import java.util.concurrent.Executors
  * Otak online Nine: Gemini API (Google AI Studio) dengan Google Search, jawaban di-stream lewat SSE.
  * Dipakai hanya bila pengguna menyalakan "Mode internet" dan mengisi API key.
  */
-class GeminiClient(context: Context, private val prefs: Prefs) {
+class GeminiClient(context: Context, private val prefs: Prefs) : OnlineBrain {
 
     private val app = context.applicationContext
     private val main = Handler(Looper.getMainLooper())
@@ -31,29 +29,16 @@ class GeminiClient(context: Context, private val prefs: Prefs) {
     @Volatile
     private var connection: HttpURLConnection? = null
 
-    /** Callback tambahan: [onFallback] dipanggil bila gagal karena jaringan/kuota sebelum ada teks. */
-    interface Callback : LlmBrain.ReplyCallback {
-        fun onFallback(reason: String)
-    }
+    override val displayName: String = "Gemini"
 
-    fun isConfigured(): Boolean = prefs.internetMode && prefs.geminiKey.isNotBlank()
+    override fun isConfigured(): Boolean = prefs.internetMode && prefs.geminiKey.isNotBlank()
 
-    fun isOnline(): Boolean = try {
-        val cm = app.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val caps = cm.getNetworkCapabilities(cm.activeNetwork)
-        caps != null && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
-            caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
-    } catch (e: Exception) {
-        false
-    }
-
-    /** Siap dipakai sekarang: mode internet aktif, ada API key, dan ada koneksi. */
-    fun isUsable(): Boolean = isConfigured() && isOnline()
+    override fun isOnline(): Boolean = OnlineBrain.networkOk(app)
 
     /** Riwayat diambil dari percakapan di layar, jadi tidak ada yang perlu direset di sini. */
-    fun reset() {}
+    override fun reset() {}
 
-    fun cancel() {
+    override fun cancel() {
         generation++
         try {
             connection?.disconnect()
@@ -68,7 +53,7 @@ class GeminiClient(context: Context, private val prefs: Prefs) {
      * [history]: giliran sebelumnya (role "user"/"model"), sudah urut. [context]: info perangkat terkini
      * (tugas, acara) yang ditambahkan ke instruksi sistem.
      */
-    fun ask(text: String, lang: AppLang, history: List<Pair<String, String>>, context: String, cb: Callback) {
+    override fun ask(text: String, lang: AppLang, history: List<Pair<String, String>>, context: String, cb: OnlineBrain.Callback) {
         val gen = ++generation
         exec.execute {
             val full = StringBuilder()
@@ -116,7 +101,7 @@ class GeminiClient(context: Context, private val prefs: Prefs) {
         val body = JSONObject()
         body.put(
             "system_instruction",
-            JSONObject().put("parts", JSONArray().put(JSONObject().put("text", persona.onlinePrompt(lang, LocalDateTime.now(), prefs.city) + "\n\n" + context)))
+            JSONObject().put("parts", JSONArray().put(JSONObject().put("text", persona.onlinePrompt(lang, LocalDateTime.now(), prefs.city, "Google Search") + "\n\n" + context)))
         )
         val contents = JSONArray()
         for ((role, t) in history + ("user" to text)) {

@@ -9,12 +9,11 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
-import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.core.content.ContextCompat
 import com.google.android.material.bottomsheet.BottomSheetDialog
-import com.google.android.material.progressindicator.LinearProgressIndicator
+import com.google.android.material.button.MaterialButtonToggleGroup
 import id.nine.assistant.core.Affinity
+import id.nine.assistant.core.Mood
 import id.nine.assistant.recorder.RecorderService
 import android.text.format.Formatter
 import android.view.View
@@ -37,7 +36,7 @@ import id.nine.assistant.databinding.ActivityMainBinding
 import id.nine.assistant.llm.LlmBrain
 import id.nine.assistant.llm.ModelManager
 import id.nine.assistant.ui.MessageAdapter
-import id.nine.assistant.ui.NineOrbView
+import id.nine.assistant.ui.NineFaceView
 import id.nine.assistant.wake.WakeWordService
 import id.nine.assistant.widget.WidgetUpdater
 
@@ -85,20 +84,23 @@ class MainActivity : AppCompatActivity(), AssistantController.Ui {
     private var lastBrainState = LlmBrain.State.NO_MODEL
     private var lastBrainDetail = ""
 
-    private fun renderBrain() {
-        val state = lastBrainState
-        val detail = lastBrainDetail
-        if (nine.gemini.isUsable()) {
-            binding.txtBrain.text = getString(R.string.brain_online)
-            return
-        }
-        binding.txtBrain.text = when (state) {
+    /** Status otak AI (ditampilkan di menu NINE). */
+    private fun brainText(): String {
+        val online = nine.online
+        if (online.isUsable()) return getString(R.string.brain_online, online.displayName)
+        return when (lastBrainState) {
             LlmBrain.State.NO_MODEL -> getString(R.string.brain_none)
             LlmBrain.State.IDLE -> getString(R.string.brain_idle)
             LlmBrain.State.LOADING -> getString(R.string.brain_loading)
-            LlmBrain.State.READY, LlmBrain.State.BUSY -> getString(R.string.brain_ready, detail.uppercase())
+            LlmBrain.State.READY, LlmBrain.State.BUSY -> getString(R.string.brain_ready, lastBrainDetail.uppercase())
             LlmBrain.State.ERROR -> getString(R.string.brain_error)
         }
+    }
+
+    private var menuBrain: TextView? = null
+
+    private fun renderBrain() {
+        menuBrain?.text = brainText()
     }
 
     private val brainListener = object : LlmBrain.StateListener {
@@ -148,8 +150,11 @@ class MainActivity : AppCompatActivity(), AssistantController.Ui {
         }
         binding.btnKeyboard.setOnClickListener { toggleKeyboard() }
         binding.btnTodo.setOnClickListener { startActivity(Intent(this, TodoActivity::class.java)) }
-        binding.txtAffinity.setOnClickListener { showAffinitySheet() }
-        renderAffinity()
+        binding.txtTitle.setOnClickListener { showMenu() }
+        binding.txtTitle.setOnLongClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
+            true
+        }
         binding.btnSend.setOnClickListener { sendTyped() }
         binding.inputText.setOnEditorActionListener { _, actionId, event ->
             val enter = event != null && event.keyCode == android.view.KeyEvent.KEYCODE_ENTER && event.action == android.view.KeyEvent.ACTION_DOWN
@@ -158,11 +163,6 @@ class MainActivity : AppCompatActivity(), AssistantController.Ui {
                 true
             } else false
         }
-        binding.btnLang.setOnClickListener {
-            controller.lang = if (controller.lang == AppLang.ID) AppLang.EN else AppLang.ID
-        }
-        binding.btnTheme.setOnClickListener { toggleTheme() }
-        binding.btnSettings.setOnClickListener { startActivity(Intent(this, SettingsActivity::class.java)) }
 
         binding.btnModelPrimary.setOnClickListener { onModelPrimary() }
         binding.btnModelSecondary.setOnClickListener { onModelSecondary() }
@@ -218,7 +218,6 @@ class MainActivity : AppCompatActivity(), AssistantController.Ui {
         // Layar Nine terbuka: hapus notifikasi "ketuk untuk bicara" dan lepaskan mikrofon dari wake word.
         NotificationManagerCompat.from(this).cancel(WakeWordService.ALERT_ID)
         if (nine.prefs.wakeEnabled && !RecorderService.recording) WakeWordService.pause(this)
-        renderAffinity()
         renderRecording()
     }
 
@@ -253,11 +252,54 @@ class MainActivity : AppCompatActivity(), AssistantController.Ui {
         }
     }
 
-    private fun toggleTheme() {
-        val dark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-        val next = if (dark) Prefs.Theme.LIGHT else Prefs.Theme.DARK
-        nine.prefs.theme = next
-        AppCompatDelegate.setDefaultNightMode(next.nightMode)
+    /** Menu NINE: alarm, tugas, pengaturan, bahasa, tema, dan status otak AI. */
+    private fun showMenu() {
+        val sheet = BottomSheetDialog(this)
+        val v = layoutInflater.inflate(R.layout.sheet_menu, null)
+        menuBrain = v.findViewById<TextView>(R.id.menuBrain).also { it.text = brainText() }
+        v.findViewById<View>(R.id.menuAlarms).setOnClickListener {
+            sheet.dismiss()
+            startActivity(Intent(this, AlarmsActivity::class.java))
+        }
+        v.findViewById<View>(R.id.menuTodo).setOnClickListener {
+            sheet.dismiss()
+            startActivity(Intent(this, TodoActivity::class.java))
+        }
+        v.findViewById<View>(R.id.menuSettings).setOnClickListener {
+            sheet.dismiss()
+            startActivity(Intent(this, SettingsActivity::class.java))
+        }
+        val langGroup = v.findViewById<MaterialButtonToggleGroup>(R.id.menuLang)
+        langGroup.check(if (controller.lang == AppLang.ID) R.id.menuLangId else R.id.menuLangEn)
+        langGroup.addOnButtonCheckedListener { _, id, checked ->
+            if (!checked) return@addOnButtonCheckedListener
+            val l = if (id == R.id.menuLangEn) AppLang.EN else AppLang.ID
+            if (l != controller.lang) controller.lang = l
+        }
+        val themeGroup = v.findViewById<MaterialButtonToggleGroup>(R.id.menuTheme)
+        themeGroup.check(
+            when (nine.prefs.theme) {
+                Prefs.Theme.SYSTEM -> R.id.menuThemeSystem
+                Prefs.Theme.LIGHT -> R.id.menuThemeLight
+                Prefs.Theme.DARK -> R.id.menuThemeDark
+            }
+        )
+        themeGroup.addOnButtonCheckedListener { _, id, checked ->
+            if (!checked) return@addOnButtonCheckedListener
+            val t = when (id) {
+                R.id.menuThemeLight -> Prefs.Theme.LIGHT
+                R.id.menuThemeDark -> Prefs.Theme.DARK
+                else -> Prefs.Theme.SYSTEM
+            }
+            if (t != nine.prefs.theme) {
+                nine.prefs.theme = t
+                sheet.dismiss()
+                AppCompatDelegate.setDefaultNightMode(t.nightMode)
+            }
+        }
+        sheet.setOnDismissListener { menuBrain = null }
+        sheet.setContentView(v)
+        sheet.show()
     }
 
     private fun toggleKeyboard() {
@@ -373,10 +415,10 @@ class MainActivity : AppCompatActivity(), AssistantController.Ui {
 
     override fun onState(state: AssistantController.State) {
         val (label, mode) = when (state) {
-            AssistantController.State.IDLE -> Pair(R.string.status_idle, NineOrbView.Mode.IDLE)
-            AssistantController.State.LISTENING -> Pair(R.string.status_listening, NineOrbView.Mode.LISTENING)
-            AssistantController.State.THINKING -> Pair(R.string.status_thinking, NineOrbView.Mode.THINKING)
-            AssistantController.State.SPEAKING -> Pair(R.string.status_speaking, NineOrbView.Mode.SPEAKING)
+            AssistantController.State.IDLE -> Pair(R.string.status_idle, NineFaceView.Mode.IDLE)
+            AssistantController.State.LISTENING -> Pair(R.string.status_listening, NineFaceView.Mode.LISTENING)
+            AssistantController.State.THINKING -> Pair(R.string.status_thinking, NineFaceView.Mode.THINKING)
+            AssistantController.State.SPEAKING -> Pair(R.string.status_speaking, NineFaceView.Mode.SPEAKING)
         }
         binding.txtStatus.setText(label)
         binding.orb.mode = mode
@@ -389,6 +431,7 @@ class MainActivity : AppCompatActivity(), AssistantController.Ui {
         if (state == AssistantController.State.IDLE) {
             binding.orb.setLevel(0f)
             binding.edgeGlow.setLevel(0f)
+            WidgetUpdater.refresh(this)
         }
     }
 
@@ -420,61 +463,24 @@ class MainActivity : AppCompatActivity(), AssistantController.Ui {
     }
 
     override fun onLanguageChanged(lang: AppLang) {
-        binding.btnLang.text = if (lang == AppLang.ID) "ID" else "EN"
+        renderBrain()
     }
 
     override fun onNotice(text: String) {
+        binding.orb.react(Mood.CONFUSED, 1800)
         Toast.makeText(this, text, Toast.LENGTH_LONG).show()
+    }
+
+    override fun onMood(mood: Mood) {
+        if (mood == Mood.NEUTRAL) return
+        binding.orb.react(mood, if (mood == Mood.LOVE) 3000 else 2400)
     }
 
     // ------------------------------------------------------------ affinity
 
-    private fun renderAffinity() {
-        val st = nine.affinity.state()
-        binding.txtAffinity.text = if (st.streak > 0) "🔥${st.streak} · Lv${st.level.number}" else "Lv${st.level.number}"
-    }
-
+    /** Streak & level tetap dihitung diam-diam; untuk sekarang tidak ditampilkan. Naik level = Nine tersipu. */
     override fun onAffinity(event: Affinity.Event) {
-        renderAffinity()
-        if (event.leveledUp) {
-            val lv = event.state.level
-            val name = lv.name(controller.lang)
-            Toast.makeText(this, getString(R.string.affinity_levelup, lv.number, name), Toast.LENGTH_LONG).show()
-            nine.log.add(false, getString(R.string.affinity_levelup_line, lv.number, name))
-            binding.txtAffinity.animate().scaleX(1.25f).scaleY(1.25f).setDuration(220).withEndAction {
-                binding.txtAffinity.animate().scaleX(1f).scaleY(1f).setDuration(220).start()
-            }.start()
-        }
-    }
-
-    private fun showAffinitySheet() {
-        val st = nine.affinity.state()
-        val lang = controller.lang
-        val sheet = BottomSheetDialog(this)
-        val v = layoutInflater.inflate(R.layout.sheet_affinity, null)
-        v.findViewById<TextView>(R.id.affLevel).text = getString(R.string.affinity_level_fmt, st.level.number)
-        v.findViewById<TextView>(R.id.affName).text = st.level.name(lang)
-        v.findViewById<TextView>(R.id.affStreak).text = getString(R.string.affinity_streak_fmt, st.streak, st.bestStreak)
-        val progress = v.findViewById<LinearProgressIndicator>(R.id.affProgress)
-        progress.max = 1000
-        progress.setProgressCompat((st.progress * 1000).toInt(), false)
-        v.findViewById<TextView>(R.id.affXp).text = st.next?.let {
-            getString(R.string.affinity_xp_fmt, st.xp, it.minXp - st.xp, it.name(lang))
-        } ?: getString(R.string.affinity_xp_max, st.xp)
-        val list = v.findViewById<LinearLayout>(R.id.affLevels)
-        for (lv in Affinity.LEVELS) {
-            val row = TextView(this)
-            val open = st.xp >= lv.minXp
-            row.text = (if (open) "✓  " else "🔒  ") + "${lv.number}. ${lv.name(lang)}  ·  " +
-                (if (open) getString(R.string.affinity_unlocked) else getString(R.string.affinity_locked, lv.minXp))
-            row.setTextColor(ContextCompat.getColor(this, if (open) R.color.nine_on_bg else R.color.nine_muted))
-            row.textSize = 14f
-            row.setPadding(0, (8 * resources.displayMetrics.density).toInt(), 0, (8 * resources.displayMetrics.density).toInt())
-            if (lv.number == st.level.number) row.setTextColor(ContextCompat.getColor(this, R.color.nine_gold))
-            list.addView(row)
-        }
-        sheet.setContentView(v)
-        sheet.show()
+        if (event.leveledUp) binding.orb.react(Mood.LOVE, 3000)
     }
 
     // ------------------------------------------------------------ perekam & kunci layar

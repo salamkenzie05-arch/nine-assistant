@@ -5,6 +5,8 @@ import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.os.BatteryManager
 import android.view.View
 import android.widget.RemoteViews
 import id.nine.assistant.MainActivity
@@ -13,6 +15,7 @@ import id.nine.assistant.TodoActivity
 import id.nine.assistant.core.Prefs
 import id.nine.assistant.skills.TodoStore
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
 /** Menggambar ulang widget Nine di layar utama. */
@@ -47,14 +50,63 @@ object WidgetUpdater {
         }
     }
 
+    enum class Face { NEUTRAL, HAPPY, SLEEPY, CHARGING, LOWBAT }
+
+    /** Ekspresi wajah di widget: dicas, baterai lemah, malam (mengantuk), baru diajak bicara (senang), atau biasa. */
+    fun face(ctx: Context): Face {
+        val b = try {
+            ctx.applicationContext.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        } catch (e: Exception) {
+            null
+        }
+        if (b != null) {
+            val status = b.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
+            if (status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL) return Face.CHARGING
+            val lvl = b.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+            val scale = b.getIntExtra(BatteryManager.EXTRA_SCALE, 100)
+            if (lvl >= 0 && scale > 0 && lvl * 100 / scale <= 15) return Face.LOWBAT
+        }
+        val h = LocalTime.now().hour
+        if (h >= 23 || h < 5) return Face.SLEEPY
+        val last = Prefs(ctx).lastTalk
+        if (System.currentTimeMillis() - last < 15 * 60_000L) return Face.HAPPY
+        return Face.NEUTRAL
+    }
+
+    private fun faceRes(f: Face, theme: String): Int = when (theme) {
+        "dark" -> when (f) {
+            Face.NEUTRAL -> R.drawable.face_dark_neutral
+            Face.HAPPY -> R.drawable.face_dark_happy
+            Face.SLEEPY -> R.drawable.face_dark_sleepy
+            Face.CHARGING -> R.drawable.face_dark_charging
+            Face.LOWBAT -> R.drawable.face_dark_lowbat
+        }
+        "auto" -> when (f) {
+            Face.NEUTRAL -> R.drawable.face_auto_neutral
+            Face.HAPPY -> R.drawable.face_auto_happy
+            Face.SLEEPY -> R.drawable.face_auto_sleepy
+            Face.CHARGING -> R.drawable.face_auto_charging
+            Face.LOWBAT -> R.drawable.face_auto_lowbat
+        }
+        else -> when (f) {
+            Face.NEUTRAL -> R.drawable.face_light_neutral
+            Face.HAPPY -> R.drawable.face_light_happy
+            Face.SLEEPY -> R.drawable.face_light_sleepy
+            Face.CHARGING -> R.drawable.face_light_charging
+            Face.LOWBAT -> R.drawable.face_light_lowbat
+        }
+    }
+
     fun orbViews(ctx: Context, dark: Boolean = false): RemoteViews =
         RemoteViews(ctx.packageName, if (dark) R.layout.widget_orb_dark else R.layout.widget_orb).apply {
-        setOnClickPendingIntent(R.id.widgetOrb, listenIntent(ctx))
-    }
+            setImageViewResource(R.id.widgetOrb, faceRes(face(ctx), if (dark) "dark" else "light"))
+            setOnClickPendingIntent(R.id.widgetOrb, listenIntent(ctx))
+        }
 
     fun todayViews(ctx: Context): RemoteViews {
         val lang = Prefs(ctx).lang
         val v = RemoteViews(ctx.packageName, R.layout.widget_today)
+        v.setImageViewResource(R.id.widgetOrb, faceRes(face(ctx), "auto"))
         v.setOnClickPendingIntent(R.id.widgetOrb, listenIntent(ctx))
         v.setOnClickPendingIntent(R.id.widgetTasks, todoIntent(ctx))
         val today = LocalDate.now()

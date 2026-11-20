@@ -6,8 +6,6 @@
     <string name="hint_input">Type a message for Nine…</string>
     <string name="cd_send">Send</string>
     <string name="cd_mic">Talk to Nine</string>
-    <string name="cd_language">Switch language</string>
-    <string name="cd_theme">Toggle light/dark theme</string>
     <string name="cd_keyboard">Type</string>
         <string name="status_idle">Tap the orb to speak</string>
     <string name="status_listening">Listening…</string>
@@ -74,8 +72,8 @@
     <string name="widget_today_desc">Nine · today\'s tasks</string>
 
     <string name="sec_internet">Internet mode (smarter)</string>
-    <string name="internet_switch">Use Gemini + Google Search when online</string>
-    <string name="internet_help">Open questions are answered by Gemini (Google) with web search, so Nine can handle weather, news, exchange rates and anything recent. Needs a free API key from Google AI Studio. When offline, Nine falls back to on-device Gemma. Phone commands (alarms, calendar, tasks, apps) are still processed on the device.</string>
+    <string name="internet_switch">Use an online brain (Gemini or Claude) when connected</string>
+    <string name="internet_help">Open questions are answered by an online brain with web search, so Nine can handle weather, news, exchange rates and anything recent. Pick the provider: Gemini (free API key from Google AI Studio) or Claude (paid API key from the Claude Console). When offline, Nine falls back to on-device Gemma. Phone commands (alarms, calendar, tasks, apps) are still processed on the device.</string>
     <string name="gemini_key_hint">Gemini API key (AIza…)</string>
     <string name="gemini_get_key">Get a free API key</string>
     <string name="city_hint">Your city (optional, for weather), e.g. Jakarta</string>
@@ -83,7 +81,7 @@
     <string name="internet_status_nokey">Enter an API key to enable it.</string>
     <string name="internet_status_online">On · connected to the internet.</string>
     <string name="internet_status_offline">On · no internet right now, using offline Gemma.</string>
-    <string name="brain_online">Online · Gemini + Google Search</string>
+    <string name="brain_online">Online · %1$s + web search</string>
 
     <string name="variant_e2b">Gemma 4 E2B · 2.6 GB · fast</string>
     <string name="variant_e4b">Gemma 4 E4B · 3.7 GB · smarter, a little slower</string>
@@ -119,17 +117,6 @@
     <string name="model_import_short">Import file</string>
     <string name="advanced">Advanced</string>
 
-    <string name="affinity_title">Closeness with Nine</string>
-    <string name="affinity_levels">9 levels</string>
-    <string name="affinity_level_fmt">Lv %1$d</string>
-    <string name="affinity_streak_fmt">🔥 %1$d-day streak · best %2$d</string>
-    <string name="affinity_xp_fmt">%1$d XP · %2$d XP to %3$s</string>
-    <string name="affinity_xp_max">%1$d XP · top level reached</string>
-    <string name="affinity_how">Talk to Nine every day to keep the streak alive. The first interaction each day earns the most XP, plus a bonus for longer streaks. Each level will unlock a small surprise later on.</string>
-    <string name="affinity_locked">locked · %1$d XP · surprise coming soon</string>
-    <string name="affinity_unlocked">unlocked</string>
-    <string name="affinity_levelup">Level %1$d reached: %2$s!</string>
-    <string name="affinity_levelup_line">We\'ve reached level %1$d of 9: %2$s. Thank you for relying on me.</string>
 
     <string name="rec_channel">Nine voice recorder</string>
     <string name="rec_notif_title">Nine is recording</string>
@@ -145,4 +132,35 @@
 
     <string name="widget_orb_dark_desc">Dark Nine orb: tap to talk</string>
     <string name="unlock_reason">Unlock to continue your Nine command</string>
+
+    <string name="cd_menu">Nine menu</string>
+    <string name="menu_lang">Language</string>
+    <string name="menu_theme">Theme</string>
+    <string name="alarms_title">Alarms</string>
+    <string name="alarms_clock_app">Clock app</string>
+    <string name="alarms_exact_permission">Allow exact alarms</string>
+    <string name="alarms_empty">No alarms yet. Tap Add alarm, or tell Nine: \"set an alarm on weekdays at 6 AM\".</string>
+    <string name="alarm_add">Add alarm</string>
+    <string name="alarm_edit">Change alarm time</string>
+    <string name="alarm_toggle">Turn alarm on or off</string>
+    <string name="alarm_delete">Delete alarm</string>
+    <string name="alarm_stop">Stop</string>
+    <string name="alarm_snooze">Snooze</string>
+    <string name="alarm_snooze_fmt">Snooze %1$d min</string>
+    <string name="alarm_default_label">Alarm</string>
+    <string name="alarm_channel">Nine alarms</string>
+    <string name="sec_alarm">Alarms</string>
+    <string name="alarm_engine_nine">Nine alarms · turn on, off or delete them by voice</string>
+    <string name="alarm_engine_clock">The phone\'s Clock app</string>
+    <string name="alarm_help">Nine alarms ring on time even when the phone sleeps, show on the lock screen, and can be controlled by voice (\"turn off the 6am alarm\", \"delete the gym alarm\"). Alarms made in the Clock app can\'t be changed by other apps.</string>
+    <string name="alarm_manage">Manage alarms</string>
+    <string name="alarm_fullscreen">Allow full screen when an alarm rings</string>
+    <string name="alarm_fullscreen_ok">Full-screen alarms: allowed ✓</string>
+    <string name="provider_label">Online brain provider</string>
+    <string name="provider_gemini">Gemini (Google)</string>
+    <string name="provider_claude">Claude (Anthropic)</string>
+    <string name="claude_key_hint">Claude API key (sk-ant-…)</string>
+    <string name="claude_get_key">Get a Claude API key</string>
+    <string name="claude_model_hint">Claude model (empty = claude-sonnet-5-5)</string>
+    <string name="claude_help">Claude is used through the Claude API with a key from the Claude Console. It\'s billed per use, separately from a Claude Pro/Max subscription. Sonnet 5.5 costs about US$2 per million input tokens and US$10 per million output tokens; web search is US$10 per 1,000 searches. Your conversation and context (tasks, events, city) are sent to Anthropic while this mode is used.</string>
 </resources>

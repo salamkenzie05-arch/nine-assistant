@@ -29,12 +29,22 @@ import id.nine.assistant.core.LocationHelper
 import id.nine.assistant.core.Persona
 import id.nine.assistant.recorder.RecorderService
 import id.nine.assistant.core.Prefs
+import id.nine.assistant.AlarmsActivity
+import id.nine.assistant.alarm.AlarmMatch
+import id.nine.assistant.alarm.AlarmRingService
+import id.nine.assistant.alarm.AlarmScheduler
+import id.nine.assistant.alarm.AlarmStore
+import id.nine.assistant.alarm.NineAlarm
+import id.nine.assistant.nlu.AlarmRef
+import id.nine.assistant.nlu.Choice
+import id.nine.assistant.nlu.RepeatDays
 import id.nine.assistant.nlu.NumberWords
 import id.nine.assistant.nlu.TimeParser
 import id.nine.assistant.nlu.Command
 import id.nine.assistant.nlu.Pending
 import id.nine.assistant.nlu.SettingsTarget
 import id.nine.assistant.nlu.VolumeAction
+import java.time.DayOfWeek
 import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -71,6 +81,7 @@ class SkillExecutor(context: Context, private val notes: NoteStore, private val 
     private val calendar = CalendarSkill(ctx)
     private val todos = TodoStore(ctx)
     private val affinity = Affinity(ctx)
+    private val alarms = AlarmStore(ctx)
     private val location: LocationHelper get() = (ctx as NineApp).location
     private var persona: Persona = personaOf()
 
@@ -98,13 +109,17 @@ class SkillExecutor(context: Context, private val notes: NoteStore, private val 
         denied: Set<String>,
         now: LocalDateTime
     ): SkillResult = when (cmd) {
-        is Command.SetAlarm -> setAlarm(cmd, lang, now)
+        is Command.SetAlarm -> setAlarm(cmd, lang, now, denied)
         is Command.SetTimer -> setTimer(cmd, lang)
         is Command.SetReminder -> setReminder(cmd, lang, now, denied)
-        Command.ShowAlarms -> SkillResult(
-            lang.t("Membuka daftar alarm${s(lang)}.", "Opening your alarms${s(lang)}."),
-            intent = Intent(AlarmClock.ACTION_SHOW_ALARMS)
-        )
+        Command.ShowAlarms -> showAlarms(lang, now)
+        Command.OpenAlarms -> if (prefs.nineAlarms) {
+            SkillResult(lang.t("Membuka daftar alarm${s(lang)}.", "Opening your alarms${s(lang)}."), intent = Intent(ctx, AlarmsActivity::class.java))
+        } else {
+            SkillResult(lang.t("Membuka daftar alarm${s(lang)}.", "Opening your alarms${s(lang)}."), intent = Intent(AlarmClock.ACTION_SHOW_ALARMS))
+        }
+        is Command.AlarmToggle -> alarmToggle(cmd, lang, now)
+        is Command.AlarmDelete -> alarmDelete(cmd, lang, confirmed, now)
         is Command.OpenApp -> openApp(cmd.query, lang)
         is Command.OpenSettings -> openSettings(cmd, lang)
         is Command.Flashlight -> flashlight(cmd.on, lang)
@@ -152,6 +167,8 @@ class SkillExecutor(context: Context, private val notes: NoteStore, private val 
         is Command.MoveLastEvent -> moveLastEvent(cmd, lang, now, denied)
         is Command.ShiftLastEvent -> shiftLastEvent(cmd, lang, now, denied)
         Command.DeleteLastEvent -> deleteLastEvent(lang, confirmed, denied)
+        is Command.DeleteEvent -> deleteEvent(cmd, lang, confirmed, denied, now)
+        is Command.DeleteEventInstance -> deleteEventInstance(cmd, lang, confirmed, denied, now)
 
         is Command.TodoAdd -> {
             val item = todos.add(cmd.text)
@@ -227,17 +244,206 @@ class SkillExecutor(context: Context, private val notes: NoteStore, private val 
 
     // ------------------------------------------------------------ alarm, timer, pengingat
 
-    private fun setAlarm(cmd: Command.SetAlarm, lang: AppLang, now: LocalDateTime): SkillResult {
-        val i = Intent(AlarmClock.ACTION_SET_ALARM).apply {
-            putExtra(AlarmClock.EXTRA_HOUR, cmd.time.hour)
-            putExtra(AlarmClock.EXTRA_MINUTES, cmd.time.minute)
-            if (!cmd.label.isNullOrBlank()) putExtra(AlarmClock.EXTRA_MESSAGE, cmd.label)
-            putExtra(AlarmClock.EXTRA_SKIP_UI, true)
+    private fun daysText(days: Set<DayOfWeek>, lang: AppLang): String = when {
+        days.isEmpty() -> ""
+        days == RepeatDays.ALL -> lang.t("setiap hari", "every day")
+        days == RepeatDays.WEEKDAYS -> lang.t("setiap hari kerja", "on weekdays")
+        days == RepeatDays.WEEKEND -> lang.t("setiap akhir pekan", "on weekends")
+        else -> {
+            val names = days.sorted().map { it.getDisplayName(java.time.format.TextStyle.FULL, lang.locale) }
+            val joined = if (names.size <= 1) names.joinToString("") else names.dropLast(1).joinToString(", ") + lang.t(" dan ", " and ") + names.last()
+            lang.t("setiap $joined", "every $joined")
         }
+    }
+
+    /** "06.00 · gym · setiap hari kerja · mati" */
+    private fun alarmDesc(a: NineAlarm, lang: AppLang, withState: Boolean = false): String {
+        val parts = arrayListOf(a.clock)
+        a.label?.let { parts += it }
+        if (a.repeating) parts += daysText(a.days, lang)
+        if (withState && !a.enabled) parts += lang.t("mati", "off")
+        return parts.joinToString(" · ")
+    }
+
+    private fun setAlarm(cmd: Command.SetAlarm, lang: AppLang, now: LocalDateTime, denied: Set<String>): SkillResult {
         val label = if (cmd.label.isNullOrBlank()) "" else " (${cmd.label})"
+        val rep = if (cmd.repeat.isEmpty()) "" else ", " + daysText(cmd.repeat, lang)
+        if (!prefs.nineAlarms) {
+            val i = Intent(AlarmClock.ACTION_SET_ALARM).apply {
+                putExtra(AlarmClock.EXTRA_HOUR, cmd.time.hour)
+                putExtra(AlarmClock.EXTRA_MINUTES, cmd.time.minute)
+                if (!cmd.label.isNullOrBlank()) putExtra(AlarmClock.EXTRA_MESSAGE, cmd.label)
+                if (cmd.repeat.isNotEmpty()) {
+                    // java.util.Calendar: Minggu = 1 ... Sabtu = 7
+                    putIntegerArrayListExtra(AlarmClock.EXTRA_DAYS, ArrayList(cmd.repeat.map { it.value % 7 + 1 }))
+                }
+                putExtra(AlarmClock.EXTRA_SKIP_UI, true)
+            }
+            return SkillResult(
+                lang.t("Alarm terpasang untuk ", "Alarm set for ") + Fmt.at(cmd.time, lang, now) + label + rep + s(lang) + ".",
+                intent = i
+            )
+        }
+        // Layar & notifikasi alarm butuh izin notifikasi (Android 13+): minta sekali.
+        val notif = Manifest.permission.POST_NOTIFICATIONS
+        if (Build.VERSION.SDK_INT >= 33 && !has(notif) && notif !in denied) {
+            return SkillResult(
+                lang.t("Izinkan notifikasi agar alarm bisa tampil di layar${s(lang)}.", "Please allow notifications so the alarm can show on screen${s(lang)}."),
+                needPermissions = listOf(notif)
+            )
+        }
+        // Simpan tanggal hanya bila bukan kejadian berikutnya yang wajar (mis. "alarm lusa jam 6").
+        val natural = now.toLocalDate().atTime(cmd.time.hour, cmd.time.minute).let { if (it.isAfter(now)) it else it.plusDays(1) }
+        val date = if (cmd.repeat.isEmpty() && cmd.time.toLocalDate() != natural.toLocalDate()) cmd.time.toLocalDate() else null
+        val a = alarms.add(cmd.time.hour, cmd.time.minute, cmd.label, cmd.repeat, date)
+        AlarmScheduler.schedule(ctx, a, now)
+        val next = a.nextTrigger(now)
+        val warn = if (AlarmScheduler.canExact(ctx)) "" else lang.t(
+            " Catatan: izin \"Alarm & pengingat\" untuk Nine mati, jadi alarm bisa sedikit terlambat.",
+            " Note: Nine's \"Alarms & reminders\" permission is off, so it may ring a little late."
+        )
+        val head = if (cmd.repeat.isEmpty()) {
+            lang.t("Alarm terpasang untuk ", "Alarm set for ") + Fmt.at(next, lang, now) + label + s(lang) + "."
+        } else {
+            lang.t(
+                "Alarm ${a.clock} terpasang ${daysText(cmd.repeat, lang)}$label${s(lang)}. Pertama berbunyi ",
+                "Alarm set for ${a.clock} ${daysText(cmd.repeat, lang)}$label${s(lang)}. First one "
+            ) + Fmt.at(next, lang, now) + "."
+        }
+        return SkillResult(head + warn)
+    }
+
+    private fun showAlarms(lang: AppLang, now: LocalDateTime): SkillResult {
+        if (!prefs.nineAlarms) {
+            return SkillResult(lang.t("Membuka daftar alarm${s(lang)}.", "Opening your alarms${s(lang)}."), intent = Intent(AlarmClock.ACTION_SHOW_ALARMS))
+        }
+        val list = AlarmMatch.sorted(alarms.all())
+        if (list.isEmpty()) {
+            return SkillResult(lang.t("Belum ada alarm${s(lang)}. Katakan misalnya \"pasang alarm jam 6 pagi\".", "No alarms yet${s(lang)}. Try \"set an alarm for 6 AM\"."))
+        }
+        val on = list.count { it.enabled }
+        val lines = list.take(8).mapIndexed { i, a -> "${i + 1}. ${alarmDesc(a, lang, withState = true)}" }.joinToString("\n")
+        val next = list.filter { it.enabled }.minByOrNull { it.nextTrigger(now) }
+        val head = lang.t("Ada ${list.size} alarm, $on menyala${s(lang)}", "You have ${list.size} ${if (list.size == 1) "alarm" else "alarms"}, $on on${s(lang)}") +
+            (next?.let { lang.t(". Berikutnya ", ". Next one ") + Fmt.at(it.nextTrigger(now), lang, now) } ?: "") + ":"
+        return SkillResult("$head\n$lines")
+    }
+
+    private fun refDesc(ref: AlarmRef, lang: AppLang): String = when {
+        ref.label != null -> "\"${ref.label}\""
+        ref.hour != null -> lang.t("jam ", "for ") + String.format("%02d.%02d", ref.hour, ref.minute ?: 0)
+        ref.index != null -> lang.t("nomor ${ref.index}", "number ${ref.index}")
+        else -> ""
+    }
+
+    private fun alarmToggle(cmd: Command.AlarmToggle, lang: AppLang, now: LocalDateTime): SkillResult {
+        // "Matikan alarm" saat alarm sedang berbunyi = hentikan bunyinya.
+        if (!cmd.on && AlarmRingService.ringing && (cmd.ref.isEmpty || cmd.ref.id == AlarmRingService.ringingId)) {
+            AlarmRingService.stop(ctx)
+            val morning = now.hour in 4..10
+            return SkillResult(
+                lang.t("Alarm dimatikan${s(lang)}.", "Alarm off${s(lang)}.") +
+                    if (morning) lang.t(" Selamat pagi.", " Good morning.") else ""
+            )
+        }
+        if (!prefs.nineAlarms) {
+            return SkillResult(
+                lang.t(
+                    "Alarm di aplikasi Jam tidak bisa saya ubah langsung, jadi saya buka daftarnya${s(lang)}. Pakai alarm Nine (Pengaturan > Alarm) agar bisa diatur lewat suara.",
+                    "I can't change Clock-app alarms directly, so I'm opening the list${s(lang)}. Switch to Nine alarms (Settings > Alarms) to control them by voice."
+                ),
+                intent = Intent(AlarmClock.ACTION_SHOW_ALARMS)
+            )
+        }
+        val list = alarms.all()
+        if (list.isEmpty()) return SkillResult(lang.t("Belum ada alarm${s(lang)}.", "There are no alarms yet${s(lang)}."))
+        val op = if (cmd.on) AlarmMatch.Op.ON else AlarmMatch.Op.OFF
+        val hits = AlarmMatch.find(cmd.ref, list, op, now, alarms.lastId)
+        if (hits.isEmpty()) {
+            val generic = cmd.ref.hour == null && cmd.ref.label == null && cmd.ref.index == null && !cmd.ref.last && !cmd.ref.next
+            return SkillResult(
+                if (generic) {
+                    if (cmd.on) lang.t("Semua alarm sudah menyala${s(lang)}.", "All alarms are already on${s(lang)}.")
+                    else lang.t("Tidak ada alarm yang menyala${s(lang)}.", "No alarms are on${s(lang)}.")
+                } else {
+                    lang.t("Saya tidak menemukan alarm ${refDesc(cmd.ref, lang)}${s(lang)}.", "I couldn't find an alarm ${refDesc(cmd.ref, lang)}${s(lang)}.")
+                }
+            )
+        }
+        if (hits.size > 1 && !cmd.ref.all) {
+            val options = hits.take(6).map { Choice(alarmDesc(it, lang, withState = true), Command.AlarmToggle(AlarmRef(id = it.id), cmd.on)) }
+            val lines = options.mapIndexed { i, c -> "${i + 1}. ${c.label}" }.joinToString("\n")
+            return SkillResult(
+                lang.t("Ada ${hits.size} alarm${s(lang)}. Yang mana? (atau \"semua\")", "There are ${hits.size} alarms${s(lang)}. Which one? (or \"all\")") + "\n" + lines,
+                pending = Pending.Choose(options, all = Command.AlarmToggle(cmd.ref.copy(all = true), cmd.on))
+            )
+        }
+        for (a in hits) {
+            val upd = if (cmd.on) {
+                a.copy(enabled = true, date = a.date?.takeIf { d -> d.atTime(a.hour, a.minute).isAfter(now) })
+            } else {
+                a.copy(enabled = false)
+            }
+            alarms.update(upd)
+            AlarmScheduler.schedule(ctx, upd, now)
+            if (!cmd.on && AlarmRingService.ringingId == a.id) AlarmRingService.stop(ctx)
+        }
+        if (hits.size > 1) {
+            return SkillResult(
+                if (cmd.on) lang.t("${hits.size} alarm dinyalakan${s(lang)}.", "${hits.size} alarms turned on${s(lang)}.")
+                else lang.t("${hits.size} alarm dimatikan${s(lang)}.", "${hits.size} alarms turned off${s(lang)}.")
+            )
+        }
+        val a = hits[0]
         return SkillResult(
-            lang.t("Alarm terpasang untuk ", "Alarm set for ") + Fmt.at(cmd.time, lang, now) + label + s(lang) + ".",
-            intent = i
+            if (cmd.on) {
+                val next = (alarms.get(a.id) ?: a).nextTrigger(now)
+                lang.t("Alarm ${alarmDesc(a, lang)} menyala lagi${s(lang)}, berbunyi ", "Alarm ${alarmDesc(a, lang)} is back on${s(lang)}, ringing ") +
+                    Fmt.at(next, lang, now) + "."
+            } else {
+                lang.t("Alarm ${alarmDesc(a, lang)} dimatikan${s(lang)}.", "Alarm ${alarmDesc(a, lang)} turned off${s(lang)}.")
+            }
+        )
+    }
+
+    private fun alarmDelete(cmd: Command.AlarmDelete, lang: AppLang, confirmed: Boolean, now: LocalDateTime): SkillResult {
+        if (!prefs.nineAlarms) {
+            return SkillResult(
+                lang.t(
+                    "Alarm di aplikasi Jam tidak bisa saya hapus langsung, jadi saya buka daftarnya${s(lang)}.",
+                    "I can't delete Clock-app alarms directly, so I'm opening the list${s(lang)}."
+                ),
+                intent = Intent(AlarmClock.ACTION_SHOW_ALARMS)
+            )
+        }
+        val list = alarms.all()
+        if (list.isEmpty()) return SkillResult(lang.t("Belum ada alarm${s(lang)}.", "There are no alarms yet${s(lang)}."))
+        val hits = AlarmMatch.find(cmd.ref, list, AlarmMatch.Op.DELETE, now, alarms.lastId)
+        if (hits.isEmpty()) {
+            return SkillResult(lang.t("Saya tidak menemukan alarm ${refDesc(cmd.ref, lang)}${s(lang)}.", "I couldn't find an alarm ${refDesc(cmd.ref, lang)}${s(lang)}."))
+        }
+        if (hits.size > 1 && !cmd.ref.all) {
+            val options = hits.take(6).map { Choice(alarmDesc(it, lang, withState = true), Command.AlarmDelete(AlarmRef(id = it.id))) }
+            val lines = options.mapIndexed { i, c -> "${i + 1}. ${c.label}" }.joinToString("\n")
+            return SkillResult(
+                lang.t("Alarm yang mana${s(lang)}? (atau \"semua\")", "Which alarm${s(lang)}? (or \"all\")") + "\n" + lines,
+                pending = Pending.Choose(options, all = Command.AlarmDelete(cmd.ref.copy(all = true)))
+            )
+        }
+        if (hits.size > 1 && !confirmed) {
+            return SkillResult(
+                lang.t("Hapus ${hits.size} alarm? Katakan ya atau tidak.", "Delete ${hits.size} alarms? Say yes or no."),
+                pending = Pending.Confirm(cmd)
+            )
+        }
+        for (a in hits) {
+            AlarmScheduler.cancel(ctx, a.id)
+            alarms.remove(a.id)
+            if (AlarmRingService.ringingId == a.id) AlarmRingService.stop(ctx)
+        }
+        return SkillResult(
+            if (hits.size == 1) lang.t("Alarm ${alarmDesc(hits[0], lang)} dihapus${s(lang)}.", "Alarm ${alarmDesc(hits[0], lang)} deleted${s(lang)}.")
+            else lang.t("${hits.size} alarm dihapus${s(lang)}.", "${hits.size} alarms deleted${s(lang)}.")
         )
     }
 
@@ -280,6 +486,7 @@ class SkillExecutor(context: Context, private val notes: NoteStore, private val 
         is Pending.EventTime -> lang.t("Kapan acaranya${s(lang)}?", "When is it${s(lang)}?")
         Pending.TodoText -> lang.t("Tugas apa yang ingin ditambahkan?", "What should I add to your list?")
         is Pending.Confirm -> lang.t("Lanjutkan? Katakan ya atau tidak.", "Proceed? Say yes or no.")
+        is Pending.Choose -> lang.t("Yang mana${s(lang)}?", "Which one${s(lang)}?")
     }
 
     // ------------------------------------------------------------ buka aplikasi
@@ -980,6 +1187,103 @@ class SkillExecutor(context: Context, private val notes: NoteStore, private val 
         if (!calendar.delete(ev.id)) return SkillResult(lang.t("Maaf${s(lang)}, acara gagal dihapus.", "Sorry${s(lang)}, I couldn't delete it."))
         prefs.lastEventId = -1
         return SkillResult(lang.t("Acara \"${ev.title}\" sudah dihapus${s(lang)}.", "\"${ev.title}\" deleted${s(lang)}."))
+    }
+
+    private fun whenText(start: LocalDateTime, allDay: Boolean, lang: AppLang, now: LocalDateTime): String =
+        if (allDay) dayPhrase(start.toLocalDate(), lang, now) else Fmt.at(start, lang, now)
+
+    private fun deleteEvent(cmd: Command.DeleteEvent, lang: AppLang, confirmed: Boolean, denied: Set<String>, now: LocalDateTime): SkillResult {
+        calendarPermissionResult(lang, denied)?.let { return it }
+        val found = try {
+            calendar.findEvents(cmd.query, cmd.date, cmd.hour, cmd.minute, cmd.ambiguous, now)
+        } catch (e: Exception) {
+            emptyList()
+        }
+        val what = cmd.query.ifBlank { lang.t("acara", "event") }
+        val wherePhrase = cmd.date?.let { " " + dayPhrase(it, lang, now) } ?: ""
+        if (found.isEmpty()) {
+            return SkillResult(
+                lang.t("Saya tidak menemukan \"$what\"$wherePhrase di kalender${s(lang)}.", "I couldn't find \"$what\"$wherePhrase in your calendar${s(lang)}.")
+            )
+        }
+        val writable = found.filter { it.writable }
+        if (writable.isEmpty()) {
+            val f = found.first()
+            return SkillResult(
+                lang.t(
+                    "\"${f.title}\" ada di kalender ${f.calendarName} yang hanya bisa dibaca, jadi tidak bisa saya hapus${s(lang)}.",
+                    "\"${f.title}\" is in the read-only ${f.calendarName} calendar, so I can't delete it${s(lang)}."
+                )
+            )
+        }
+        // Judul yang persis sama jauh lebih cocok daripada yang lain: anggap itu yang dimaksud.
+        val best = writable.first()
+        val single = writable.size == 1 || best.score >= writable[1].score + 5
+        if (!single) {
+            val options = writable.take(5).map { f ->
+                Choice(
+                    "${f.title} — ${whenText(f.start, f.allDay, lang, now)}",
+                    Command.DeleteEventInstance(f.eventId, f.title, f.start, f.beginMillis, f.allDay, f.recurring)
+                )
+            }
+            val lines = options.mapIndexed { i, c -> "${i + 1}. ${c.label}" }.joinToString("\n")
+            return SkillResult(
+                lang.t(
+                    "Ada ${writable.size} acara yang cocok${s(lang)}. Yang mana yang dihapus?",
+                    "${writable.size} events match${s(lang)}. Which one should I delete?"
+                ) + "\n" + lines,
+                pending = Pending.Choose(options)
+            )
+        }
+        return deleteEventInstance(
+            Command.DeleteEventInstance(best.eventId, best.title, best.start, best.beginMillis, best.allDay, best.recurring),
+            lang, confirmed, denied, now
+        )
+    }
+
+    private fun deleteEventInstance(
+        cmd: Command.DeleteEventInstance,
+        lang: AppLang,
+        confirmed: Boolean,
+        denied: Set<String>,
+        now: LocalDateTime
+    ): SkillResult {
+        calendarPermissionResult(lang, denied)?.let { return it }
+        val whenT = whenText(cmd.begin, cmd.allDay, lang, now)
+        if (!confirmed) {
+            val rec = if (cmd.recurring) {
+                lang.t(" Ini acara berulang; hanya kejadian itu yang saya hapus.", " It's a recurring event; I'll remove only that occurrence.")
+            } else ""
+            return SkillResult(
+                lang.t("Hapus \"${cmd.title}\" $whenT?$rec Katakan ya atau tidak.", "Delete \"${cmd.title}\" $whenT?$rec Say yes or no."),
+                pending = Pending.Confirm(cmd)
+            )
+        }
+        val ok = if (cmd.recurring) {
+            calendar.cancelInstance(cmd.eventId, cmd.beginMillis) && !calendar.instanceExists(cmd.eventId, cmd.beginMillis)
+        } else {
+            calendar.delete(cmd.eventId) && !calendar.exists(cmd.eventId)
+        }
+        if (!ok) {
+            return SkillResult(
+                lang.t(
+                    "Kalender menolak menghapus \"${cmd.title}\" secara otomatis, jadi saya buka acaranya. Hapus dari sana${s(lang)}.",
+                    "The calendar wouldn't let me delete \"${cmd.title}\" automatically, so I'm opening it. Delete it from there${s(lang)}."
+                ),
+                intent = calendar.viewIntent(cmd.eventId)
+            )
+        }
+        if (prefs.lastEventId == cmd.eventId) prefs.lastEventId = -1
+        return SkillResult(
+            if (cmd.recurring) {
+                lang.t(
+                    "\"${cmd.title}\" $whenT sudah dihapus; jadwal berulang lainnya tetap${s(lang)}.",
+                    "\"${cmd.title}\" $whenT is deleted; the rest of the series stays${s(lang)}."
+                )
+            } else {
+                lang.t("\"${cmd.title}\" $whenT sudah dihapus dari kalender${s(lang)}.", "\"${cmd.title}\" $whenT has been deleted from your calendar${s(lang)}.")
+            }
+        )
     }
 
     private fun agenda(cmd: Command.ShowAgenda, lang: AppLang, now: LocalDateTime, denied: Set<String>): SkillResult {
