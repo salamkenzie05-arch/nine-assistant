@@ -389,7 +389,7 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
 
     private val reVolWord = rx("""\b(?:volume|suara|sound|audio)\b""")
     private val reMute = rx("""\b(?:bisukan|senyapkan|mute|silence)\b""")
-    private val reUnmute = rx("""\b(?:unmute|bunyikan|aktifkan\s+suara|nyalakan\s+suara|turn\s+on\s+(?:the\s+)?sound)\b""")
+    private val reUnmute = rx("""\b(?:unmute|bunyikan\b(?!\s+(?:senar|string|dawai|nada|note|gitar|guitar))|aktifkan\s+suara|nyalakan\s+suara|turn\s+on\s+(?:the\s+)?sound)\b""")
     private val reVolMax = rx("""\bvolume\s+(?:maksimal|maksimum|max|penuh|full)\b|\b(?:maksimalkan|full)\s+volume\b""")
     private val reVolSet = rx("""\b(?:volume|suara)\s*(?:ke|jadi|menjadi|to|at)?\s*(\d{1,3})\s*(?:persen|percent|%)?""")
     private val reVolSet2 = rx("""\b(?:atur|set|setel|ubah)\s+(?:volume|suara)\b.*?(\d{1,3})""")

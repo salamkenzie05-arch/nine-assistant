@@ -36,7 +36,11 @@ class Round2ParserTest {
     fun playingASongStillGoesToYouTubeMusic() {
         val c = p("putar lagu bohemian rhapsody")
         assertTrue("got $c", c is Command.PlayMedia)
-        assertEquals("youtube music", (c as Command.PlayMedia).app)
+        val m = c as Command.PlayMedia
+        assertEquals("bohemian rhapsody", m.query)
+        // tanpa aplikasi disebut: SkillExecutor memilih YouTube Music; bila disebut, harus itu yang dipakai
+        assertTrue("app=${m.app}", m.app == null || m.app == "youtube music")
+        assertEquals("youtube music", (p("putar bohemian rhapsody di youtube music") as Command.PlayMedia).app)
     }
 
     @Test

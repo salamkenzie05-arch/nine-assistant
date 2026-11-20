@@ -153,7 +153,7 @@ class Prefs(context: Context) {
 
     /** Wajah Nine bereaksi pada beat/bass/nada musik yang terdengar lewat mikrofon (hanya saat layar Nine terbuka). */
     var musicReact: Boolean
-        get() = sp.getBoolean("music_react", false)
+        get() = sp.getBoolean("music_react", true)
         set(value) = sp.edit().putBoolean("music_react", value).apply()
 
     /** Hari (yyyy-MM-dd) dan jumlah pemakaian muncratan hati pada hari itu (maks. 3 per hari). */
