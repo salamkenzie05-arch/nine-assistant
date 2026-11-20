@@ -139,7 +139,7 @@
 
     <string name="sec_location">Location</string>
     <string name="location_switch">Use location for accuracy</string>
-    <string name="location_help">Nine uses your approximate location for weather, nearby places and local time. It's only sent to Gemini when Internet mode is on, and never stored.</string>
+    <string name="location_help">Nine uses your approximate location for weather, nearby places and local time. It\'s only sent to Gemini when Internet mode is on, and never stored.</string>
     <string name="location_status_fmt">Last: %1$s</string>
     <string name="location_status_none">No location yet.</string>
 
