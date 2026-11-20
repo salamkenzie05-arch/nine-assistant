@@ -198,4 +198,6 @@
     <string name="profile_saved">Profil disimpan</string>
     <string name="profile_button">Ubah profil (nama, panggilan, tanggal lahir, pasangan)</string>
     <string name="gpu_switch">Percepat AI dengan GPU (lebih cepat menjawab, tetapi layar bisa patah-patah)</string>
+    <string name="cd_attach">Kirim gambar</string>
+    <string name="image_failed">Gambar tidak bisa dibaca.</string>
 </resources>

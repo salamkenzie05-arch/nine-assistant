@@ -186,6 +186,93 @@ class AssistantController(context: Context, private val ui: Ui) {
         }
     }
 
+    /**
+     * Kirim gambar ([path] = berkas di cache aplikasi) ke otak AI offline untuk dijelaskan. [caption] = pertanyaan pengguna
+     * tentang gambar itu (boleh kosong). Gambar tidak pernah dikirim ke internet.
+     */
+    fun submitImage(path: String, caption: String) {
+        val l = lang
+        val sfx = prefs.persona.sfx(l)
+        recognizing = false
+        input.cancel()
+        stopOutput()
+        val q = caption.trim()
+        log.add(true, if (q.isEmpty()) l.t("[Gambar]", "[Image]") else l.t("[Gambar] $q", "[Image] $q"))
+        if (!brain.isUsable) {
+            java.io.File(path).delete()
+            ui.onMood(Mood.CONFUSED)
+            reply(
+                l.t(
+                    "Untuk membaca gambar saya butuh otak AI offline${sfx}. Unduh dulu modelnya di Pengaturan.",
+                    "To read images I need the offline AI brain${sfx}. Please download the model in Settings first."
+                ),
+                listenAfter = false
+            )
+            return
+        }
+        setState(State.THINKING)
+        ui.onPartial(l.t("Memeriksa gambar…", "Looking at the image…"))
+        val index = log.add(false, "")
+        val gen = ++askGen
+        val raw = StringBuilder()
+        val prompt = if (q.isEmpty()) {
+            l.t("Jelaskan isi gambar ini dengan singkat dan jelas.", "Describe what is in this image, briefly and clearly.")
+        } else q
+        val cb = object : LlmBrain.ReplyCallback {
+            override fun onChunk(text: String) {
+                if (gen != askGen) return
+                raw.append(text)
+                ui.onPartial("")
+                log.update(index, TextClean.clean(raw.toString()))
+            }
+
+            override fun onDone(fullText: String) {
+                java.io.File(path).delete()
+                if (gen != askGen) return
+                brainJob = null
+                cancelAi = null
+                ui.onPartial("")
+                val cleaned = TextClean.clean(fullText)
+                if (cleaned.isEmpty()) {
+                    log.update(index, "…")
+                    setState(State.IDLE)
+                    return
+                }
+                log.update(index, cleaned)
+                ui.onMood(moodForText(cleaned))
+                if (prefs.speakReplies) {
+                    output.speak(cleaned, l, onStart = { setState(State.SPEAKING) }) { setState(State.IDLE) }
+                } else {
+                    setState(State.IDLE)
+                }
+            }
+
+            override fun onError(message: String) {
+                java.io.File(path).delete()
+                if (gen != askGen) return
+                brainJob = null
+                cancelAi = null
+                ui.onPartial("")
+                ui.onMood(Mood.SAD)
+                val text = if (message == "no_vision") {
+                    l.t(
+                        "Maaf${sfx}, model AI yang terpasang di HP ini belum bisa membaca gambar.",
+                        "I'm afraid the AI model on this phone can't read images yet${sfx}."
+                    )
+                } else {
+                    l.t(
+                        "Maaf${sfx}, saya gagal membaca gambar itu ($message). Coba gambar lain atau coba lagi sebentar lagi.",
+                        "My apologies${sfx}, I couldn't read that image ($message). Try another image or try again shortly."
+                    )
+                }
+                log.update(index, text)
+                setState(State.IDLE)
+            }
+        }
+        brainJob = brain.ask(prompt, l, cb, path)
+        cancelAi = { brain.cancel() }
+    }
+
     fun submitText(text: String) {
         val t = text.trim()
         if (t.isEmpty()) return

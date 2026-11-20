@@ -6,6 +6,7 @@ import android.os.Looper
 import android.os.Process
 import android.os.SystemClock
 import com.google.ai.edge.litertlm.Backend
+import com.google.ai.edge.litertlm.Content
 import com.google.ai.edge.litertlm.Contents
 import com.google.ai.edge.litertlm.Conversation
 import com.google.ai.edge.litertlm.ConversationConfig
@@ -126,11 +127,17 @@ class LlmBrain(context: Context, private val prefs: Prefs, private val models: M
     /** Harus dipanggil di thread LLM. */
     private var loadedPath: String? = null
 
-    private fun ensureEngine(): Boolean {
+    /** Engine dimuat dengan pembaca gambar (hanya dimuat saat ada gambar; lebih berat). */
+    private var engineHasVision = false
+
+    private fun ensureEngine(vision: Boolean = false): Boolean {
         lastUse = SystemClock.elapsedRealtime()
         val path = models.modelFile.absolutePath
-        if (engine != null && loadedPath == path) return true
-        if (engine != null) closeEngine() // model diganti (E2B ↔ E4B)
+        if (engine != null && loadedPath == path && (!vision || engineHasVision)) return true
+        if (engine != null) {
+            closeEngine() // model diganti (E2B ↔ E4B), atau perlu pembaca gambar
+            contextDropped = true
+        }
         if (!models.isReady()) {
             setState(State.NO_MODEL)
             return false
@@ -140,14 +147,25 @@ class LlmBrain(context: Context, private val prefs: Prefs, private val models: M
         var lastError = ""
         for (name in order) {
             try {
-                val cfg = EngineConfig(
-                    modelPath = models.modelFile.absolutePath,
-                    backend = backendFor(name),
-                    cacheDir = app.cacheDir.path
-                )
+                // Pembaca gambar di CPU: tidak berebut GPU dengan tampilan.
+                val cfg = if (vision) {
+                    EngineConfig(
+                        modelPath = models.modelFile.absolutePath,
+                        backend = backendFor(name),
+                        visionBackend = Backend.CPU(),
+                        cacheDir = app.cacheDir.path
+                    )
+                } else {
+                    EngineConfig(
+                        modelPath = models.modelFile.absolutePath,
+                        backend = backendFor(name),
+                        cacheDir = app.cacheDir.path
+                    )
+                }
                 val e = Engine(cfg)
                 e.initialize()
                 engine = e // simpan hanya setelah initialize berhasil
+                engineHasVision = vision
                 loadedPath = path
                 backendName = name
                 setState(State.READY)
@@ -219,6 +237,7 @@ class LlmBrain(context: Context, private val prefs: Prefs, private val models: M
         idleJob?.cancel()
         idleJob = null
         loadedPath = null
+        engineHasVision = false
         closeConversation()
         try {
             engine?.close()
@@ -229,9 +248,10 @@ class LlmBrain(context: Context, private val prefs: Prefs, private val models: M
     }
 
     /** Ajukan pertanyaan. Kembalikan Job yang bisa dibatalkan lewat [cancel]. */
-    fun ask(text: String, lang: AppLang, cb: ReplyCallback): Job = scope.launch {
-        if (!ensureEngine()) {
-            post { cb.onError(if (models.isReady()) "engine" else "no_model") }
+    fun ask(text: String, lang: AppLang, cb: ReplyCallback, imagePath: String? = null): Job = scope.launch {
+        val withImage = imagePath != null
+        if (!ensureEngine(withImage)) {
+            post { cb.onError(if (!models.isReady()) "no_model" else if (withImage) "no_vision" else "engine") }
             return@launch
         }
         var attempt = 0
@@ -252,7 +272,12 @@ class LlmBrain(context: Context, private val prefs: Prefs, private val models: M
             }
             try {
                 val conv = ensureConversation(lang)
-                conv.sendMessageAsync(text).collect { msg ->
+                val flow = if (imagePath != null) {
+                    conv.sendMessageAsync(Contents.of(Content.ImageFile(imagePath), Content.Text(text)))
+                } else {
+                    conv.sendMessageAsync(text)
+                }
+                flow.collect { msg ->
                     val chunk = msg.toString()
                     if (chunk.isNotEmpty()) {
                         full.append(chunk)
@@ -286,7 +311,7 @@ class LlmBrain(context: Context, private val prefs: Prefs, private val models: M
                     closeEngine()
                     backendName = "cpu"
                     prefs.llmBackend = "cpu"
-                    if (!ensureEngine()) {
+                    if (!ensureEngine(withImage)) {
                         post { cb.onError(msg) }
                         return@launch
                     }

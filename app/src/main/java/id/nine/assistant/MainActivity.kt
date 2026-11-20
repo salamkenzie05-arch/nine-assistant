@@ -175,6 +175,7 @@ open class MainActivity : AppCompatActivity(), AssistantController.Ui {
             true
         }
         binding.btnSend.setOnClickListener { sendTyped() }
+        binding.btnAttach.setOnClickListener { pickImage.launch("image/*") }
         binding.inputText.setOnEditorActionListener { _, actionId, event ->
             val enter = event != null && event.keyCode == android.view.KeyEvent.KEYCODE_ENTER && event.action == android.view.KeyEvent.ACTION_DOWN
             if (enter || actionId == EditorInfo.IME_ACTION_SEND || actionId == EditorInfo.IME_ACTION_DONE || actionId == EditorInfo.IME_ACTION_GO) {
@@ -586,6 +587,31 @@ open class MainActivity : AppCompatActivity(), AssistantController.Ui {
     private fun hideKeyboard() {
         val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
         imm.hideSoftInputFromWindow(binding.inputText.windowToken, 0)
+    }
+
+    /** Pemilih gambar sistem (tanpa izin tambahan: pengguna memilih sendiri gambarnya). */
+    private val pickImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) handlePickedImage(uri)
+    }
+
+    private fun handlePickedImage(uri: android.net.Uri) {
+        val caption = binding.inputText.text?.toString().orEmpty().trim()
+        binding.inputText.setText("")
+        hideKeyboard()
+        binding.inputText.clearFocus()
+        val app = applicationContext
+        Thread({
+            val file = id.nine.assistant.core.ImagePrep.prepare(app, uri)
+            runOnUiThread {
+                if (isFinishing || isDestroyed) {
+                    file?.delete()
+                } else if (file == null) {
+                    Toast.makeText(this, R.string.image_failed, Toast.LENGTH_SHORT).show()
+                } else {
+                    controller.submitImage(file.absolutePath, caption)
+                }
+            }
+        }, "nine-image").start()
     }
 
     private fun sendTyped() {
