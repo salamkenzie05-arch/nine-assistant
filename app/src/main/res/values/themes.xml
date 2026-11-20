@@ -7,7 +7,6 @@
         <item name="colorSurface">@color/nine_card</item>
         <item name="colorOnSurface">@color/nine_on_bg</item>
         <!-- Matikan nuansa lavender bawaan Material 3 (sheet, toggle, outline, tint elevasi). -->
-        <item name="colorSurfaceTint">@color/nine_card</item>
         <item name="colorSurfaceContainerLowest">@color/nine_card</item>
         <item name="colorSurfaceContainerLow">@color/nine_card</item>
         <item name="colorSurfaceContainer">@color/nine_card</item>
