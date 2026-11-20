@@ -90,10 +90,10 @@ class Round3ParserTest {
 
     @Test
     fun moneyTalkThatIsNotALog() {
-        assertFalse(p("aku mau beli kopi 18 ribu besok") is Command.FinanceAdd)
-        assertFalse(p("berapa harga kopi 18 ribu") is Command.FinanceAdd)
-        assertFalse(p("alarm jam 6 pagi") is Command.FinanceAdd)
-        assertFalse(p("terima kasih nine") is Command.FinanceAdd)
+        for (t in listOf("aku mau beli kopi 18 ribu besok", "berapa harga kopi 18 ribu", "alarm jam 6 pagi", "terima kasih nine")) {
+            val c = p(t)
+            assertFalse("\"$t\" -> $c", c is Command.FinanceAdd)
+        }
     }
 
     @Test

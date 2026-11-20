@@ -1005,6 +1005,8 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
         if (d.isEmpty() || d.length > 80) return null
         // "buka google maps dan ..." tanpa tujuan jelas dibiarkan untuk pembuka aplikasi
         if (Regex("""^(?:dan|lalu|terus|and|then)\b""", RegexOption.IGNORE_CASE).containsMatchIn(d)) return null
+        // "buka google maps app/aplikasi" bukan tujuan: serahkan ke pembuka aplikasi
+        if (Regex("""^(?:app|apps|aplikasi|aplikasinya|application|nya|dong|ya)$""", RegexOption.IGNORE_CASE).matches(d)) return null
         val preview = reNavPreview.containsMatchIn(raw) && !reNavGo.containsMatchIn(raw)
         return Command.Navigate(
             destination = d,
