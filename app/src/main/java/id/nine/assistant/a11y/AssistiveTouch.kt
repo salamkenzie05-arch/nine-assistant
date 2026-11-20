@@ -24,6 +24,7 @@ import android.widget.TextView
 import id.nine.assistant.AssistActivity
 import id.nine.assistant.MainActivity
 import id.nine.assistant.NineApp
+import id.nine.assistant.core.AppLang
 import kotlin.math.abs
 
 /**
@@ -300,7 +301,7 @@ class AssistiveTouch(private val svc: NineAccessibilityService) {
                     gravity = Gravity.CENTER
                 })
                 v.addView(TextView(ctx).apply {
-                    text = if (l == id.nine.assistant.core.AppLang.ID) item.id else item.en
+                    text = if (l == AppLang.ID) item.id else item.en
                     setTextColor(Color.argb(220, 255, 255, 255))
                     textSize = 11f
                     gravity = Gravity.CENTER

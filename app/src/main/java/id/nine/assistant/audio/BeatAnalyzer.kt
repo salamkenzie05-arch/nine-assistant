@@ -83,7 +83,8 @@ class BeatAnalyzer(private val sampleRate: Int = 16000) {
         val rAll = sqrt(eAll / count)
 
         // lantai derau mengikuti pelan ke bawah, peak mengikuti cepat ke atas dan pelan ke bawah
-        floor = if (rAll < floor) rAll else floor + (rAll - floor) * 0.002f
+        // (batas atas FLOOR_MAX: musik yang stabil tidak boleh dianggap derau latar setelah beberapa detik)
+        floor = if (rAll < floor) rAll else min(floor + (rAll - floor) * 0.002f, FLOOR_MAX)
         peak = if (rAll > peak) rAll else peak + (rAll - peak) * 0.01f
         peak = max(peak, 0.02f)
         val musicNow = rAll > max(0.012f, floor * 2.2f)
@@ -142,6 +143,8 @@ class BeatAnalyzer(private val sampleRate: Int = 16000) {
     }
 
     private companion object {
+        /** Lantai derau latar tertinggi yang mungkin (RMS 0..1). */
+        const val FLOOR_MAX = 0.01f
         /** ±1 detik pada blok ±32 ms. */
         const val HISTORY = 30
     }
