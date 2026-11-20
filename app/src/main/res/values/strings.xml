@@ -9,8 +9,7 @@
     <string name="cd_language">Ganti bahasa</string>
     <string name="cd_theme">Ganti tema terang/gelap</string>
     <string name="cd_keyboard">Ketik</string>
-    <string name="cd_help">Bantuan</string>
-    <string name="status_idle">Ketuk orb untuk bicara</string>
+        <string name="status_idle">Ketuk orb untuk bicara</string>
     <string name="status_listening">Mendengarkan…</string>
     <string name="status_thinking">Berpikir…</string>
     <string name="status_speaking">Berbicara · ketuk untuk berhenti</string>
@@ -23,8 +22,8 @@
     <string name="brain_error">Otak AI gagal dimuat</string>
 
     <string name="model_card_title">Aktifkan otak AI Nine</string>
-    <string name="model_card_text">Unduh Gemma 4 E2B (±2,6 GB, sekali saja; disarankan lewat Wi-Fi). Setelah itu Nine bisa diajak mengobrol dan menjawab pertanyaan tanpa internet.</string>
-    <string name="model_download">Unduh Gemma 4 (2,6 GB)</string>
+    <string name="model_card_text">Unduh Gemma 4 (2,6 GB untuk E2B atau 3,7 GB untuk E4B, pilih di Pengaturan; sekali saja, sebaiknya lewat Wi-Fi). Setelah itu Nine bisa diajak mengobrol dan menjawab pertanyaan tanpa internet.</string>
+    <string name="model_download">Unduh model Gemma</string>
     <string name="model_import">Impor file model (.litertlm)</string>
     <string name="model_delete">Hapus model</string>
     <string name="model_cancel">Batalkan unduhan</string>
@@ -32,14 +31,14 @@
     <string name="model_retry">Coba lagi</string>
     <string name="model_downloading">Mengunduh %1$s / %2$s</string>
     <string name="model_importing">Menyalin %1$s / %2$s</string>
-    <string name="model_ready">Gemma 4 E2B terpasang (%1$s)</string>
+    <string name="model_ready">%1$s terpasang (%2$s)</string>
     <string name="model_missing">Belum terpasang</string>
     <string name="model_fail_token">Server meminta login Hugging Face. Buka halaman model di browser, setujui lisensinya, buat token \"Read\" di huggingface.co/settings/tokens, tempel di bawah, lalu coba lagi. Atau unduh file model di browser lalu pilih \"Impor file model\".</string>
     <string name="model_fail_network">Unduhan gagal (%1$s). Periksa koneksi lalu coba lagi.</string>
     <string name="model_fail_storage">Ruang penyimpanan tidak cukup (butuh ±3 GB kosong).</string>
     <string name="model_fail_corrupt">File model tidak lengkap. Silakan unduh ulang.</string>
     <string name="model_fail_import">Gagal mengimpor file: %1$s</string>
-    <string name="model_delete_confirm">Hapus model Gemma (±2,6 GB)? Nine kembali ke mode perintah.</string>
+    <string name="model_delete_confirm">Hapus model Gemma ini? Nine kembali ke mode perintah (atau mode internet bila aktif).</string>
     <string name="hf_token_hint">Token Hugging Face (opsional)</string>
     <string name="hf_token_help">Hanya diperlukan bila unduhan ditolak karena butuh login. Token disimpan di perangkat ini saja.</string>
 
@@ -63,4 +62,47 @@
     <string name="assistant_button">Pilih Nine sebagai asisten digital</string>
     <string name="sec_privacy">Privasi</string>
     <string name="privacy_text">Suara, perintah, percakapan, dan catatan Anda diproses dan disimpan hanya di perangkat ini. Koneksi internet hanya dipakai satu kali untuk mengunduh model Gemma dari Hugging Face.</string>
+
+    <string name="todo_title">Tugas hari ini</string>
+    <string name="todo_hint">Tambah tugas…</string>
+    <string name="todo_add">Tambah</string>
+    <string name="todo_delete">Hapus tugas</string>
+    <string name="todo_clear_done">Hapus yang selesai</string>
+    <string name="todo_empty">Belum ada tugas. Ketik di bawah, atau katakan ke Nine: \"tambah tugas beli susu\".</string>
+
+    <string name="widget_orb_desc">Orb Nine: ketuk untuk bicara</string>
+    <string name="widget_today_desc">Nine · tugas hari ini</string>
+
+    <string name="sec_internet">Mode internet (lebih pintar)</string>
+    <string name="internet_switch">Gunakan Gemini + Google Search bila online</string>
+    <string name="internet_help">Pertanyaan bebas dijawab Gemini (Google) dengan pencarian web, jadi bisa menjawab cuaca, berita, kurs, dan hal terbaru. Butuh API key gratis dari Google AI Studio. Saat offline, Nine otomatis kembali ke Gemma di HP. Perintah HP (alarm, kalender, tugas, aplikasi) tetap diproses di perangkat.</string>
+    <string name="gemini_key_hint">API key Gemini (AIza…)</string>
+    <string name="gemini_get_key">Dapatkan API key gratis</string>
+    <string name="city_hint">Kota Anda (opsional, untuk cuaca), mis. Jakarta</string>
+    <string name="internet_status_off">Mode internet mati · semua jawaban dari Gemma offline.</string>
+    <string name="internet_status_nokey">Isi API key untuk mengaktifkan.</string>
+    <string name="internet_status_online">Aktif · terhubung ke internet.</string>
+    <string name="internet_status_offline">Aktif · sedang tidak ada internet, memakai Gemma offline.</string>
+    <string name="brain_online">Online · Gemini + Google Search</string>
+
+    <string name="variant_e2b">Gemma 4 E2B · 2,6 GB · cepat</string>
+    <string name="variant_e4b">Gemma 4 E4B · 3,7 GB · lebih pintar, sedikit lebih lambat</string>
+
+    <string name="sec_wake">Panggil dengan suara</string>
+    <string name="wake_switch">Aktifkan kata pemanggil</string>
+    <string name="wake_help">Frasa dalam bahasa Inggris, bisa lebih dari satu dipisah koma, mis. \"hey nine, okay nine\". Pendeteksian berjalan offline dan terus memakai mikrofon (sedikit menambah pemakaian baterai). Agar layar Nine bisa muncul dari aplikasi lain, jadikan Nine asisten digital default atau berikan izin di bawah.</string>
+    <string name="wake_overlay_button">Izinkan Nine muncul di atas aplikasi lain</string>
+    <string name="wake_overlay_granted">Izin tampil di atas aplikasi lain: sudah diberikan ✓</string>
+    <string name="wake_status_on">Mendengarkan \"%1$s\".</string>
+    <string name="wake_status_off">Mati.</string>
+    <string name="wake_no_phrase">Isi minimal satu frasa.</string>
+    <string name="wake_channel">Kata pemanggil Nine</string>
+    <string name="wake_alert_channel">Nine dipanggil</string>
+    <string name="wake_listening">Menunggu %1$s</string>
+    <string name="wake_paused">Dijeda saat Nine terbuka</string>
+    <string name="wake_turn_off">Matikan</string>
+    <string name="wake_loading">Menyiapkan pendeteksi suara…</string>
+    <string name="wake_no_model">Model kata pemanggil tidak ada di APK ini.</string>
+    <string name="wake_error">Kata pemanggil error: %1$s</string>
+    <string name="wake_tap_to_talk">Ya, Tuan? Ketuk untuk bicara.</string>
 </resources>

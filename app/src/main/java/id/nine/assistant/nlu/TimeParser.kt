@@ -1,6 +1,7 @@
 package id.nine.assistant.nlu
 
 import java.time.DayOfWeek
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 
@@ -17,9 +18,47 @@ data class TimeSpec(
     val ambiguous: Boolean,
     val dayOffset: Int?,
     val weekday: DayOfWeek?,
-    val relativeSeconds: Int?
+    val relativeSeconds: Int?,
+    /** Tanggal eksplisit ("25 Desember", "tanggal 3", "25/12"). Bulan/tahun boleh null. */
+    val dateDay: Int? = null,
+    val dateMonth: Int? = null,
+    val dateYear: Int? = null
 ) {
     val isKnown: Boolean get() = hour != null || relativeSeconds != null
+
+    /** Ada informasi hari/tanggal (besok, Senin, 25 Desember, ...). */
+    val hasDay: Boolean get() = dayOffset != null || weekday != null || dateDay != null
+
+    /** Tanggal yang dimaksud tanpa jam, atau null bila tidak disebut. */
+    fun resolveDate(now: LocalDateTime): LocalDate? {
+        val today = now.toLocalDate()
+        if (dateDay != null) return explicitDate(today)
+        if (weekday != null) {
+            val diff = ((weekday.value - today.dayOfWeek.value) + 7) % 7
+            return today.plusDays(diff.toLong())
+        }
+        if (dayOffset != null) return today.plusDays(dayOffset.toLong())
+        if (relativeSeconds != null) return now.plusSeconds(relativeSeconds.toLong()).toLocalDate()
+        return null
+    }
+
+    private fun explicitDate(today: LocalDate): LocalDate? {
+        val d = dateDay ?: return null
+        fun make(y: Int, m: Int): LocalDate? = try {
+            LocalDate.of(y, m, d)
+        } catch (e: Exception) {
+            null
+        }
+        if (dateMonth != null) {
+            if (dateYear != null) return make(if (dateYear < 100) 2000 + dateYear else dateYear, dateMonth)
+            val thisYear = make(today.year, dateMonth)
+            return if (thisYear != null && thisYear.isBefore(today)) make(today.year + 1, dateMonth) else thisYear
+        }
+        val thisMonth = make(today.year, today.monthValue)
+        if (thisMonth != null && !thisMonth.isBefore(today)) return thisMonth
+        val next = today.plusMonths(1)
+        return make(next.year, next.monthValue)
+    }
 
     fun resolve(now: LocalDateTime): LocalDateTime? {
         if (relativeSeconds != null) return now.plusSeconds(relativeSeconds.toLong())
@@ -27,7 +66,12 @@ data class TimeSpec(
         val today = now.toLocalDate()
         var date = today
         var futureDay = false
-        if (weekday != null) {
+        val explicit = if (dateDay != null) explicitDate(today) else null
+        if (dateDay != null && explicit == null) return null
+        if (explicit != null) {
+            date = explicit
+            futureDay = explicit.isAfter(today)
+        } else if (weekday != null) {
             val diff = ((weekday.value - today.dayOfWeek.value) + 7) % 7
             date = today.plusDays(diff.toLong())
             futureDay = diff > 0
@@ -35,7 +79,7 @@ data class TimeSpec(
             date = today.plusDays(dayOffset.toLong())
             futureDay = dayOffset > 0
         }
-        val explicitDay = weekday != null || dayOffset != null
+        val explicitDay = weekday != null || dayOffset != null || explicit != null
         fun at(hh: Int): LocalDateTime = LocalDateTime.of(date, LocalTime.of(hh, minute))
 
         if (ambiguous) {
@@ -54,7 +98,7 @@ data class TimeSpec(
         }
         val dt = at(h)
         if (dt.isAfter(now) || futureDay) return dt
-        if (explicitDay) return if (weekday != null) dt.plusDays(7) else dt
+        if (explicitDay) return if (weekday != null && explicit == null) dt.plusDays(7) else dt
         return dt.plusDays(1)
     }
 }
@@ -80,13 +124,67 @@ object TimeParser {
     private val reNoonMid = rx("""\b(noon|midday|tengah\s+hari|midnight|tengah\s+malam)\b""")
     private val reBarePart = rx("""\b(\d{1,2})(?:[.:](\d{2}))?(?=\s*(?:(?:nanti|this|in\s+the|at|di|pada)\s+)?(?:pagi|siang|sore|malam|subuh|morning|afternoon|evening|night)\b)""")
 
-    private val reDay = rx("""\b(?:hari\s+)?(hari\s+ini|today|besok|tomorrow|lusa|day\s+after\s+tomorrow|senin|selasa|rabu|kamis|jumat|jum'at|sabtu|minggu(?!\s+(?:depan|lalu|ini))|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b""")
+    private val reDay = rx("""\b(?:hari\s+)?(?:next\s+|this\s+|on\s+)?(hari\s+ini|today|besok|tomorrow|lusa|day\s+after\s+tomorrow|minggu\s+depan|pekan\s+depan|next\s+week|senin|selasa|rabu|kamis|jumat|jum'at|sabtu|minggu(?!\s+(?:depan|lalu|ini))|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b(?:\s+(?:depan|ini))?""")
+
+    private const val MONTHS = """januari|februari|pebruari|maret|april|mei|juni|juli|agustus|september|oktober|november|nopember|desember|january|february|march|may|june|july|august|october|december|jan|feb|mar|apr|jun|jul|agu|agt|ags|aug|sep|sept|okt|oct|nov|des|dec"""
+    private val reDateDM = rx("""\b(?:(?:tanggal|tgl\.?|the)\s*)?(\d{1,2})(?:st|nd|rd|th)?\s+(?:of\s+)?($MONTHS)\b\.?(?:\s+(\d{4}))?""")
+    private val reDateMD = rx("""\b($MONTHS)\.?\s+(\d{1,2})(?:st|nd|rd|th)?\b(?:,?\s+(\d{4}))?""")
+    // "25/12", "25/12/2026", "25-12-2026" (pakai "-" hanya bila ada tahun, agar "jam 7-8" tidak dianggap tanggal)
+    private val reDateSlash = rx("""(?<![\d.:])\b(\d{1,2})(?:/(\d{1,2})(?:/(\d{2,4}))?|-(\d{1,2})-(\d{2,4}))\b(?![.:]\d)""")
+    private val reDayOnly = rx("""\b(?:(?:pada\s+)?(?:tanggal|tgl\.?)\s*(\d{1,2})\b|(?:on\s+)?the\s+(\d{1,2})(?:st|nd|rd|th)\b)""")
+
+    private fun monthOf(w: String): Int? {
+        val m = w.lowercase()
+        return when {
+            m.startsWith("jan") -> 1
+            m.startsWith("feb") || m.startsWith("peb") -> 2
+            m.startsWith("mar") -> 3
+            m.startsWith("apr") -> 4
+            m == "mei" || m == "may" -> 5
+            m.startsWith("jun") -> 6
+            m.startsWith("jul") -> 7
+            m.startsWith("ag") || m.startsWith("aug") -> 8
+            m.startsWith("sep") -> 9
+            m.startsWith("ok") || m.startsWith("oct") -> 10
+            m.startsWith("nov") || m.startsWith("nop") -> 11
+            m.startsWith("des") || m.startsWith("dec") -> 12
+            else -> null
+        }
+    }
+
+    private class DateHit(val day: Int, val month: Int?, val year: Int?, val range: IntRange)
+
+    private fun findDate(text: String): DateHit? {
+        reDateDM.find(text)?.let { m ->
+            val d = m.groupValues[1].toInt()
+            val mo = monthOf(m.groupValues[2])
+            if (d in 1..31 && mo != null) return DateHit(d, mo, m.groupValues[3].toIntOrNull(), m.range)
+        }
+        reDateMD.find(text)?.let { m ->
+            val d = m.groupValues[2].toInt()
+            val mo = monthOf(m.groupValues[1])
+            // "may 5" vs "mar" (maret) aman; hindari "mei" sebagai kata biasa tanpa angka (sudah butuh angka)
+            if (d in 1..31 && mo != null) return DateHit(d, mo, m.groupValues[3].toIntOrNull(), m.range)
+        }
+        reDateSlash.find(text)?.let { m ->
+            val d = m.groupValues[1].toInt()
+            val mo = (m.groupValues[2].ifEmpty { m.groupValues[4] }).toIntOrNull() ?: 0
+            val y = (m.groupValues[3].ifEmpty { m.groupValues[5] }).toIntOrNull()
+            if (d in 1..31 && mo in 1..12) return DateHit(d, mo, y, m.range)
+        }
+        reDayOnly.find(text)?.let { m ->
+            val d = (m.groupValues[1].ifEmpty { m.groupValues[2] }).toIntOrNull()
+            if (d != null && d in 1..31) return DateHit(d, null, null, m.range)
+        }
+        return null
+    }
     private val rePart = rx("""(?:\b(nanti|this|in\s+the|at|di|pada)\s+)?\b(pagi|siang|sore|malam|dini\s+hari|subuh|morning|afternoon|evening|night|tonight)\b(\s+ini)?""")
 
     private fun dayOffsetOf(w: String): Int? = when (w.lowercase().replace(Regex("\\s+"), " ")) {
         "hari ini", "today" -> 0
         "besok", "tomorrow" -> 1
         "lusa", "day after tomorrow" -> 2
+        "minggu depan", "pekan depan", "next week" -> 7
         else -> null
     }
 
@@ -250,13 +348,17 @@ object TimeParser {
         }
 
         val ranges = ArrayList<IntRange>()
-        val clock = findClock(text)
+        val dateHit = findDate(text)
+        // Sembunyikan tanggal agar angkanya tidak dibaca sebagai jam ("25 desember jam 7").
+        val clockText = if (dateHit == null) text else blank(text, dateHit.range)
+        val clock = findClock(clockText)
         if (clock != null) ranges.add(clock.range)
+        if (dateHit != null) ranges.add(dateHit.range)
 
         var dayOffset: Int? = null
         var weekday: DayOfWeek? = null
-        var dayRange: IntRange? = null
-        reDay.find(text)?.let { m ->
+        var dayRange: IntRange? = dateHit?.range
+        if (dateHit == null) reDay.find(text)?.let { m ->
             val w = m.groupValues[1]
             dayOffset = dayOffsetOf(w)
             weekday = weekdayOf(w)
@@ -300,8 +402,14 @@ object TimeParser {
             hour = part.defaultHour
         }
 
-        val spec = TimeSpec(hour, minute, ambiguous, dayOffset, weekday, null)
+        val spec = TimeSpec(hour, minute, ambiguous, dayOffset, weekday, null, dateHit?.day, dateHit?.month, dateHit?.year)
         return ParsedTime(spec, tidy(removeRanges(text, ranges)))
+    }
+
+    private fun blank(text: String, r: IntRange): String {
+        val sb = StringBuilder(text)
+        for (i in r) sb.setCharAt(i, ' ')
+        return sb.toString()
     }
 
     private fun removeRanges(text: String, ranges: List<IntRange>): String {

@@ -30,7 +30,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-light"
+                    android:fontFamily="@font/nine_light"
                     android:letterSpacing="0.35"
                     android:text="NINE"
                     android:textColor="@color/nine_on_bg"
@@ -53,6 +53,15 @@
                 android:contentDescription="@string/cd_language"
                 android:text="ID"
                 android:textColor="@color/nine_on_bg" />
+
+            <ImageButton
+                android:id="@+id/btnTodo"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/todo_title"
+                android:src="@drawable/ic_checklist"
+                app:tint="@color/nine_on_bg" />
 
             <ImageButton
                 android:id="@+id/btnTheme"
@@ -222,16 +231,6 @@
                 android:src="@drawable/ic_keyboard"
                 app:tint="@color/nine_muted" />
 
-            <ImageButton
-                android:id="@+id/btnHelp"
-                android:layout_width="52dp"
-                android:layout_height="52dp"
-                android:layout_gravity="end|center_vertical"
-                android:layout_marginEnd="24dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="@string/cd_help"
-                android:src="@drawable/ic_help"
-                app:tint="@color/nine_muted" />
         </FrameLayout>
 
         <TextView

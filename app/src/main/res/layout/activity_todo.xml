@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/todoRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/nine_bg"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp">
+
+        <ImageButton
+            android:id="@+id/btnBack"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/back"
+            android:src="@drawable/ic_back"
+            app:tint="@color/nine_on_bg" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/todo_title"
+                android:textColor="@color/nine_on_bg"
+                android:textSize="20sp" />
+
+            <TextView
+                android:id="@+id/txtDate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/nine_muted"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnClearDone"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/todo_clear_done" />
+    </LinearLayout>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/todoList"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="8dp" />
+
+    <TextView
+        android:id="@+id/txtEmpty"
+        style="@style/Nine.Body"
+        android:gravity="center"
+        android:padding="24dp"
+        android:text="@string/todo_empty"
+        android:visibility="gone" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:background="@drawable/bg_user_pill"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="16dp"
+        android:paddingEnd="4dp">
+
+        <EditText
+            android:id="@+id/inputTodo"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:background="@android:color/transparent"
+            android:hint="@string/todo_hint"
+            android:imeOptions="actionDone"
+            android:importantForAutofill="no"
+            android:inputType="textCapSentences"
+            android:minHeight="48dp"
+            android:textColor="@color/nine_on_bg"
+            android:textColorHint="@color/nine_muted" />
+
+        <ImageButton
+            android:id="@+id/btnAddTodo"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/todo_add"
+            android:src="@drawable/ic_send"
+            app:tint="@color/nine_accent" />
+    </LinearLayout>
+</LinearLayout>

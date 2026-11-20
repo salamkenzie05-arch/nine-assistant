@@ -6,5 +6,8 @@
     <color name="nine_pill">#1A1F2B</color>
     <color name="nine_card">#10141C</color>
     <color name="nine_accent">#35E0FF</color>
-    <color name="nine_gold">#FFC24D</color>
+    <color name="nine_gold">#C7861A</color>
+    <color name="widget_bg">#E60B0F18</color>
+    <color name="widget_text">#F2F5FA</color>
+    <color name="widget_muted">#8A93A6</color>
 </resources>

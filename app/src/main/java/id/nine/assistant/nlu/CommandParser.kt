@@ -43,16 +43,20 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
         return parseLanguage(raw)
             ?: parseReset(raw)
             ?: parseControl(raw)
+            ?: parseTodo(raw)
             ?: parseAlarm(norm, now)
             ?: parseTimer(norm)
             ?: parseReminder(raw, now)
+            ?: parseCalendar(raw, now)
             ?: parseFlashlight(raw)
             ?: parseSettings(raw)
             ?: parseVolume(norm)
             ?: parseDeviceInfo(raw)
             ?: parseNotes(raw)
+            ?: parseWhatsApp(raw)
             ?: parseSms(raw)
             ?: parseCall(raw)
+            ?: parseExternal(raw)
             ?: parseOpenApp(raw)
             ?: Command.Unknown(raw)
     }
@@ -324,7 +328,7 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
 
     // ------------------------------------------------------------------ buka aplikasi
 
-    private val reOpen = rx("""^(?:buka|bukakan|jalankan|luncurkan|launch|open|start|run)\b\s*(?:aplikasi\s+|app\s+|apl\s+|the\s+)*(.*?)(?:\s+(?:app|aplikasi))?$""")
+    private val reOpen = rx("""^(?:buka|bukain|bukakan|bukaain|jalankan|jalanin|luncurkan|launch|open(?:\s+up)?|start|run)\b\s*(?:aplikasi\s+|app\s+|apl\s+|the\s+|my\s+)*(.*?)(?:\s+(?:app|aplikasi|application))?$""")
 
     private fun parseOpenApp(raw: String): Command? {
         val m = reOpen.find(raw) ?: return null
@@ -334,6 +338,263 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
         val t = targetOf(q, networkOnly = true)
         if (t != null) return Command.OpenSettings(t, null)
         return Command.OpenApp(q)
+    }
+
+    // ------------------------------------------------------------------ daftar tugas
+
+    private val TODO_RX = """(?:daftar\s+)?(?:tugas|to[\s-]?do(?:\s+list)?|todos?(?:\s+list)?|kerjaan|pekerjaan|tasks?(?:\s+list)?|checklist)"""
+    private val reTodoClearAll = rx("""^(?:hapus|bersihkan|kosongkan|clear|delete|remove|reset)\s+(?:semua\s+|all\s+|my\s+|the\s+|seluruh\s+|isi\s+)*$TODO_RX(?:\s+(?:saya|ku|aku|hari\s+ini))*$""")
+    private val reTodoClearDone = rx("""^(?:hapus|bersihkan|buang|clear|remove|delete)\s+(?:semua\s+|all\s+|the\s+)?(?:$TODO_RX\s+(?:yang\s+)?(?:sudah\s+)?(?:selesai|beres|done|completed|finished)|(?:completed|done|finished)\s+$TODO_RX)$""")
+    private val reTodoAdd = listOf(
+        rx("""^(?:tambah(?:kan)?|buat(?:kan)?|bikin(?:in)?|catat(?:kan)?|masukkan|masukin)\s+(?:sebuah\s+|satu\s+)?(?:tugas|to[\s-]?do|todo|kerjaan|pekerjaan)(?:\s+baru)?\b\s*[:,]?\s*(.*)$"""),
+        rx("""^(?:tambah(?:kan)?|masukkan|masukin|catat(?:kan)?|taruh)\s+(.+?)\s+(?:ke|di|dalam)\s+(?:dalam\s+)?$TODO_RX(?:\s+(?:saya|ku|aku|hari\s+ini))*$"""),
+        rx("""^(?:tugas|to[\s-]?do|todo)\s+baru\s*[:,]?\s*(.*)$"""),
+        rx("""^(?:to[\s-]?do|todo)\s*[:,]\s*(.+)$"""),
+        rx("""^(?:add|put)\s+(.+?)\s+(?:to|on)\s+(?:my\s+|the\s+)?(?:to[\s-]?do(?:\s+list)?|todo(?:\s+list)?|task\s+list|tasks|list)(?:\s+for\s+today)?$"""),
+        rx("""^(?:add|create|new|make)\s+(?:a\s+)?(?:new\s+)?(?:task|to[\s-]?do|todo)\b\s*[:,]?\s*(.*)$""")
+    )
+    private val reTodoList = listOf(
+        rx("""^(?:apa\s+(?:saja\s+)?|lihat\s+|tampilkan\s+|bacakan\s+|baca\s+|cek\s+|buka\s+|tunjukkan\s+)?$TODO_RX(?:\s+(?:saya|ku|aku))?(?:\s+(?:hari\s+ini|apa\s+saja|apa|untuk\s+hari\s+ini))*$"""),
+        rx("""^(?:apa\s+)?(?:saja\s+)?(?:yang\s+)?(?:harus|perlu)\s+(?:saya|aku|gue)\s+(?:kerjakan|lakukan|selesaikan)(?:\s+hari\s+ini)?$"""),
+        rx("""^(?:what(?:'s|\s+is|\s+are)\s+(?:on\s+)?my\s+$TODO_RX(?:\s+(?:today|for\s+today))?|(?:show|read|list|open|check)\s+(?:me\s+)?(?:my\s+)?$TODO_RX|my\s+$TODO_RX|what\s+do\s+i\s+(?:need|have)\s+to\s+do(?:\s+today)?)$""")
+    )
+    private val reTodoDone = listOf(
+        rx("""^(?:tandai|centang|ceklis|checklist|selesaikan|coret)\s+(?:tugas\s+)?(.+?)(?:\s+(?:sudah\s+|sebagai\s+|jadi\s+)?(?:selesai|beres))?$"""),
+        rx("""^(?:tugas\s+)(.+?)\s+(?:sudah\s+|udah\s+)?(?:selesai|beres)$"""),
+        rx("""^(?:sudah\s+|udah\s+)?(?:selesai|beres)\s+tugas\s+(.+)$"""),
+        rx("""^(?:mark|check\s+off|tick\s+off|cross\s+off|complete|finish)\s+(?:task\s+)?(.+?)(?:\s+as)?(?:\s+(?:done|complete(?:d)?|finished))?$""")
+    )
+    private val reTodoRemove = listOf(
+        rx("""^(?:hapus|buang|delete|remove)\s+(?:tugas|task|to[\s-]?do)\s+(.+?)(?:\s+(?:dari\s+(?:daftar\s+)?(?:tugas)?|from\s+(?:my\s+)?(?:list|to[\s-]?do\s+list)))?$"""),
+        rx("""^(?:hapus|buang)\s+(.+?)\s+dari\s+$TODO_RX$"""),
+        rx("""^(?:remove|delete)\s+(.+?)\s+from\s+(?:my\s+|the\s+)?(?:to[\s-]?do(?:\s+list)?|todo(?:\s+list)?|tasks|list)$""")
+    )
+
+    private fun todoRef(s: String): String {
+        var t = NumberWords.normalize(s.trim()).lowercase()
+        t = t.replace(Regex("""^(?:nomor|number|no\.?|#|yang|ke-?|the)\s*"""), "").trim()
+        val ord = mapOf(
+            "pertama" to "1", "kedua" to "2", "ketiga" to "3", "keempat" to "4", "kelima" to "5",
+            "keenam" to "6", "ketujuh" to "7", "kedelapan" to "8", "kesembilan" to "9", "kesepuluh" to "10",
+            "first" to "1", "second" to "2", "third" to "3", "fourth" to "4", "fifth" to "5",
+            "sixth" to "6", "seventh" to "7", "eighth" to "8", "ninth" to "9", "tenth" to "10",
+            "terakhir" to "-1", "last" to "-1", "one" to "1"
+        )
+        ord[t]?.let { return it }
+        Regex("""^(\d{1,2})(?:st|nd|rd|th)?$""").find(t)?.let { return it.groupValues[1] }
+        return s.trim()
+    }
+
+    private fun parseTodo(raw: String): Command? {
+        if (reTodoClearDone.matches(raw)) return Command.TodoClearDone
+        if (reTodoClearAll.matches(raw)) return Command.TodoClearAll
+        for (r in reTodoList) if (r.matches(raw)) return Command.TodoList
+        for (r in reTodoAdd) {
+            val m = r.find(raw) ?: continue
+            val text = m.groupValues[1].trim().trim(',', '.', ':')
+            return if (text.isEmpty()) Command.NeedInfo(Pending.TodoText) else Command.TodoAdd(text)
+        }
+        for (r in reTodoRemove) {
+            val m = r.find(raw) ?: continue
+            return Command.TodoRemove(todoRef(m.groupValues[1]))
+        }
+        for (r in reTodoDone) {
+            val m = r.find(raw) ?: continue
+            val ref = m.groupValues[1].trim()
+            if (ref.isEmpty()) continue
+            return Command.TodoDone(todoRef(ref))
+        }
+        return null
+    }
+
+    // ------------------------------------------------------------------ kalender
+
+    private val reEventAdd = listOf(
+        rx("""^(?:tambah(?:kan)?|buat(?:kan)?|bikin(?:in)?|catat(?:kan)?|masukkan|masukin|simpan|atur|set)\s+(?:sebuah\s+|satu\s+)?(acara|jadwal|agenda|event|janji(?:\s+temu)?|rapat|meeting)\b(?:\s+baru)?\s*[:,]?\s*(.*)$"""),
+        rx("""^(?:jadwalkan|agendakan)\s+()(.*)$"""),
+        rx("""^(?:schedule|add|create|make|put|set\s+up|book)\s+(?:an?\s+|new\s+|my\s+)*(event|appointment|meeting|calendar\s+event)\b\s*[:,]?\s*(.*)$"""),
+        rx("""^(?:schedule|book)\s+()(.+)$""")
+    )
+    private val reEventToCalendar = listOf(
+        rx("""^(?:tambah(?:kan)?|masukkan|masukin|catat(?:kan)?|simpan|taruh)\s+(.+?)\s+(?:ke|di)\s+(?:dalam\s+)?kalender(?:\s+(.*))?$"""),
+        rx("""^(?:add|put|save)\s+(.+?)\s+(?:to|on|in)\s+(?:my\s+|the\s+)?calendar(?:\s+(.*))?$""")
+    )
+    private val reCalendarWords = rx("""\s*\b(?:ke|di|to|on|in)\s+(?:dalam\s+)?(?:my\s+|the\s+)?(?:kalender|calendar)\b\s*""")
+    private val reAgendaWord = rx("""\b(?:what\s+do\s+i\s+have|jadwal|agenda|acara|kegiatan|kalender|calendar|schedule|events?|appointments?|meetings?|rapat)\b""")
+    private val reAgendaCue = rx("""^(?:apa|ada|cek|lihat|tampilkan|bacakan|baca|tunjukkan|gimana|bagaimana|what|show|check|read|any|do\s+i\s+have|my|jadwal|agenda|acara|kegiatan)\b""")
+    private val reAgendaAsk = rx("""\b(?:apa|ada|cek|lihat|tampilkan|bacakan|baca|tunjukkan|gimana|bagaimana|what|show|check|read|any|do\s+i\s+have)\b""")
+    private val reAgendaFiller = rx("""\b(?:s|apa|ada|saja|aja|cek|lihat|tampilkan|bacakan|baca|tunjukkan|saya|aku|ku|gue|hari|untuk|ya|di|pada|jadwal|agenda|acara|kegiatan|kalender|calendar|schedule|events?|appointments?|meetings?|rapat|what|whats|what's|is|are|on|my|the|show|me|check|read|any|do|i|have|for|today|tomorrow|gimana|bagaimana|kosong|nggak|tidak)\b""")
+    private val reDurationFor = rx("""\b(?:selama|for)\s+""")
+    private val reUntil = rx("""\b(?:sampai|hingga|until|till)\s+(?:jam\s+|pukul\s+)?(\d{1,2})(?:[.:](\d{2}))?(?:\s*(am|pm))?""")
+    private val reTitleLead = rx("""^(?:(?:untuk|tentang|dengan\s+judul|berjudul|judulnya|namanya|called|named|titled|about|for|acara|event|baru|new)\s+)+""")
+    private val reTitleTrail = rx("""(?:\s+(?:pada|at|on|di|for|untuk|dan|and))+$""")
+
+    private fun tidyTitle(t: String): String {
+        var x = reCalendarWords.replace(t, " ").replace(Regex("\\s+"), " ").trim().trim(',', '.', ':')
+        x = reTitleLead.replaceFirst(x, "")
+        x = reTitleTrail.replaceFirst(x, "")
+        return x.trim().trim(',', '.', ':')
+    }
+
+    /** Membuat acara dari judul + teks waktu. Null bila waktunya tidak bisa dipahami. */
+    internal fun buildEvent(title: String, timeText: String, now: LocalDateTime): Command? {
+        var text = NumberWords.normalize(timeText)
+        // durasi: "selama 2 jam" / "for 90 minutes"
+        var durationSec: Int? = null
+        reDurationFor.find(text)?.let { f ->
+            val rest = text.substring(f.range.last + 1)
+            val d = Durations.find(rest)
+            if (d != null && d.range.first == 0) {
+                durationSec = d.seconds
+                text = text.substring(0, f.range.first) + " " + rest.substring(d.range.last + 1)
+            }
+        }
+        // jam selesai: "sampai jam 5"
+        var untilH: Int? = null
+        var untilM = 0
+        reUntil.find(text)?.let { u ->
+            untilH = u.groupValues[1].toInt()
+            untilM = u.groupValues[2].ifEmpty { "0" }.toInt()
+            val ap = u.groupValues[3].lowercase()
+            if (ap == "pm" && untilH!! < 12) untilH = untilH!! + 12
+            text = text.removeRange(u.range)
+        }
+        val tp = TimeParser.parse(text) ?: return null
+        val spec = tp.spec
+        val rawTitle = (title + " " + tp.remainder).trim()
+        val name = tidyTitle(rawTitle)
+        if (spec.relativeSeconds != null) {
+            val start = now.plusSeconds(spec.relativeSeconds.toLong())
+            return Command.AddEvent(name, start, durationSec?.let { start.plusSeconds(it.toLong()) }, false)
+        }
+        if (spec.hour == null) {
+            if (!spec.hasDay) return null
+            val d = spec.resolveDate(now) ?: return null
+            return Command.AddEvent(name, d.atStartOfDay(), null, true)
+        }
+        val start = spec.resolve(now) ?: return null
+        var end: LocalDateTime? = durationSec?.let { start.plusSeconds(it.toLong()) }
+        val uh = untilH
+        if (end == null && uh != null && uh in 0..23) {
+            var h = uh
+            if (h <= 12 && h + 12 > start.hour && h < start.hour) h += 12
+            val e = start.toLocalDate().atTime(h % 24, untilM.coerceIn(0, 59))
+            if (e.isAfter(start)) end = e
+        }
+        return Command.AddEvent(name, start, end, false)
+    }
+
+    private fun parseCalendar(raw: String, now: LocalDateTime): Command? {
+        // 1) "tambahkan rapat ke kalender besok jam 9"
+        for (r in reEventToCalendar) {
+            val m = r.find(raw) ?: continue
+            val payload = (m.groupValues[1] + " " + m.groupValues.getOrElse(2) { "" }).trim()
+            return eventOrAsk(payload, now)
+        }
+        // 2) "buat acara ...", "jadwalkan ...", "schedule a meeting ..."
+        for (r in reEventAdd) {
+            val m = r.find(raw) ?: continue
+            val kind = m.groupValues[1].lowercase()
+            val keepKind = kind == "rapat" || kind == "meeting" || kind.startsWith("janji") || kind == "appointment"
+            val payload = (if (keepKind) "${m.groupValues[1]} " else "") + m.groupValues[2]
+            return eventOrAsk(payload.trim(), now)
+        }
+        // 3) agenda: "jadwal saya besok apa saja", "what's on my calendar tomorrow"
+        if (reAgendaWord.containsMatchIn(raw) && reAgendaCue.containsMatchIn(raw)) {
+            val norm = NumberWords.normalize(raw)
+            val tp = TimeParser.parse(norm)
+            val leftover = reAgendaFiller.replace((tp?.remainder ?: norm).replace(Regex("['’]"), " "), " ")
+                .replace(Regex("[?.,!\\s]+"), " ").trim()
+            val asks = reAgendaAsk.containsMatchIn(raw)
+            if (leftover.isEmpty() && (asks || tp?.spec?.hour == null)) {
+                val date = tp?.spec?.resolveDate(now) ?: now.toLocalDate()
+                return Command.ShowAgenda(date)
+            }
+            // "jadwal rapat besok jam 10" → anggap menambah acara bila ada waktu
+            if (!asks && Regex("^(?:jadwal|agenda|acara)\\b", RegexOption.IGNORE_CASE).containsMatchIn(raw) && tp != null && (tp.spec.hour != null || tp.spec.hasDay)) {
+                val payload = raw.replaceFirst(Regex("^(?:jadwal|agenda|acara)\\s*", RegexOption.IGNORE_CASE), "")
+                return eventOrAsk(payload, now)
+            }
+        }
+        return null
+    }
+
+    private fun eventOrAsk(payload: String, now: LocalDateTime): Command {
+        val ev = buildEvent("", payload, now)
+        if (ev != null) return ev
+        val title = tidyTitle(NumberWords.normalize(payload))
+        return Command.NeedInfo(Pending.EventTime(title))
+    }
+
+    // ------------------------------------------------------------------ WhatsApp
+
+    private val WA = """(?:wa|whatsapp|whats\s+app|watsap|wasap|whatsap)"""
+    private val reWa = listOf(
+        rx("""^(?:kirim(?:kan|in)?\s+)?(?:pesan\s+|chat\s+)?$WA\s+(?:ke\s+|kepada\s+|untuk\s+|to\s+)?(.+?)(?:\s+(?:isi(?:nya)?|berisi|yang\s+berisi|bilang|katakan|bahwa|dengan\s+pesan|saying|that\s+says)\s+(.+)|\s*:\s*(.+))?$"""),
+        rx("""^(?:kirim(?:kan|in)?|chat)\s+(?:pesan\s+)?(?:ke\s+|kepada\s+)?(.+?)\s+(?:lewat|via|pakai|di)\s+$WA(?:\s+(?:isi(?:nya)?|berisi|bilang|katakan|bahwa)\s+(.+)|\s*:\s*(.+))?$"""),
+        rx("""^(?:send\s+(?:a\s+)?)?$WA(?:\s+message)?\s+to\s+(.+?)(?:\s+(?:saying|that\s+says|that)\s+(.+)|\s*:\s*(.+))?$"""),
+        rx("""^(?:send\s+(?:a\s+)?)?(?:message|text)\s+to\s+(.+?)\s+on\s+$WA(?:\s+(?:saying|that\s+says|that)\s+(.+))?()$""")
+    )
+
+    private fun parseWhatsApp(raw: String): Command? {
+        for (r in reWa) {
+            val m = r.find(raw) ?: continue
+            val target = m.groupValues[1].trim()
+            if (target.isEmpty()) continue
+            val body = (m.groupValues.getOrElse(2) { "" }.ifEmpty { m.groupValues.getOrElse(3) { "" } }).trim()
+            return Command.WhatsApp(target, body.ifEmpty { null })
+        }
+        return null
+    }
+
+    // ------------------------------------------------------------------ aplikasi eksternal
+
+    private val MEDIA_APP = """(youtube\s+music|yt\s+music|youtube|yt|you\s+tube|spotify|joox|apple\s+music|resso|soundcloud)"""
+    private val rePlay = rx("""^(?:putar(?:kan)?|puterin|setel(?:in)?|mainkan|play|listen\s+to|dengarkan|dengerin|tonton|nonton|watch)\b\s*(?:lagu|musik|music|song|video|film|playlist|album|podcast|some)?\s*(.*?)(?:\s+(?:di|on|pakai|lewat|via|in|dari|from)\s+$MEDIA_APP)?$""")
+    private val reSearchIn = rx("""^(?:cari(?:kan)?|carikan|search(?:\s+for)?|find|look\s+up)\s+(.+?)\s+(?:di|on|in|pakai|lewat)\s+(youtube|yt|you\s+tube|spotify|google\s+maps|maps|map|peta|google|internet|web|browser|chrome)$""")
+    private val reNav = rx("""^(?:navigasi(?:kan)?|arahkan(?:\s+(?:saya|aku))?|antar(?:kan|in)?\s+(?:saya|aku|gue)|tunjukkan\s+(?:jalan|arah|rute)|petunjuk\s+arah|rute|jalan|directions?|navigate|take\s+me|get\s+directions|how\s+do\s+i\s+get|drive)\s+(?:ke|menuju|to|for)\s+(.+)$""")
+    private val reWeb = listOf(
+        rx("""^(?:google(?:ing)?|googlein|telusuri)\s+(.+)$"""),
+        rx("""^search\s+(?:the\s+)?(?:web|internet|google)\s+for\s+(.+)$""")
+    )
+    private val reUrl = rx("""^(?:buka|bukain|open|kunjungi|visit|go\s+to)\s+(?:situs|website|web|laman|halaman|site|the\s+website)?\s*((?:https?://)?[a-z0-9-]+(?:\s*(?:\.|\bdot\b|\btitik\b)\s*[a-z0-9-]+)+(?:/\S*)?)$""")
+
+    private fun mediaApp(w: String?): String? {
+        val a = w?.lowercase()?.replace(Regex("\\s+"), " ") ?: return null
+        return when {
+            a.contains("music") && (a.startsWith("yt") || a.startsWith("youtube")) -> "youtube music"
+            a.startsWith("y") -> "youtube"
+            else -> a
+        }
+    }
+
+    private fun parseExternal(raw: String): Command? {
+        reUrl.find(raw)?.let { m ->
+            val url = m.groupValues[1].lowercase()
+                .replace(Regex("\\s*\\b(?:dot|titik)\\b\\s*"), ".").replace(Regex("\\s*\\.\\s*"), ".").replace(" ", "")
+            if (url.contains('.')) return Command.OpenUrl(url)
+        }
+        reSearchIn.find(raw)?.let { m ->
+            val q = m.groupValues[1].trim()
+            val where = m.groupValues[2].lowercase()
+            return when {
+                where.startsWith("y") || where.startsWith("you") -> Command.PlayMedia(q, "youtube")
+                where == "spotify" -> Command.PlayMedia(q, "spotify")
+                where.contains("map") || where == "peta" -> Command.Navigate(q, drive = false)
+                else -> Command.WebSearch(q)
+            }
+        }
+        reNav.find(raw)?.let { m -> return Command.Navigate(m.groupValues[1].trim(), drive = true) }
+        for (r in reWeb) r.find(raw)?.let { m -> return Command.WebSearch(m.groupValues[1].trim()) }
+        rePlay.find(raw)?.let { m ->
+            val q = m.groupValues[1].trim()
+            val app = mediaApp(m.groupValues[2].ifEmpty { null })
+            // "putar youtube" tanpa kata kunci = buka aplikasinya
+            if (q.isEmpty() && app != null) return Command.OpenApp(app)
+            if (app == null && Regex("^$MEDIA_APP$", RegexOption.IGNORE_CASE).matches(q)) return Command.OpenApp(q)
+            return Command.PlayMedia(q, app)
+        }
+        return null
     }
 
     // ------------------------------------------------------------------ util untuk SlotFiller

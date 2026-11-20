@@ -89,8 +89,12 @@ class LlmBrain(context: Context, private val prefs: Prefs, private val models: M
     private fun backendFor(name: String): Backend = if (name == "cpu") Backend.CPU() else Backend.GPU()
 
     /** Harus dipanggil di thread LLM. */
+    private var loadedPath: String? = null
+
     private fun ensureEngine(): Boolean {
-        if (engine != null) return true
+        val path = models.modelFile.absolutePath
+        if (engine != null && loadedPath == path) return true
+        if (engine != null) closeEngine() // model diganti (E2B ↔ E4B)
         if (!models.isReady()) {
             setState(State.NO_MODEL)
             return false
@@ -108,6 +112,7 @@ class LlmBrain(context: Context, private val prefs: Prefs, private val models: M
                 val e = Engine(cfg)
                 e.initialize()
                 engine = e // simpan hanya setelah initialize berhasil
+                loadedPath = path
                 backendName = name
                 setState(State.READY)
                 return true
@@ -146,6 +151,7 @@ class LlmBrain(context: Context, private val prefs: Prefs, private val models: M
     }
 
     private fun closeEngine() {
+        loadedPath = null
         closeConversation()
         try {
             engine?.close()

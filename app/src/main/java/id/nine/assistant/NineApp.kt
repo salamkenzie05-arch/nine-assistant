@@ -5,6 +5,7 @@ import android.content.ComponentCallbacks2
 import androidx.appcompat.app.AppCompatDelegate
 import id.nine.assistant.core.ConversationLog
 import id.nine.assistant.core.Prefs
+import id.nine.assistant.llm.GeminiClient
 import id.nine.assistant.llm.LlmBrain
 import id.nine.assistant.llm.ModelManager
 
@@ -17,6 +18,8 @@ class NineApp : Application() {
         private set
     lateinit var brain: LlmBrain
         private set
+    lateinit var gemini: GeminiClient
+        private set
     val log = ConversationLog()
 
     override fun onCreate() {
@@ -25,9 +28,16 @@ class NineApp : Application() {
         AppCompatDelegate.setDefaultNightMode(prefs.theme.nightMode)
         models = ModelManager(this, prefs)
         brain = LlmBrain(this, prefs, models)
+        gemini = GeminiClient(this, prefs)
         models.addListener { status ->
-            if (status is ModelManager.Status.Ready) brain.preload()
+            when (status) {
+                is ModelManager.Status.Ready -> brain.preload()
+                ModelManager.Status.Missing -> brain.unload()
+                else -> Unit
+            }
         }
+        // Wake word: hidupkan lagi layanan bila sebelumnya aktif (mis. setelah aplikasi dibuka ulang).
+        if (prefs.wakeEnabled) id.nine.assistant.wake.WakeWordService.start(this)
     }
 
     @Suppress("DEPRECATION")

@@ -26,6 +26,26 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      # Model kecil Vosk (bahasa Inggris, ±40 MB) untuk wake word "hey nine", dibundel ke APK.
+      - uses: actions/cache@v4
+        with:
+          path: vosk-cache
+          key: vosk-model-small-en-us-0.15
+
+      - name: Fetch Vosk wake-word model
+        shell: bash
+        run: |
+          set -e
+          mkdir -p vosk-cache app/src/main/assets
+          if [ ! -s vosk-cache/model.zip ]; then
+            curl -fL --retry 4 --retry-delay 5 -o vosk-cache/model.zip \
+              https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip
+          fi
+          rm -rf app/src/main/assets/vosk-en vosk-tmp && mkdir vosk-tmp
+          unzip -q vosk-cache/model.zip -d vosk-tmp
+          mv vosk-tmp/vosk-model-small-en-us-0.15 app/src/main/assets/vosk-en
+          du -sh app/src/main/assets/vosk-en
+
       - name: Unit tests + release APK
         shell: bash
         run: |

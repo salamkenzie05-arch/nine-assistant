@@ -190,6 +190,60 @@ class CommandParserTest {
     }
 
     @Test
+    fun calendar() {
+        check("tambah acara rapat tim besok jam 10", "AddEvent(title=rapat tim, start=2026-11-21T10:00, end=null, allDay=false)")
+        check("buat jadwal dokter gigi tanggal 25 jam 9 pagi", "AddEvent(title=dokter gigi, start=2026-11-25T09:00, end=null, allDay=false)")
+        check("jadwalkan meeting dengan klien hari senin jam 2 siang selama 2 jam", "AddEvent(title=meeting dengan klien, start=2026-11-23T14:00, end=2026-11-23T16:00, allDay=false)")
+        check("tambahkan ulang tahun ibu ke kalender tanggal 3 desember", "AddEvent(title=ulang tahun ibu, start=2026-12-03T00:00, end=null, allDay=true)")
+        check("buat acara makan malam keluarga sabtu jam 7 malam sampai jam 9", "AddEvent(title=makan malam keluarga, start=2026-11-21T19:00, end=2026-11-21T21:00, allDay=false)")
+        check("schedule lunch with Sarah tomorrow at noon", "AddEvent(title=lunch with Sarah, start=2026-11-21T12:00, end=null, allDay=false)")
+        check("add an event dentist appointment on December 5th at 3 pm", "AddEvent(title=dentist appointment, start=2026-12-05T15:00, end=null, allDay=false)")
+        check("jadwal rapat besok jam 10", "AddEvent(title=rapat, start=2026-11-21T10:00, end=null, allDay=false)")
+        check("tambah acara", "NeedInfo(pending=EventTime(title=))")
+        check("jadwal saya hari ini apa saja", "ShowAgenda(date=2026-11-20)")
+        check("ada acara apa besok", "ShowAgenda(date=2026-11-21)")
+        check("what's on my calendar tomorrow", "ShowAgenda(date=2026-11-21)")
+        check("ingatkan saya bayar listrik senin jam 9", "SetReminder(text=bayar listrik, at=2026-11-23T09:00)")
+    }
+
+    @Test
+    fun todo() {
+        check("tambah tugas beli susu", "TodoAdd(text=beli susu)")
+        check("tambahkan cuci mobil ke daftar tugas", "TodoAdd(text=cuci mobil)")
+        check("add buy milk to my to do list", "TodoAdd(text=buy milk)")
+        check("tambah tugas", "NeedInfo(pending=TodoText)")
+        check("apa saja tugas saya hari ini", "TodoList")
+        check("apa yang harus saya kerjakan hari ini", "TodoList")
+        check("what's on my to do list", "TodoList")
+        check("tandai tugas 2 selesai", "TodoDone(ref=2)")
+        check("tugas beli susu sudah selesai", "TodoDone(ref=beli susu)")
+        check("selesaikan tugas pertama", "TodoDone(ref=1)")
+        check("mark task 3 as done", "TodoDone(ref=3)")
+        check("hapus tugas 1", "TodoRemove(ref=1)")
+        check("hapus tugas yang sudah selesai", "TodoClearDone")
+        check("hapus semua tugas", "TodoClearAll")
+    }
+
+    @Test
+    fun externalApps() {
+        check("bukain whatsapp", "OpenApp(query=whatsapp)")
+        check("buka wa dong", "OpenApp(query=wa)")
+        check("tolong buka instagram", "OpenApp(query=instagram)")
+        check("putar youtube", "OpenApp(query=youtube)")
+        check("putar lagu bohemian rhapsody di spotify", "PlayMedia(query=bohemian rhapsody, app=spotify)")
+        check("cari resep rendang di youtube", "PlayMedia(query=resep rendang, app=youtube)")
+        check("mainkan lagu tulus", "PlayMedia(query=tulus, app=null)")
+        check("navigasi ke monas", "Navigate(destination=monas, drive=true)")
+        check("cari bengkel terdekat di maps", "Navigate(destination=bengkel terdekat, drive=false)")
+        check("google harga emas hari ini", "WebSearch(query=harga emas hari ini)")
+        check("buka website detik dot com", "OpenUrl(url=detik.com)")
+        check("kirim wa ke budi isinya aku otw", "WhatsApp(target=budi, body=aku otw)")
+        check("kirim pesan ke ibu lewat wa bilang aku pulang telat", "WhatsApp(target=ibu, body=aku pulang telat)")
+        check("whatsapp mom saying I'm on my way", "WhatsApp(target=mom, body=I'm on my way)")
+        check("kirim pesan ke Budi isinya aku sudah sampai", "SendSms(target=Budi, body=aku sudah sampai)")
+    }
+
+    @Test
     fun slotFilling() {
         slot(Pending.AlarmTime(null), "jam 7 pagi", "SetAlarm(time=2026-11-21T07:00, label=null)")
         slot(Pending.AlarmTime(null), "tidak jadi", "Cancelled")
@@ -210,6 +264,8 @@ class CommandParserTest {
         slot(conf, "buka whatsapp", "NotAnAnswer")
         slot(Pending.ReminderText, "minum obat jam 9 malam", "SetReminder(text=minum obat, at=2026-11-20T21:00)")
         slot(Pending.CallTarget, "ibu", "Call(target=ibu)")
+        slot(Pending.EventTime("rapat"), "besok jam 9 pagi", "AddEvent(title=rapat, start=2026-11-21T09:00, end=null, allDay=false)")
+        slot(Pending.TodoText, "beli susu", "TodoAdd(text=beli susu)")
     }
 
     @Test

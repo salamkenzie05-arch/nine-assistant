@@ -50,7 +50,7 @@ class NineOrbView @JvmOverloads constructor(
     private val cyan = Color.rgb(0x35, 0xE0, 0xFF)
     private val blue = Color.rgb(0x3D, 0x6B, 0xFF)
     private val violet = Color.rgb(0x8B, 0x5C, 0xFF)
-    private val gold = Color.rgb(0xFF, 0xC2, 0x4D)
+    private val gold = Color.rgb(0xC7, 0x86, 0x1A)
 
     private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val basePaint = Paint(Paint.ANTI_ALIAS_FLAG)

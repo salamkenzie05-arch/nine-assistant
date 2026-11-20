@@ -58,6 +58,11 @@ android {
     packaging {
         resources.excludes += setOf("META-INF/LICENSE*", "META-INF/NOTICE*")
     }
+
+    androidResources {
+        // File model Vosk (.fst, .mdl, dll.) disimpan tanpa kompresi agar cepat disalin.
+        noCompress += listOf("fst", "mdl", "int", "conf", "mat", "dubm", "ie", "stats", "txt")
+    }
 }
 
 kotlin {
@@ -75,6 +80,10 @@ dependencies {
 
     // Gemma on-device (Google AI Edge LiteRT-LM)
     implementation("com.google.ai.edge.litertlm:litertlm-android:0.18.0")
+
+    // Wake word offline (Vosk + JNA versi AAR yang membawa libjnidispatch untuk Android)
+    implementation("com.alphacephei:vosk-android:0.3.47@aar")
+    implementation("net.java.dev.jna:jna:5.13.0@aar")
 
     testImplementation("junit:junit:4.13.2")
 }

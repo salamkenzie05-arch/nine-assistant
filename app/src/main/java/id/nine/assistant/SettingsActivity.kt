@@ -1,6 +1,10 @@
 package id.nine.assistant
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
 import android.content.res.Configuration
 import android.os.Bundle
 import android.provider.Settings
@@ -13,6 +17,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -21,6 +26,7 @@ import id.nine.assistant.core.Prefs
 import id.nine.assistant.databinding.ActivitySettingsBinding
 import id.nine.assistant.llm.ModelManager
 import id.nine.assistant.speech.SpeechOutput
+import id.nine.assistant.wake.WakeWordService
 
 class SettingsActivity : AppCompatActivity() {
 
@@ -68,6 +74,48 @@ class SettingsActivity : AppCompatActivity() {
                 .setNegativeButton(android.R.string.cancel, null)
                 .show()
         }
+
+        // --- Pilihan model Gemma
+        binding.groupVariant.check(if (nine.models.variant == ModelManager.Variant.E4B) R.id.variantE4b else R.id.variantE2b)
+        binding.groupVariant.setOnCheckedChangeListener { _, id ->
+            val v = if (id == R.id.variantE4b) ModelManager.Variant.E4B else ModelManager.Variant.E2B
+            if (v != nine.models.variant) {
+                nine.brain.unload()
+                nine.models.setVariant(v)
+            }
+        }
+
+        // --- Mode internet
+        binding.switchInternet.isChecked = prefs.internetMode
+        binding.editGeminiKey.setText(prefs.geminiKey)
+        binding.editGeminiModel.setText(if (prefs.geminiModel == Prefs.DEFAULT_GEMINI_MODEL) "" else prefs.geminiModel)
+        binding.editCity.setText(prefs.city)
+        binding.switchInternet.setOnCheckedChangeListener { _, checked ->
+            prefs.geminiKey = binding.editGeminiKey.text.toString()
+            prefs.internetMode = checked
+            renderInternet()
+        }
+        binding.btnGetKey.setOnClickListener {
+            try {
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://aistudio.google.com/apikey")))
+            } catch (e: Exception) {
+                // tidak ada browser
+            }
+        }
+        renderInternet()
+
+        // --- Wake word
+        binding.switchWake.isChecked = prefs.wakeEnabled
+        binding.editWakePhrase.setText(prefs.wakePhrases)
+        binding.switchWake.setOnCheckedChangeListener { _, checked -> setWake(checked) }
+        binding.btnOverlay.setOnClickListener {
+            try {
+                startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
+            } catch (e: Exception) {
+                startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION))
+            }
+        }
+        renderWake()
 
         // --- Tema
         binding.groupTheme.check(
@@ -152,8 +200,22 @@ class SettingsActivity : AppCompatActivity() {
         nine.models.addListener(modelListener)
     }
 
+    override fun onResume() {
+        super.onResume()
+        renderInternet()
+        renderWake()
+    }
+
     override fun onPause() {
         super.onPause()
+        prefs.geminiKey = binding.editGeminiKey.text.toString()
+        prefs.geminiModel = binding.editGeminiModel.text.toString()
+        prefs.city = binding.editCity.text.toString()
+        val phrase = binding.editWakePhrase.text.toString().trim()
+        if (phrase.isNotEmpty() && phrase != prefs.wakePhrases) {
+            prefs.wakePhrases = phrase
+            if (prefs.wakeEnabled) WakeWordService.reload(this)
+        }
         val hid = binding.editHonId.text.toString().trim()
         val hen = binding.editHonEn.text.toString().trim()
         if (hid != prefs.honorificId || hen != prefs.honorificEn) {
@@ -205,6 +267,66 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun size(b: Long): String = Formatter.formatShortFileSize(this, b)
 
+    private fun renderInternet() {
+        val g = nine.gemini
+        binding.txtInternetStatus.setText(
+            when {
+                !prefs.internetMode -> R.string.internet_status_off
+                prefs.geminiKey.isBlank() && binding.editGeminiKey.text.isNullOrBlank() -> R.string.internet_status_nokey
+                g.isOnline() -> R.string.internet_status_online
+                else -> R.string.internet_status_offline
+            }
+        )
+    }
+
+    private val notifPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { _ -> renderWake() }
+
+    private val micPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            if (granted) setWake(true) else binding.switchWake.isChecked = false
+        }
+
+    private fun setWake(on: Boolean) {
+        if (on) {
+            val phrase = binding.editWakePhrase.text.toString().trim()
+            if (WakeWordService.parsePhrases(phrase).isEmpty()) {
+                Toast.makeText(this, R.string.wake_no_phrase, Toast.LENGTH_LONG).show()
+                binding.switchWake.isChecked = false
+                return
+            }
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                micPermission.launch(Manifest.permission.RECORD_AUDIO)
+                return
+            }
+            if (Build.VERSION.SDK_INT >= 33 &&
+                ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+            ) {
+                notifPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+            prefs.wakePhrases = phrase
+            prefs.wakeEnabled = true
+            WakeWordService.start(this)
+            // Layar Pengaturan sedang terbuka; wake word akan aktif saat Nine ditutup.
+        } else {
+            prefs.wakeEnabled = false
+            WakeWordService.stop(this)
+        }
+        renderWake()
+    }
+
+    private fun renderWake() {
+        val overlay = Build.VERSION.SDK_INT < 23 || Settings.canDrawOverlays(this)
+        binding.btnOverlay.isEnabled = !overlay
+        binding.btnOverlay.text = getString(if (overlay) R.string.wake_overlay_granted else R.string.wake_overlay_button)
+        val phrases = WakeWordService.parsePhrases(prefs.wakePhrases).joinToString("\", \"")
+        binding.txtWakeStatus.text = if (prefs.wakeEnabled) {
+            WakeWordService.status.ifEmpty { getString(R.string.wake_status_on, phrases) }
+        } else {
+            getString(R.string.wake_status_off)
+        }
+    }
+
     private fun render(s: ModelManager.Status) {
         binding.brainProgress.visibility = View.GONE
         binding.btnDownload.isEnabled = true
@@ -213,7 +335,7 @@ class SettingsActivity : AppCompatActivity() {
         binding.btnDownload.visibility = View.VISIBLE
         when (s) {
             ModelManager.Status.Ready -> {
-                binding.brainStatus.text = getString(R.string.model_ready, size(nine.models.modelFile.length()))
+                binding.brainStatus.text = getString(R.string.model_ready, nine.models.variant.label, size(nine.models.modelFile.length()))
                 binding.brainDetail.text = getString(R.string.privacy_text)
                 binding.btnDownload.visibility = View.GONE
                 binding.btnDelete.visibility = View.VISIBLE

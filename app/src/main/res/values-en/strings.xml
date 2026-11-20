@@ -9,8 +9,7 @@
     <string name="cd_language">Switch language</string>
     <string name="cd_theme">Toggle light/dark theme</string>
     <string name="cd_keyboard">Type</string>
-    <string name="cd_help">Help</string>
-    <string name="status_idle">Tap the orb to speak</string>
+        <string name="status_idle">Tap the orb to speak</string>
     <string name="status_listening">Listening…</string>
     <string name="status_thinking">Thinking…</string>
     <string name="status_speaking">Speaking · tap to stop</string>
@@ -23,8 +22,8 @@
     <string name="brain_error">AI brain failed to load</string>
 
     <string name="model_card_title">Enable Nine\'s AI brain</string>
-    <string name="model_card_text">Download Gemma 4 E2B (about 2.6 GB, once; Wi-Fi recommended). Then Nine can chat and answer questions without the internet.</string>
-    <string name="model_download">Download Gemma 4 (2.6 GB)</string>
+    <string name="model_card_text">Download Gemma 4 (2.6 GB for E2B or 3.7 GB for E4B, choose in Settings; once, Wi-Fi recommended). Then Nine can chat and answer questions without the internet.</string>
+    <string name="model_download">Download Gemma model</string>
     <string name="model_import">Import model file (.litertlm)</string>
     <string name="model_delete">Delete model</string>
     <string name="model_cancel">Cancel download</string>
@@ -32,14 +31,14 @@
     <string name="model_retry">Retry</string>
     <string name="model_downloading">Downloading %1$s / %2$s</string>
     <string name="model_importing">Copying %1$s / %2$s</string>
-    <string name="model_ready">Gemma 4 E2B installed (%1$s)</string>
+    <string name="model_ready">%1$s installed (%2$s)</string>
     <string name="model_missing">Not installed</string>
     <string name="model_fail_token">The server requires a Hugging Face login. Open the model page in a browser, accept the license, create a \"Read\" token at huggingface.co/settings/tokens, paste it below, then retry. Or download the model file in a browser and use \"Import model file\".</string>
     <string name="model_fail_network">Download failed (%1$s). Check your connection and retry.</string>
     <string name="model_fail_storage">Not enough storage (about 3 GB free needed).</string>
     <string name="model_fail_corrupt">The model file is incomplete. Please download again.</string>
     <string name="model_fail_import">Import failed: %1$s</string>
-    <string name="model_delete_confirm">Delete the Gemma model (about 2.6 GB)? Nine returns to command mode.</string>
+    <string name="model_delete_confirm">Delete this Gemma model? Nine returns to command mode (or internet mode if enabled).</string>
     <string name="hf_token_hint">Hugging Face token (optional)</string>
     <string name="hf_token_help">Only needed if the download is refused for requiring a login. The token stays on this device.</string>
 
@@ -63,4 +62,47 @@
     <string name="assistant_button">Choose Nine as digital assistant</string>
     <string name="sec_privacy">Privacy</string>
     <string name="privacy_text">Your voice, commands, conversations and notes are processed and stored only on this device. The internet is used once, to download the Gemma model from Hugging Face.</string>
+
+    <string name="todo_title">Today\'s tasks</string>
+    <string name="todo_hint">Add a task…</string>
+    <string name="todo_add">Add</string>
+    <string name="todo_delete">Delete task</string>
+    <string name="todo_clear_done">Clear completed</string>
+    <string name="todo_empty">No tasks yet. Type below, or tell Nine: \"add buy milk to my to-do list\".</string>
+
+    <string name="widget_orb_desc">Nine orb: tap to talk</string>
+    <string name="widget_today_desc">Nine · today\'s tasks</string>
+
+    <string name="sec_internet">Internet mode (smarter)</string>
+    <string name="internet_switch">Use Gemini + Google Search when online</string>
+    <string name="internet_help">Open questions are answered by Gemini (Google) with web search, so Nine can handle weather, news, exchange rates and anything recent. Needs a free API key from Google AI Studio. When offline, Nine falls back to on-device Gemma. Phone commands (alarms, calendar, tasks, apps) are still processed on the device.</string>
+    <string name="gemini_key_hint">Gemini API key (AIza…)</string>
+    <string name="gemini_get_key">Get a free API key</string>
+    <string name="city_hint">Your city (optional, for weather), e.g. Jakarta</string>
+    <string name="internet_status_off">Internet mode off · all answers come from offline Gemma.</string>
+    <string name="internet_status_nokey">Enter an API key to enable it.</string>
+    <string name="internet_status_online">On · connected to the internet.</string>
+    <string name="internet_status_offline">On · no internet right now, using offline Gemma.</string>
+    <string name="brain_online">Online · Gemini + Google Search</string>
+
+    <string name="variant_e2b">Gemma 4 E2B · 2.6 GB · fast</string>
+    <string name="variant_e4b">Gemma 4 E4B · 3.7 GB · smarter, a little slower</string>
+
+    <string name="sec_wake">Voice activation</string>
+    <string name="wake_switch">Enable wake phrase</string>
+    <string name="wake_help">English phrases, separate several with commas, e.g. \"hey nine, okay nine\". Detection runs offline and keeps the microphone on (slightly more battery). To let Nine appear over other apps, make it the default digital assistant or grant the permission below.</string>
+    <string name="wake_overlay_button">Allow Nine to appear over other apps</string>
+    <string name="wake_overlay_granted">Display over other apps: granted ✓</string>
+    <string name="wake_status_on">Listening for \"%1$s\".</string>
+    <string name="wake_status_off">Off.</string>
+    <string name="wake_no_phrase">Enter at least one phrase.</string>
+    <string name="wake_channel">Nine wake phrase</string>
+    <string name="wake_alert_channel">Nine summoned</string>
+    <string name="wake_listening">Waiting for %1$s</string>
+    <string name="wake_paused">Paused while Nine is open</string>
+    <string name="wake_turn_off">Turn off</string>
+    <string name="wake_loading">Preparing the wake detector…</string>
+    <string name="wake_no_model">The wake-phrase model is missing from this APK.</string>
+    <string name="wake_error">Wake phrase error: %1$s</string>
+    <string name="wake_tap_to_talk">Yes, sir? Tap to talk.</string>
 </resources>

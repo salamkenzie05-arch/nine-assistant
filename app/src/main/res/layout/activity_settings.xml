@@ -44,6 +44,68 @@
             android:paddingEnd="24dp"
             android:paddingBottom="48dp">
 
+            <!-- Mode internet -->
+            <TextView style="@style/Nine.SectionTitle" android:text="@string/sec_internet" />
+
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/switchInternet"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:text="@string/internet_switch"
+                android:textColor="@color/nine_on_bg" />
+
+            <TextView style="@style/Nine.Body" android:text="@string/internet_help" />
+
+            <EditText
+                android:id="@+id/editGeminiKey"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="@string/gemini_key_hint"
+                android:importantForAutofill="no"
+                android:inputType="textPassword"
+                android:minHeight="48dp"
+                android:textColor="@color/nine_on_bg"
+                android:textColorHint="@color/nine_muted"
+                android:textSize="14sp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnGetKey"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/gemini_get_key" />
+
+            <EditText
+                android:id="@+id/editGeminiModel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="gemini-flash-latest"
+                android:importantForAutofill="no"
+                android:inputType="text"
+                android:minHeight="48dp"
+                android:textColor="@color/nine_on_bg"
+                android:textColorHint="@color/nine_muted"
+                android:textSize="14sp" />
+
+            <EditText
+                android:id="@+id/editCity"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/city_hint"
+                android:importantForAutofill="no"
+                android:inputType="textCapWords"
+                android:minHeight="48dp"
+                android:textColor="@color/nine_on_bg"
+                android:textColorHint="@color/nine_muted"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/txtInternetStatus"
+                style="@style/Nine.Body"
+                android:textSize="12sp" />
+
             <!-- Otak AI -->
             <TextView style="@style/Nine.SectionTitle" android:text="@string/sec_brain" />
 
@@ -58,6 +120,16 @@
                 android:id="@+id/brainDetail"
                 style="@style/Nine.Body"
                 android:layout_marginTop="4dp" />
+
+            <RadioGroup
+                android:id="@+id/groupVariant"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp">
+
+                <RadioButton android:id="@+id/variantE2b" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="48dp" android:text="@string/variant_e2b" android:textColor="@color/nine_on_bg" />
+                <RadioButton android:id="@+id/variantE4b" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="48dp" android:text="@string/variant_e4b" android:textColor="@color/nine_on_bg" />
+            </RadioGroup>
 
             <com.google.android.material.progressindicator.LinearProgressIndicator
                 android:id="@+id/brainProgress"
@@ -102,6 +174,43 @@
                 android:textSize="14sp" />
 
             <TextView style="@style/Nine.Body" android:text="@string/hf_token_help" android:textSize="12sp" />
+
+            <!-- Wake word -->
+            <TextView style="@style/Nine.SectionTitle" android:text="@string/sec_wake" />
+
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/switchWake"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:text="@string/wake_switch"
+                android:textColor="@color/nine_on_bg" />
+
+            <EditText
+                android:id="@+id/editWakePhrase"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="hey nine"
+                android:importantForAutofill="no"
+                android:inputType="text"
+                android:minHeight="48dp"
+                android:textColor="@color/nine_on_bg"
+                android:textColorHint="@color/nine_muted" />
+
+            <TextView style="@style/Nine.Body" android:text="@string/wake_help" android:textSize="12sp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnOverlay"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/wake_overlay_button" />
+
+            <TextView
+                android:id="@+id/txtWakeStatus"
+                style="@style/Nine.Body"
+                android:textSize="12sp" />
 
             <!-- Tampilan -->
             <TextView style="@style/Nine.SectionTitle" android:text="@string/sec_look" />

@@ -3,6 +3,7 @@ package id.nine.assistant
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.res.Configuration
+import android.os.Build
 import android.os.Bundle
 import android.text.format.Formatter
 import android.view.View
@@ -12,6 +13,7 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -25,6 +27,8 @@ import id.nine.assistant.llm.LlmBrain
 import id.nine.assistant.llm.ModelManager
 import id.nine.assistant.ui.MessageAdapter
 import id.nine.assistant.ui.NineOrbView
+import id.nine.assistant.wake.WakeWordService
+import id.nine.assistant.widget.WidgetUpdater
 
 class MainActivity : AppCompatActivity(), AssistantController.Ui {
 
@@ -63,16 +67,32 @@ class MainActivity : AppCompatActivity(), AssistantController.Ui {
 
     private val modelListener = ModelManager.Listener { renderModel(it) }
 
+    private var lastBrainState = LlmBrain.State.NO_MODEL
+    private var lastBrainDetail = ""
+
+    private fun renderBrain() {
+        val state = lastBrainState
+        val detail = lastBrainDetail
+        if (nine.gemini.isUsable()) {
+            binding.txtBrain.text = getString(R.string.brain_online)
+            return
+        }
+        binding.txtBrain.text = when (state) {
+            LlmBrain.State.NO_MODEL -> getString(R.string.brain_none)
+            LlmBrain.State.IDLE -> getString(R.string.brain_idle)
+            LlmBrain.State.LOADING -> getString(R.string.brain_loading)
+            LlmBrain.State.READY, LlmBrain.State.BUSY -> getString(R.string.brain_ready, detail.uppercase())
+            LlmBrain.State.ERROR -> getString(R.string.brain_error)
+        }
+    }
+
     private val brainListener = object : LlmBrain.StateListener {
         override fun onBrainState(state: LlmBrain.State, detail: String) {
-            binding.txtBrain.text = when (state) {
-                LlmBrain.State.NO_MODEL -> getString(R.string.brain_none)
-                LlmBrain.State.IDLE -> getString(R.string.brain_idle)
-                LlmBrain.State.LOADING -> getString(R.string.brain_loading)
-                LlmBrain.State.READY, LlmBrain.State.BUSY -> getString(R.string.brain_ready, detail.uppercase())
-                LlmBrain.State.ERROR -> getString(R.string.brain_error)
-            }
+            lastBrainState = state
+            if (state != LlmBrain.State.ERROR) lastBrainDetail = detail
+            renderBrain()
         }
+
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -108,7 +128,7 @@ class MainActivity : AppCompatActivity(), AssistantController.Ui {
             true
         }
         binding.btnKeyboard.setOnClickListener { toggleKeyboard() }
-        binding.btnHelp.setOnClickListener { controller.submitText(if (controller.lang == AppLang.ID) "bantuan" else "help") }
+        binding.btnTodo.setOnClickListener { startActivity(Intent(this, TodoActivity::class.java)) }
         binding.btnSend.setOnClickListener { sendTyped() }
         binding.inputText.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_SEND) {
@@ -129,6 +149,7 @@ class MainActivity : AppCompatActivity(), AssistantController.Ui {
         nine.models.addListener(modelListener)
         nine.brain.addListener(brainListener)
         nine.brain.preload()
+        WidgetUpdater.refresh(this)
 
         handleLaunchIntent(intent)
     }
@@ -155,6 +176,11 @@ class MainActivity : AppCompatActivity(), AssistantController.Ui {
         if (i == null) return
         val auto = i.getBooleanExtra(EXTRA_AUTO_LISTEN, false) || i.action == Intent.ACTION_ASSIST
         if (auto) {
+            // Dipanggil dari tombol samping / wake word: boleh tampil di atas layar kunci.
+            if (Build.VERSION.SDK_INT >= 27) {
+                setShowWhenLocked(true)
+                setTurnScreenOn(true)
+            }
             i.removeExtra(EXTRA_AUTO_LISTEN)
             binding.root.post { controller.startListening() }
         }
@@ -162,12 +188,19 @@ class MainActivity : AppCompatActivity(), AssistantController.Ui {
 
     override fun onResume() {
         super.onResume()
+        visible = true
         onLanguageChanged(controller.lang)
+        renderBrain()
+        // Layar Nine terbuka: hapus notifikasi "ketuk untuk bicara" dan lepaskan mikrofon dari wake word.
+        NotificationManagerCompat.from(this).cancel(WakeWordService.ALERT_ID)
+        if (nine.prefs.wakeEnabled) WakeWordService.pause(this)
     }
 
     override fun onStop() {
         super.onStop()
+        visible = false
         controller.onBackground()
+        if (nine.prefs.wakeEnabled) WakeWordService.resume(this)
     }
 
     override fun onDestroy() {
@@ -367,5 +400,10 @@ class MainActivity : AppCompatActivity(), AssistantController.Ui {
 
     companion object {
         const val EXTRA_AUTO_LISTEN = "id.nine.assistant.AUTO_LISTEN"
+        const val EXTRA_FROM_WAKE = "id.nine.assistant.FROM_WAKE"
+
+        /** True saat layar utama Nine sedang tampil (dipakai layanan wake word). */
+        @Volatile
+        var visible = false
     }
 }

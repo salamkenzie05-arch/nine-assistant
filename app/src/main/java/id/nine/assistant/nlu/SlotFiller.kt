@@ -30,7 +30,7 @@ class SlotFiller(private val parser: CommandParser) {
 
     fun fill(p: Pending, text: String): SlotOutcome {
         // Untuk isian bebas (catatan, isi pesan) hanya anggap batal bila ucapannya pendek.
-        val freeText = p is Pending.NoteText || p is Pending.SmsBody || p is Pending.ReminderText
+        val freeText = p is Pending.NoteText || p is Pending.SmsBody || p is Pending.ReminderText || p is Pending.TodoText
         val short = text.trim().split(Regex("\\s+")).size <= 2
         if (Answers.isNo(text) && (!freeText || short)) return SlotOutcome.Cancelled
         val now = parser.parseWithNow()
@@ -82,6 +82,14 @@ class SlotFiller(private val parser: CommandParser) {
 
             is Pending.AppName ->
                 SlotOutcome.Resolved(Command.OpenApp(text.trim()))
+
+            is Pending.EventTime -> {
+                val ev = parser.buildEvent(p.title, text, now)
+                if (ev != null) SlotOutcome.Resolved(ev) else SlotOutcome.NotAnAnswer
+            }
+
+            is Pending.TodoText ->
+                SlotOutcome.Resolved(Command.TodoAdd(text.trim()))
         }
     }
 }

@@ -60,5 +60,42 @@ class Prefs(context: Context) {
         get() = sp.getLong("dl_id", -1L)
         set(value) = sp.edit().putLong("dl_id", value).apply()
 
+    // --- Mode internet (Gemini)
+    var internetMode: Boolean
+        get() = sp.getBoolean("net_mode", false)
+        set(value) = sp.edit().putBoolean("net_mode", value).apply()
+
+    var geminiKey: String
+        get() = sp.getString("gemini_key", "") ?: ""
+        set(value) = sp.edit().putString("gemini_key", value.trim()).apply()
+
+    var geminiModel: String
+        get() = (sp.getString("gemini_model", null) ?: "").ifBlank { DEFAULT_GEMINI_MODEL }
+        set(value) = sp.edit().putString("gemini_model", value.trim()).apply()
+
+    /** Kota pengguna (opsional) agar pertanyaan cuaca/lokal lebih tepat. */
+    var city: String
+        get() = sp.getString("city", "") ?: ""
+        set(value) = sp.edit().putString("city", value.trim()).apply()
+
+    // --- Model Gemma offline
+    var modelVariant: String
+        get() = sp.getString("model_variant", "e2b") ?: "e2b"
+        set(value) = sp.edit().putString("model_variant", value).apply()
+
+    // --- Wake word
+    var wakeEnabled: Boolean
+        get() = sp.getBoolean("wake_on", false)
+        set(value) = sp.edit().putBoolean("wake_on", value).apply()
+
+    /** Satu atau beberapa frasa, dipisah koma. */
+    var wakePhrases: String
+        get() = (sp.getString("wake_phrase", null) ?: "").ifBlank { "hey nine" }
+        set(value) = sp.edit().putString("wake_phrase", value.trim()).apply()
+
     val persona: Persona get() = Persona(honorificId, honorificEn)
+
+    companion object {
+        const val DEFAULT_GEMINI_MODEL = "gemini-flash-latest"
+    }
 }

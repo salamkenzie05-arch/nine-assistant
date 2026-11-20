@@ -2,6 +2,7 @@ package id.nine.assistant.skills
 
 import android.Manifest
 import android.app.ActivityManager
+import android.app.SearchManager
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -15,6 +16,7 @@ import android.os.Build
 import android.os.Environment
 import android.os.StatFs
 import android.provider.AlarmClock
+import android.provider.MediaStore
 import android.provider.CalendarContract
 import android.provider.Settings
 import android.telephony.SmsManager
@@ -28,6 +30,7 @@ import id.nine.assistant.nlu.Pending
 import id.nine.assistant.nlu.SettingsTarget
 import id.nine.assistant.nlu.VolumeAction
 import java.time.Duration
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -54,6 +57,8 @@ data class SkillResult(
 class SkillExecutor(context: Context, private val notes: NoteStore, private val personaOf: () -> Persona) {
     private val ctx = context.applicationContext
     private val contacts = ContactsLookup(ctx)
+    private val calendar = CalendarSkill(ctx)
+    private val todos = TodoStore(ctx)
     private var persona: Persona = personaOf()
 
     /** ", Tuan" / ", sir" */
@@ -82,7 +87,7 @@ class SkillExecutor(context: Context, private val notes: NoteStore, private val 
     ): SkillResult = when (cmd) {
         is Command.SetAlarm -> setAlarm(cmd, lang, now)
         is Command.SetTimer -> setTimer(cmd, lang)
-        is Command.SetReminder -> setReminder(cmd, lang, now)
+        is Command.SetReminder -> setReminder(cmd, lang, now, denied)
         Command.ShowAlarms -> SkillResult(
             lang.t("Membuka daftar alarm${s(lang)}.", "Opening your alarms${s(lang)}."),
             intent = Intent(AlarmClock.ACTION_SHOW_ALARMS)
@@ -127,7 +132,77 @@ class SkillExecutor(context: Context, private val notes: NoteStore, private val 
         )
         Command.StopSpeaking -> SkillResult("", stopSpeaking = true)
         is Command.NeedInfo -> SkillResult(prompt(cmd.pending, lang), pending = cmd.pending)
-        is Command.Unknown -> SkillResult(persona.didNotUnderstand(lang, cmd.text), chat = cmd.text)
+        is Command.Unknown -> unknown(cmd.text, lang)
+
+        is Command.AddEvent -> addEvent(cmd, lang, now, denied)
+        is Command.ShowAgenda -> agenda(cmd, lang, now, denied)
+
+        is Command.TodoAdd -> {
+            val item = todos.add(cmd.text)
+            val left = todos.pending().size
+            SkillResult(
+                lang.t(
+                    "Masuk daftar tugas${s(lang)}: ${item.text}. Total $left tugas belum selesai.",
+                    "Added to your list${s(lang)}: ${item.text}. $left open ${if (left == 1) "task" else "tasks"}."
+                )
+            )
+        }
+        Command.TodoList -> todoList(lang)
+        is Command.TodoDone -> {
+            val item = todos.find(cmd.ref)
+            if (item == null) {
+                SkillResult(lang.t("Saya tidak menemukan tugas \"${cmd.ref}\" di daftar hari ini.", "I couldn't find \"${cmd.ref}\" on today's list."))
+            } else {
+                todos.setDone(item.id, true)
+                val left = todos.pending().size
+                val tail = if (left == 0) lang.t(" Semua tugas hari ini beres. Luar biasa.", " That's everything for today. Splendid.")
+                else lang.t(" Tersisa $left.", " $left to go.")
+                SkillResult(lang.t("Dicentang${s(lang)}: ${item.text}.", "Checked off${s(lang)}: ${item.text}.") + tail)
+            }
+        }
+        is Command.TodoRemove -> {
+            val item = todos.find(cmd.ref)
+            if (item == null) {
+                SkillResult(lang.t("Saya tidak menemukan tugas \"${cmd.ref}\".", "I couldn't find \"${cmd.ref}\" on your list."))
+            } else {
+                todos.remove(item.id)
+                SkillResult(lang.t("Dihapus dari daftar${s(lang)}: ${item.text}.", "Removed${s(lang)}: ${item.text}."))
+            }
+        }
+        Command.TodoClearDone -> {
+            todos.clearDone()
+            SkillResult(lang.t("Tugas yang sudah selesai saya bersihkan${s(lang)}.", "Completed tasks cleared${s(lang)}."))
+        }
+        Command.TodoClearAll -> {
+            val n = todos.today().size
+            if (n == 0) {
+                SkillResult(lang.t("Daftar tugas sudah kosong${s(lang)}.", "Your list is already empty${s(lang)}."))
+            } else if (!confirmed) {
+                SkillResult(
+                    lang.t("Hapus semua $n tugas? Katakan ya atau tidak.", "Delete all $n tasks? Say yes or no."),
+                    pending = Pending.Confirm(Command.TodoClearAll)
+                )
+            } else {
+                todos.clearAll()
+                SkillResult(lang.t("Daftar tugas dikosongkan${s(lang)}.", "Task list cleared${s(lang)}."))
+            }
+        }
+
+        is Command.PlayMedia -> playMedia(cmd, lang)
+        is Command.Navigate -> navigate(cmd, lang)
+        is Command.WebSearch -> SkillResult(
+            lang.t("Mencari \"${cmd.query}\" di Google${s(lang)}.", "Searching Google for \"${cmd.query}\"${s(lang)}."),
+            intent = Intent(Intent.ACTION_WEB_SEARCH).putExtra(SearchManager.QUERY, cmd.query),
+            fallback = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=" + Uri.encode(cmd.query)))
+        )
+        is Command.OpenUrl -> {
+            val url = if (cmd.url.startsWith("http")) cmd.url else "https://" + cmd.url
+            SkillResult(
+                lang.t("Membuka ${cmd.url}${s(lang)}.", "Opening ${cmd.url}${s(lang)}."),
+                intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+            )
+        }
+        is Command.WhatsApp -> whatsApp(cmd, lang, denied)
     }
 
     // ------------------------------------------------------------ alarm, timer, pengingat
@@ -164,7 +239,7 @@ class SkillExecutor(context: Context, private val notes: NoteStore, private val 
         return SkillResult(reply, intent = i)
     }
 
-    private fun setReminder(cmd: Command.SetReminder, lang: AppLang, now: LocalDateTime): SkillResult {
+    private fun setReminder(cmd: Command.SetReminder, lang: AppLang, now: LocalDateTime, denied: Set<String>): SkillResult {
         val text = cmd.text.ifBlank { lang.t("Pengingat", "Reminder") }
         val until = Duration.between(now, cmd.at)
         if (until.isNegative) {
@@ -184,21 +259,8 @@ class SkillExecutor(context: Context, private val notes: NoteStore, private val 
                 intent = i
             )
         }
-        // Lebih dari 24 jam: alarm Android tidak bisa, jadi buat acara kalender.
-        val millis = cmd.at.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        val i = Intent(Intent.ACTION_INSERT).apply {
-            data = CalendarContract.Events.CONTENT_URI
-            putExtra(CalendarContract.Events.TITLE, text)
-            putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, millis)
-            putExtra(CalendarContract.EXTRA_EVENT_END_TIME, millis + 30 * 60 * 1000L)
-        }
-        return SkillResult(
-            lang.t(
-                "Pengingat itu lebih dari 24 jam lagi, jadi saya buka Kalender untuk $whenText. Simpan acaranya untuk menyelesaikan.",
-                "That's more than 24 hours away, so I'm opening Calendar for $whenText. Save the event to finish."
-            ),
-            intent = i
-        )
+        // Lebih dari 24 jam: alarm Android tidak bisa, jadi simpan sebagai acara kalender dengan notifikasi tepat waktu.
+        return addEvent(Command.AddEvent(text, cmd.at, null, false), lang, now, denied, reminderMinutes = 0, asReminder = true)
     }
 
     private fun prompt(p: Pending, lang: AppLang): String = when (p) {
@@ -210,6 +272,8 @@ class SkillExecutor(context: Context, private val notes: NoteStore, private val 
         is Pending.SmsBody -> lang.t("Apa isi pesannya?", "What should the message say?")
         Pending.CallTarget -> lang.t("Siapa yang ingin ditelepon?", "Who would you like to call?")
         Pending.AppName -> lang.t("Aplikasi apa yang ingin dibuka?", "Which app should I open?")
+        is Pending.EventTime -> lang.t("Kapan acaranya${s(lang)}?", "When is it${s(lang)}?")
+        Pending.TodoText -> lang.t("Tugas apa yang ingin ditambahkan?", "What should I add to your list?")
         is Pending.Confirm -> lang.t("Lanjutkan? Katakan ya atau tidak.", "Proceed? Say yes or no.")
     }
 
@@ -221,24 +285,70 @@ class SkillExecutor(context: Context, private val notes: NoteStore, private val 
         "kalkulator" to listOf("calculator"),
         "jam" to listOf("clock"),
         "pesan" to listOf("messages", "message"),
+        "sms" to listOf("messages", "message"),
         "telepon" to listOf("phone", "dialer"),
+        "telpon" to listOf("phone", "dialer"),
         "kontak" to listOf("contacts"),
         "peta" to listOf("maps"),
+        "gmaps" to listOf("maps"),
+        "google maps" to listOf("maps"),
         "galeri" to listOf("gallery", "photos"),
         "foto" to listOf("photos", "gallery"),
-        "musik" to listOf("music"),
-        "unduhan" to listOf("downloads"),
-        "berkas" to listOf("files"),
-        "file" to listOf("files"),
-        "browser" to listOf("chrome", "browser", "internet"),
-        "peramban" to listOf("chrome", "browser", "internet"),
-        "email" to listOf("gmail", "mail"),
-        "surel" to listOf("gmail", "mail"),
+        "musik" to listOf("music", "youtube music", "spotify"),
+        "unduhan" to listOf("downloads", "my files"),
+        "berkas" to listOf("my files", "files"),
+        "file" to listOf("my files", "files"),
+        "file saya" to listOf("my files"),
+        "browser" to listOf("chrome", "internet", "browser"),
+        "peramban" to listOf("chrome", "internet", "browser"),
+        "internet" to listOf("chrome", "internet"),
+        "email" to listOf("gmail", "email", "mail"),
+        "surel" to listOf("gmail", "email"),
         "pengaturan" to listOf("settings"),
-        "toko aplikasi" to listOf("play store")
+        "setelan" to listOf("settings"),
+        "toko aplikasi" to listOf("play store", "galaxy store"),
+        "playstore" to listOf("play store"),
+        "wa" to listOf("whatsapp"),
+        "whatsap" to listOf("whatsapp"),
+        "watsap" to listOf("whatsapp"),
+        "ig" to listOf("instagram"),
+        "insta" to listOf("instagram"),
+        "yt" to listOf("youtube"),
+        "you tube" to listOf("youtube"),
+        "yt music" to listOf("youtube music"),
+        "fb" to listOf("facebook"),
+        "x" to listOf("x", "twitter"),
+        "twitter" to listOf("x", "twitter"),
+        "tele" to listOf("telegram"),
+        "tokped" to listOf("tokopedia"),
+        "catatan samsung" to listOf("samsung notes"),
+        "catatan" to listOf("samsung notes", "notes", "keep"),
+        "perekam suara" to listOf("voice recorder"),
+        "senter" to listOf("flashlight"),
+        "cuaca" to listOf("weather"),
+        "kesehatan" to listOf("samsung health", "health")
     )
 
     private fun key(s: String) = s.lowercase().filter { it.isLetterOrDigit() }
+
+    private fun lev(a: String, b: String): Int {
+        if (a == b) return 0
+        if (a.isEmpty()) return b.length
+        if (b.isEmpty()) return a.length
+        var prev = IntArray(b.length + 1) { it }
+        var cur = IntArray(b.length + 1)
+        for (i in 1..a.length) {
+            cur[0] = i
+            for (j in 1..b.length) {
+                val cost = if (a[i - 1] == b[j - 1]) 0 else 1
+                cur[j] = minOf(cur[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost)
+            }
+            val t = prev
+            prev = cur
+            cur = t
+        }
+        return prev[b.length]
+    }
 
     @Suppress("DEPRECATION")
     private fun launcherApps(): List<android.content.pm.ResolveInfo> {
@@ -250,49 +360,68 @@ class SkillExecutor(context: Context, private val notes: NoteStore, private val 
         }
     }
 
-    private fun openApp(query: String, lang: AppLang): SkillResult {
-        val pm = ctx.packageManager
-        val wanted = (listOf(query) + (aliases[query.lowercase().trim()] ?: emptyList())).map { key(it) }.filter { it.isNotEmpty() }
-        if (wanted.isEmpty()) return SkillResult(prompt(Pending.AppName, lang), pending = Pending.AppName)
+    private class AppHit(val label: String, val pkg: String, val cls: String, val score: Int)
 
-        var bestScore = 0
-        var bestLabel = ""
-        var bestInfo: android.content.pm.ResolveInfo? = null
+    private fun appScore(k: String, w: String): Int = when {
+        k == w -> 100
+        k.startsWith(w) && w.length >= 3 -> 85
+        w.length >= 4 && k.contains(w) -> 70
+        k.length >= 4 && w.contains(k) -> 60
+        w.length >= 5 && lev(k, w) <= (if (w.length >= 8) 2 else 1) -> 75 // salah dengar: "whatsap", "youtub"
+        else -> 0
+    }
+
+    /** Cari aplikasi terpasang yang paling cocok dengan [query] (nama, alias, atau salah eja kecil). */
+    private fun findApp(query: String): AppHit? = findApps(query).firstOrNull()
+
+    private fun findApps(query: String): List<AppHit> {
+        val q = query.lowercase().trim()
+        val wanted = (listOf(q) + (aliases[q] ?: emptyList())).map { key(it) }.filter { it.isNotEmpty() }.distinct()
+        if (wanted.isEmpty()) return emptyList()
+        val pm = ctx.packageManager
+        val hits = ArrayList<AppHit>()
         for (ri in launcherApps()) {
-            if (ri.activityInfo.packageName == ctx.packageName) continue
+            val pkg = ri.activityInfo.packageName
+            if (pkg == ctx.packageName) continue
             val label = ri.loadLabel(pm).toString()
             val k = key(label)
             if (k.isEmpty()) continue
-            var s = 0
-            for (w in wanted) {
-                val sc = when {
-                    k == w -> 100
-                    k.startsWith(w) -> 80
-                    w.length >= 4 && k.contains(w) -> 60
-                    k.length >= 4 && w.contains(k) -> 55
-                    else -> 0
-                }
-                if (sc > s) s = sc
+            var best = 0
+            for ((i, w) in wanted.withIndex()) {
+                // alias sedikit di bawah nama asli
+                val sc = appScore(k, w) - (if (i == 0) 0 else 2)
+                if (sc > best) best = sc
             }
-            // beri kemenangan pada nama yang lebih pendek bila skor sama
-            if (s > bestScore || (s == bestScore && s > 0 && label.length < bestLabel.length)) {
-                bestScore = s
-                bestLabel = label
-                bestInfo = ri
-            }
+            if (best > 0) hits.add(AppHit(label, pkg, ri.activityInfo.name, best))
         }
-        val info = bestInfo
-        if (info == null || bestScore < 55) {
-            return SkillResult(
-                lang.t("Aplikasi \"$query\" tidak ditemukan.", "I couldn't find an app called \"$query\".")
-            )
-        }
+        return hits.sortedWith(compareByDescending<AppHit> { it.score }.thenBy { it.label.length })
+    }
+
+    private fun launch(hit: AppHit, lang: AppLang): SkillResult {
         val launch = Intent(Intent.ACTION_MAIN).apply {
             addCategory(Intent.CATEGORY_LAUNCHER)
-            setClassName(info.activityInfo.packageName, info.activityInfo.name)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            setClassName(hit.pkg, hit.cls)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
         }
-        return SkillResult(lang.t("Membuka $bestLabel${s(lang)}.", "Opening $bestLabel${s(lang)}."), intent = launch)
+        val fallback = ctx.packageManager.getLaunchIntentForPackage(hit.pkg)?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        return SkillResult(lang.t("Membuka ${hit.label}${s(lang)}.", "Opening ${hit.label}${s(lang)}."), intent = launch, fallback = fallback)
+    }
+
+    private fun openApp(query: String, lang: AppLang): SkillResult {
+        if (key(query).isEmpty()) return SkillResult(prompt(Pending.AppName, lang), pending = Pending.AppName)
+        val hits = findApps(query)
+        val best = hits.firstOrNull()
+        if (best == null || best.score < 60) {
+            val near = hits.take(3).joinToString(", ") { it.label }
+            return SkillResult(
+                if (near.isNotEmpty()) {
+                    lang.t("Aplikasi \"$query\" tidak ditemukan. Mungkin maksud Anda: $near?", "I couldn't find \"$query\". Did you mean: $near?")
+                } else {
+                    lang.t("Aplikasi \"$query\" tidak ditemukan di HP ini${s(lang)}.", "I couldn't find an app called \"$query\" on this phone${s(lang)}.")
+                }
+            )
+        }
+        return launch(best, lang)
     }
 
     // ------------------------------------------------------------ pengaturan
@@ -605,12 +734,250 @@ class SkillExecutor(context: Context, private val notes: NoteStore, private val 
 
     // ------------------------------------------------------------ bantuan
 
+    // ------------------------------------------------------------ kalender
+
+    private fun calendarPermissionResult(lang: AppLang, denied: Set<String>): SkillResult? {
+        val perms = listOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR)
+        if (perms.all { has(it) }) return null
+        return if (perms.any { it in denied }) {
+            SkillResult(
+                lang.t(
+                    "Tanpa izin kalender saya tidak bisa membaca atau menambah acara. Izinkan di Pengaturan > Aplikasi > Nine > Izin.",
+                    "Without calendar permission I can't read or add events. Allow it in Settings > Apps > Nine > Permissions."
+                )
+            )
+        } else {
+            SkillResult(
+                lang.t("Saya perlu izin kalender${s(lang)}.", "I need calendar access${s(lang)}."),
+                needPermissions = perms
+            )
+        }
+    }
+
+    private fun dayPhrase(date: LocalDate, lang: AppLang, now: LocalDateTime): String {
+        val days = java.time.temporal.ChronoUnit.DAYS.between(now.toLocalDate(), date)
+        val full = date.format(DateTimeFormatter.ofPattern("EEEE, d MMMM", lang.locale))
+        return when (days) {
+            0L -> lang.t("hari ini", "today")
+            1L -> lang.t("besok", "tomorrow")
+            else -> lang.t("hari $full", "on $full")
+        }
+    }
+
+    private fun addEvent(
+        cmd: Command.AddEvent,
+        lang: AppLang,
+        now: LocalDateTime,
+        denied: Set<String>,
+        reminderMinutes: Int = 15,
+        asReminder: Boolean = false
+    ): SkillResult {
+        calendarPermissionResult(lang, denied)?.let { return it }
+        if (!cmd.allDay && cmd.start.isBefore(now.minusMinutes(1))) {
+            return SkillResult(lang.t("Waktu itu sudah lewat${s(lang)}.", "That time has already passed${s(lang)}."))
+        }
+        val title = cmd.title.ifBlank { lang.t("Acara", "Event") }.replaceFirstChar { it.uppercase() }
+        return when (val r = calendar.add(title, cmd.start, cmd.end, cmd.allDay, reminderMinutes)) {
+            is CalendarSkill.AddResult.Added -> {
+                val whenText = if (cmd.allDay) dayPhrase(cmd.start.toLocalDate(), lang, now) + lang.t(" (seharian)", " (all day)")
+                else Fmt.at(cmd.start, lang, now) + (cmd.end?.let { lang.t(" sampai ", " until ") + Fmt.clock(it.hour, it.minute, lang) } ?: "")
+                val reply = if (asReminder) {
+                    lang.t("Baik${s(lang)}, saya ingatkan $whenText: $title. Tersimpan di kalender.", "Very good${s(lang)}, I'll remind you $whenText: $title. It's in your calendar.")
+                } else {
+                    lang.t("\"$title\" sudah masuk kalender, $whenText${s(lang)}.", "\"$title\" is on your calendar, $whenText${s(lang)}.")
+                }
+                SkillResult(reply)
+            }
+            CalendarSkill.AddResult.NoCalendar -> SkillResult(
+                lang.t(
+                    "Tidak ada kalender yang bisa ditulisi di HP ini. Buka aplikasi Kalender sekali untuk menyiapkan akun.",
+                    "There's no writable calendar on this phone. Open the Calendar app once to set up an account."
+                )
+            )
+            is CalendarSkill.AddResult.Failed -> SkillResult(
+                lang.t("Maaf${s(lang)}, acara gagal disimpan (${r.reason}).", "Sorry${s(lang)}, I couldn't save the event (${r.reason}).")
+            )
+        }
+    }
+
+    private fun agenda(cmd: Command.ShowAgenda, lang: AppLang, now: LocalDateTime, denied: Set<String>): SkillResult {
+        calendarPermissionResult(lang, denied)?.let { return it }
+        val day = dayPhrase(cmd.date, lang, now)
+        val events = try {
+            calendar.eventsOn(cmd.date)
+        } catch (e: Exception) {
+            emptyList()
+        }
+        if (events.isEmpty()) {
+            return SkillResult(lang.t("Kalender Anda kosong $day${s(lang)}.", "Your calendar is clear $day${s(lang)}."))
+        }
+        val lines = events.take(8).joinToString("\n") { e ->
+            val t = if (e.allDay) lang.t("Seharian", "All day") else Fmt.clock(e.start.hour, e.start.minute, lang).replaceFirstChar { it.uppercase() }
+            "• $t — ${e.title}"
+        }
+        val head = lang.t(
+            "${day.replaceFirstChar { it.uppercase() }} ada ${events.size} acara${s(lang)}:",
+            "${day.replaceFirstChar { it.uppercase() }} you have ${events.size} ${if (events.size == 1) "event" else "events"}${s(lang)}:"
+        )
+        return SkillResult("$head\n$lines")
+    }
+
+    // ------------------------------------------------------------ daftar tugas
+
+    private fun todoList(lang: AppLang): SkillResult {
+        val list = todos.today()
+        if (list.isEmpty()) {
+            return SkillResult(
+                lang.t(
+                    "Daftar tugas hari ini masih kosong${s(lang)}. Katakan misalnya \"tambah tugas beli susu\".",
+                    "Today's list is empty${s(lang)}. Try \"add buy milk to my to-do list\"."
+                )
+            )
+        }
+        val open = list.count { !it.done }
+        val lines = list.mapIndexed { i, it -> "${i + 1}. ${if (it.done) "✓ " else ""}${it.text}" }.joinToString("\n")
+        val head = if (open == 0) lang.t("Semua tugas hari ini sudah selesai${s(lang)}:", "Everything is done for today${s(lang)}:")
+        else lang.t("Ada $open tugas belum selesai${s(lang)}:", "You have $open open ${if (open == 1) "task" else "tasks"}${s(lang)}:")
+        return SkillResult("$head\n$lines")
+    }
+
+    // ------------------------------------------------------------ aplikasi eksternal
+
+    private fun installed(pkg: String): Boolean = try {
+        ctx.packageManager.getPackageInfo(pkg, 0)
+        true
+    } catch (e: Exception) {
+        false
+    }
+
+    private fun playMedia(cmd: Command.PlayMedia, lang: AppLang): SkillResult {
+        val q = cmd.query.trim()
+        val enc = Uri.encode(q)
+        return when (cmd.app) {
+            "youtube" -> SkillResult(
+                lang.t("Mencari \"$q\" di YouTube${s(lang)}.", "Searching YouTube for \"$q\"${s(lang)}."),
+                intent = Intent(Intent.ACTION_SEARCH).setPackage("com.google.android.youtube").putExtra("query", q),
+                fallback = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/results?search_query=$enc"))
+            )
+            "youtube music" -> SkillResult(
+                lang.t("Memutar \"$q\" di YouTube Music${s(lang)}.", "Playing \"$q\" on YouTube Music${s(lang)}."),
+                intent = Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH)
+                    .setPackage("com.google.android.apps.youtube.music")
+                    .putExtra(SearchManager.QUERY, q)
+                    .putExtra(MediaStore.EXTRA_MEDIA_FOCUS, "vnd.android.cursor.item/*"),
+                fallback = Intent(Intent.ACTION_VIEW, Uri.parse("https://music.youtube.com/search?q=$enc"))
+            )
+            "spotify" -> SkillResult(
+                lang.t("Memutar \"$q\" di Spotify${s(lang)}.", "Playing \"$q\" on Spotify${s(lang)}."),
+                intent = Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH)
+                    .setPackage("com.spotify.music")
+                    .putExtra(SearchManager.QUERY, q)
+                    .putExtra(MediaStore.EXTRA_MEDIA_FOCUS, "vnd.android.cursor.item/*"),
+                fallback = Intent(Intent.ACTION_VIEW, Uri.parse("spotify:search:$enc"))
+            )
+            null -> {
+                // Tanpa aplikasi disebut: pakai Spotify bila ada, lalu pemutar musik default, lalu YouTube.
+                val pkg = listOf("com.spotify.music", "com.google.android.apps.youtube.music").firstOrNull { installed(it) }
+                val i = Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH)
+                    .putExtra(SearchManager.QUERY, q)
+                    .putExtra(MediaStore.EXTRA_MEDIA_FOCUS, "vnd.android.cursor.item/*")
+                if (pkg != null) i.setPackage(pkg)
+                SkillResult(
+                    if (q.isEmpty()) lang.t("Memutar musik${s(lang)}.", "Playing some music${s(lang)}.")
+                    else lang.t("Memutar \"$q\"${s(lang)}.", "Playing \"$q\"${s(lang)}."),
+                    intent = i,
+                    fallback = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/results?search_query=$enc"))
+                )
+            }
+            else -> openApp(cmd.app ?: "", lang)
+        }
+    }
+
+    private fun navigate(cmd: Command.Navigate, lang: AppLang): SkillResult {
+        val enc = Uri.encode(cmd.destination)
+        val maps = "com.google.android.apps.maps"
+        return if (cmd.drive) {
+            SkillResult(
+                lang.t("Navigasi ke ${cmd.destination}${s(lang)}. Hati-hati di jalan.", "Navigating to ${cmd.destination}${s(lang)}. Drive safely."),
+                intent = Intent(Intent.ACTION_VIEW, Uri.parse("google.navigation:q=$enc")).setPackage(maps),
+                fallback = Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=$enc"))
+            )
+        } else {
+            SkillResult(
+                lang.t("Mencari ${cmd.destination} di peta${s(lang)}.", "Looking up ${cmd.destination} on the map${s(lang)}."),
+                intent = Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=$enc")),
+                fallback = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/maps/search/?api=1&query=$enc"))
+            )
+        }
+    }
+
+    /** Nomor lokal Indonesia ke format internasional untuk WhatsApp (0812… → 62812…). */
+    private fun waNumber(raw: String): String {
+        var d = raw.filter { it.isDigit() || it == '+' }
+        if (d.startsWith("+")) return d.drop(1)
+        d = d.filter { it.isDigit() }
+        return when {
+            d.startsWith("0") -> "62" + d.drop(1)
+            d.startsWith("8") -> "62$d"
+            else -> d
+        }
+    }
+
+    private fun whatsApp(cmd: Command.WhatsApp, lang: AppLang, denied: Set<String>): SkillResult {
+        var number = asPhoneNumber(cmd.target)
+        var display = cmd.target
+        if (number == null) {
+            contactPermissionResult(lang, denied)?.let { return it }
+            when (val r = contacts.find(cmd.target)) {
+                is ContactsLookup.Result.Found -> {
+                    number = r.number
+                    display = r.name
+                }
+                is ContactsLookup.Result.Ambiguous -> return SkillResult(
+                    lang.t(
+                        "Ada beberapa kontak: ${r.names.joinToString(", ")}. Sebutkan nama lengkapnya.",
+                        "There are several contacts: ${r.names.joinToString(", ")}. Please say the full name."
+                    )
+                )
+                ContactsLookup.Result.NotFound -> return SkillResult(
+                    lang.t("Kontak \"${cmd.target}\" tidak ditemukan.", "I couldn't find a contact named \"${cmd.target}\".")
+                )
+            }
+        }
+        val num = waNumber(number ?: cmd.target)
+        val text = cmd.body?.let { "?text=" + Uri.encode(it) } ?: ""
+        val uri = Uri.parse("https://wa.me/$num$text")
+        val pkg = listOf("com.whatsapp", "com.whatsapp.w4b").firstOrNull { installed(it) }
+        val i = Intent(Intent.ACTION_VIEW, uri)
+        if (pkg != null) i.setPackage(pkg)
+        val reply = if (cmd.body != null) {
+            lang.t("Membuka WhatsApp ke $display dengan pesan siap kirim. Tinggal tekan kirim${s(lang)}.", "Opening WhatsApp to $display with the message ready. Just tap send${s(lang)}.")
+        } else {
+            lang.t("Membuka chat WhatsApp dengan $display${s(lang)}.", "Opening your WhatsApp chat with $display${s(lang)}.")
+        }
+        return SkillResult(reply, intent = i, fallback = Intent(Intent.ACTION_VIEW, uri))
+    }
+
+    /** Ucapan yang tidak dikenali: bila itu nama aplikasi yang terpasang, buka saja; selain itu teruskan ke otak AI. */
+    private fun unknown(text: String, lang: AppLang): SkillResult {
+        val words = text.trim().split(Regex("\\s+"))
+        if (words.size <= 3) {
+            val hit = findApp(text)
+            if (hit != null && hit.score >= 95) return launch(hit, lang)
+        }
+        return SkillResult(persona.didNotUnderstand(lang, text), chat = text)
+    }
+
     private fun help(lang: AppLang): String = lang.t(
         "Beberapa hal yang bisa saya lakukan:\n" +
             "• Ngobrol atau bertanya apa saja (perlu otak AI di Pengaturan)\n" +
             "• \"Pasang alarm jam 6 pagi\"\n" +
             "• \"Timer 10 menit\"\n" +
             "• \"Ingatkan saya minum obat jam 8 malam\"\n" +
+            "• \"Tambah acara rapat besok jam 10\" / \"Jadwal saya hari ini\"\n" +
+            "• \"Tambah tugas beli susu\" / \"Apa tugas saya hari ini\"\n" +
+            "• \"Putar lagu Tulus di Spotify\" / \"Navigasi ke Monas\"\n" +
+            "• \"Kirim WA ke Budi isinya aku otw\"\n" +
             "• \"Buka WhatsApp\" / \"Buka pengaturan Wi-Fi\"\n" +
             "• \"Nyalakan senter\" / \"Volume 50 persen\"\n" +
             "• \"Berapa sisa baterai?\" / \"Jam berapa sekarang?\"\n" +
@@ -622,6 +989,10 @@ class SkillExecutor(context: Context, private val notes: NoteStore, private val 
             "• \"Set an alarm for 6 AM\"\n" +
             "• \"Set a timer for 10 minutes\"\n" +
             "• \"Remind me to take my pills at 8 PM\"\n" +
+            "• \"Schedule lunch with Sarah tomorrow at noon\" / \"What's on my calendar today\"\n" +
+            "• \"Add buy milk to my to-do list\" / \"What's on my to-do list\"\n" +
+            "• \"Play some jazz on Spotify\" / \"Navigate to the airport\"\n" +
+            "• \"Send a WhatsApp to John saying I'm on my way\"\n" +
             "• \"Open WhatsApp\" / \"Open Wi-Fi settings\"\n" +
             "• \"Turn on the flashlight\" / \"Set volume to 50 percent\"\n" +
             "• \"How much battery is left?\" / \"What time is it?\"\n" +

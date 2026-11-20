@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
 import id.nine.assistant.NineApp
+import id.nine.assistant.llm.GeminiClient
 import id.nine.assistant.llm.LlmBrain
 import id.nine.assistant.llm.TextClean
 import id.nine.assistant.nlu.Command
@@ -45,6 +46,7 @@ class AssistantController(context: Context, private val ui: Ui) {
     val prefs: Prefs = nine.prefs
     private val log = nine.log
     private val brain = nine.brain
+    private val gemini = nine.gemini
     private val parser = CommandParser()
     private val filler = SlotFiller(parser)
     private val executor = SkillExecutor(app, NoteStore(app)) { prefs.persona }
@@ -88,6 +90,7 @@ class AssistantController(context: Context, private val ui: Ui) {
         set(value) {
             prefs.lang = value
             brain.reset()
+            gemini.reset()
             ui.onLanguageChanged(value)
         }
 
@@ -97,6 +100,8 @@ class AssistantController(context: Context, private val ui: Ui) {
     private var listenAfterPermission = false
     private val denied = HashSet<String>()
     private var brainJob: Job? = null
+    /** Membatalkan jawaban AI yang sedang berjalan (online atau offline). */
+    private var cancelAi: (() -> Unit)? = null
     /** Naik setiap kali jawaban Gemma dibatalkan/diganti, agar callback lama diabaikan. */
     private var askGen = 0
 
@@ -141,10 +146,9 @@ class AssistantController(context: Context, private val ui: Ui) {
     private fun stopOutput() {
         output.stop()
         askGen++
-        if (brainJob != null) {
-            brain.cancel()
-            brainJob = null
-        }
+        cancelAi?.invoke()
+        cancelAi = null
+        brainJob = null
     }
 
     /** UI tidak lagi tampil: berhenti merekam, biarkan jawaban selesai diucapkan. */
@@ -169,8 +173,9 @@ class AssistantController(context: Context, private val ui: Ui) {
     fun destroy() {
         input.destroy()
         output.shutdown()
-        // Jawaban Gemma yang sedang berjalan dihentikan; model tetap dimuat di NineApp.
-        if (brainJob != null) brain.cancel()
+        // Jawaban AI yang sedang berjalan dihentikan; model tetap dimuat di NineApp.
+        cancelAi?.invoke()
+        cancelAi = null
     }
 
     // ------------------------------------------------------------------ izin
@@ -246,6 +251,7 @@ class AssistantController(context: Context, private val ui: Ui) {
         res.newLang?.let { lang = it }
         if (res.resetChat) {
             brain.reset()
+            gemini.reset()
         }
 
         if (res.stopSpeaking) {
@@ -255,8 +261,8 @@ class AssistantController(context: Context, private val ui: Ui) {
         }
 
         val chat = res.chat
-        if (chat != null && brain.isUsable) {
-            askBrain(chat)
+        if (chat != null && (gemini.isUsable() || brain.isUsable)) {
+            askAi(chat)
             return
         }
 
@@ -279,11 +285,14 @@ class AssistantController(context: Context, private val ui: Ui) {
 
     // ------------------------------------------------------------------ Gemma
 
-    private fun askBrain(question: String) {
+    private fun askAi(question: String) {
         val l = lang
+        val online = gemini.isUsable()
         setState(State.THINKING)
-        if (brain.state == LlmBrain.State.IDLE || brain.state == LlmBrain.State.LOADING) {
-            ui.onPartial(l.t("Membangunkan otak AI…", "Waking up the AI brain…"))
+        when {
+            online -> ui.onPartial(l.t("Mencari jawaban…", "Looking that up…"))
+            brain.state == LlmBrain.State.IDLE || brain.state == LlmBrain.State.LOADING ->
+                ui.onPartial(l.t("Membangunkan otak AI…", "Waking up the AI brain…"))
         }
         val index = log.add(false, "")
         val raw = StringBuilder()
@@ -292,7 +301,7 @@ class AssistantController(context: Context, private val ui: Ui) {
         if (speak) output.beginStream(l) { setState(State.SPEAKING) }
         val gen = ++askGen
 
-        brainJob = brain.ask(question, l, object : LlmBrain.ReplyCallback {
+        val sink = object : GeminiClient.Callback {
             override fun onChunk(text: String) {
                 if (gen != askGen) return
                 ui.onPartial("")
@@ -306,9 +315,10 @@ class AssistantController(context: Context, private val ui: Ui) {
             override fun onDone(fullText: String) {
                 if (gen != askGen) return
                 brainJob = null
+                cancelAi = null
                 val cleaned = TextClean.clean(fullText)
                 if (cleaned.isEmpty()) {
-                    log.update(index, l.t("…", "…"))
+                    log.update(index, "…")
                     output.stop()
                     setState(State.IDLE)
                     return
@@ -329,10 +339,13 @@ class AssistantController(context: Context, private val ui: Ui) {
             override fun onError(message: String) {
                 if (gen != askGen) return
                 brainJob = null
+                cancelAi = null
                 ui.onPartial("")
                 output.stop()
                 val text = if (message == "no_model") {
                     prefs.persona.didNotUnderstand(l, question)
+                } else if (message.startsWith("API key") || message.startsWith("Gemini") || message.contains("Gemini")) {
+                    message
                 } else {
                     l.t(
                         "Maaf${prefs.persona.sfx(l)}, otak AI saya sedang bermasalah ($message). Coba lagi sebentar lagi.",
@@ -346,7 +359,32 @@ class AssistantController(context: Context, private val ui: Ui) {
                     setState(State.IDLE)
                 }
             }
-        })
+
+            override fun onFallback(reason: String) {
+                if (gen != askGen) return
+                // Internet gagal sebelum ada jawaban: lanjutkan dengan Gemma offline.
+                if (brain.isUsable) {
+                    ui.onPartial(l.t("Internet bermasalah, beralih ke mode offline…", "Connection trouble, switching to offline mode…"))
+                    brainJob = brain.ask(question, l, this)
+                    cancelAi = { brain.cancel() }
+                } else {
+                    onError(
+                        l.t(
+                            "Tidak bisa terhubung ke Gemini ($reason) dan otak AI offline belum diunduh.",
+                            "I couldn't reach Gemini ($reason) and the offline AI brain isn't downloaded."
+                        )
+                    )
+                }
+            }
+        }
+
+        if (online) {
+            gemini.ask(question, l, sink)
+            cancelAi = { gemini.cancel() }
+        } else {
+            brainJob = brain.ask(question, l, sink)
+            cancelAi = { brain.cancel() }
+        }
     }
 
     // ------------------------------------------------------------------ menjawab
