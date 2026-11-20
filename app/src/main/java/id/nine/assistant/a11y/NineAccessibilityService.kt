@@ -153,7 +153,7 @@ class NineAccessibilityService : AccessibilityService() {
     private val onRe = Regex("""\b(on|aktif|menyala|nyala|hidup|dinyalakan|enabled)\b""")
 
     private fun parseOnOff(raw: String): Boolean? {
-        val s = raw.lowercase().trim()
+        val s = norm(raw).lowercase().trim()
         if (s.isEmpty()) return null
         if (offRe.containsMatchIn(s)) return false
         if (onRe.containsMatchIn(s)) return true
@@ -173,6 +173,9 @@ class NineAccessibilityService : AccessibilityService() {
         else -> Regex("""^\b$""")
     }
 
+    /** Samakan tanda hubung/spasi khusus (mis. "Wi‑Fi" di One UI memakai tanda hubung tak terputus) agar cocok dengan regex. */
+    private fun norm(s: String): String = s.replace(Regex("[\\u2010-\\u2015\\u2212]"), "-").replace('\u00A0', ' ').replace('\u202F', ' ')
+
     private fun labelOf(n: AccessibilityNodeInfo): String {
         val cd = n.contentDescription?.toString().orEmpty()
         val t = n.text?.toString().orEmpty()
@@ -182,7 +185,7 @@ class NineAccessibilityService : AccessibilityService() {
             texts(n, 3, sub)
             base = sub.firstOrNull().orEmpty()
         }
-        return base.split(',', '\n').firstOrNull().orEmpty().trim().lowercase()
+        return norm(base).split(',', '\n').firstOrNull().orEmpty().trim().lowercase()
     }
 
     private fun stateOf(n: AccessibilityNodeInfo): Boolean? {
@@ -243,7 +246,7 @@ class NineAccessibilityService : AccessibilityService() {
                 val sub = ArrayList<String>()
                 texts(n, 0, sub)
                 n.parent?.let { texts(it, 2, sub) }
-                sub.any { re.containsMatchIn(it.lowercase()) }
+                sub.any { re.containsMatchIn(norm(it).lowercase()) }
             }
             if (hit != null) return hit
         }

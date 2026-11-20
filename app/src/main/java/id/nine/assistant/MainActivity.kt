@@ -255,6 +255,7 @@ open class MainActivity : AppCompatActivity(), AssistantController.Ui {
         nine.log.removeListener(logListener)
         nine.models.removeListener(modelListener)
         nine.brain.removeListener(brainListener)
+        ticker.removeCallbacks(syncRetry)
         tuner?.stop()
         reactor?.stop()
         controller.destroy()
@@ -286,21 +287,34 @@ open class MainActivity : AppCompatActivity(), AssistantController.Ui {
         binding.orb.react(Mood.LOVE, 3600)
     }
 
+    /** Percobaan ulang pendek bila mikrofon belum bebas (mis. wake word baru saja dilepas). */
+    private val syncRetry = Runnable { syncAudio() }
+    private var tunerRetries = 0
+
     /** Sesuaikan mikrofon: tuner dan reaksi musik hanya berjalan saat layar terbuka dan Nine sedang diam. */
     private fun syncAudio() {
         if (!::controller.isInitialized) return
+        ticker.removeCallbacks(syncRetry)
         val can = visible && controller.state == AssistantController.State.IDLE && hasMic() && !RecorderService.recording
         // tuner
         val t = tuner
         if (tunerActive && t != null) {
             if (can) {
-                if (!t.isRunning && !t.start()) {
-                    Toast.makeText(
-                        this,
-                        controller.lang.t("Mikrofon sedang dipakai aplikasi lain; tuner dihentikan.", "The microphone is busy; tuner stopped."),
-                        Toast.LENGTH_LONG
-                    ).show()
-                    stopTuner()
+                if (!t.isRunning) {
+                    if (t.start()) {
+                        tunerRetries = 0
+                    } else if (tunerRetries < 4) {
+                        tunerRetries++
+                        ticker.postDelayed(syncRetry, 700)
+                    } else {
+                        tunerRetries = 0
+                        Toast.makeText(
+                            this,
+                            controller.lang.t("Mikrofon sedang dipakai aplikasi lain; tuner dihentikan.", "The microphone is busy; tuner stopped."),
+                            Toast.LENGTH_LONG
+                        ).show()
+                        stopTuner()
+                    }
                 }
             } else {
                 t.stop()
@@ -310,7 +324,7 @@ open class MainActivity : AppCompatActivity(), AssistantController.Ui {
         val wantMusic = nine.prefs.musicReact && !tunerActive && can
         if (wantMusic) {
             val r = reactor ?: MusicReactor(this) { f -> binding.orb.setMusic(f) }.also { reactor = it }
-            if (!r.isRunning) r.start()
+            if (!r.isRunning && !r.start()) ticker.postDelayed(syncRetry, 1500)
         } else {
             reactor?.stop()
             binding.orb.clearMusic()
