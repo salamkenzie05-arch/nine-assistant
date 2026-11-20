@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/nine_bg">
+
+    <LinearLayout
+        android:id="@+id/content"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <!-- Bilah atas -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="24dp"
+            android:paddingTop="12dp"
+            android:paddingEnd="8dp">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-light"
+                    android:letterSpacing="0.35"
+                    android:text="NINE"
+                    android:textColor="@color/nine_on_bg"
+                    android:textSize="22sp" />
+
+                <TextView
+                    android:id="@+id/txtBrain"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/nine_muted"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnLang"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:minWidth="48dp"
+                android:contentDescription="@string/cd_language"
+                android:text="ID"
+                android:textColor="@color/nine_on_bg" />
+
+            <ImageButton
+                android:id="@+id/btnTheme"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/cd_theme"
+                android:src="@drawable/ic_theme"
+                app:tint="@color/nine_on_bg" />
+
+            <ImageButton
+                android:id="@+id/btnSettings"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/settings"
+                android:src="@drawable/ic_settings"
+                app:tint="@color/nine_on_bg" />
+        </LinearLayout>
+
+        <!-- Kartu aktivasi otak AI -->
+        <LinearLayout
+            android:id="@+id/modelCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="12dp"
+            android:layout_marginEnd="16dp"
+            android:background="@drawable/bg_card"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/modelTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/model_card_title"
+                android:textColor="@color/nine_on_bg"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/modelText"
+                style="@style/Nine.Body"
+                android:layout_marginTop="4dp"
+                android:text="@string/model_card_text" />
+
+            <com.google.android.material.progressindicator.LinearProgressIndicator
+                android:id="@+id/modelProgress"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:visibility="gone"
+                app:trackCornerRadius="4dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="end"
+                android:orientation="horizontal">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnModelSecondary"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/model_later" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnModelPrimary"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="@string/model_download" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Riwayat -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/list"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:clipToPadding="false"
+            android:fadingEdgeLength="48dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="12dp"
+            android:requiresFadingEdge="vertical" />
+
+        <!-- Transkrip langsung -->
+        <TextView
+            android:id="@+id/txtPartial"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:maxLines="3"
+            android:minHeight="28dp"
+            android:paddingStart="28dp"
+            android:paddingEnd="28dp"
+            android:textColor="@color/nine_muted"
+            android:textSize="20sp" />
+
+        <!-- Kolom ketik (disembunyikan sampai tombol keyboard ditekan) -->
+        <LinearLayout
+            android:id="@+id/inputRow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginEnd="16dp"
+            android:background="@drawable/bg_user_pill"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="16dp"
+            android:paddingEnd="4dp"
+            android:visibility="gone">
+
+            <EditText
+                android:id="@+id/inputText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="@android:color/transparent"
+                android:hint="@string/hint_input"
+                android:imeOptions="actionSend"
+                android:importantForAutofill="no"
+                android:inputType="textCapSentences"
+                android:maxLines="3"
+                android:minHeight="48dp"
+                android:textColor="@color/nine_on_bg"
+                android:textColorHint="@color/nine_muted" />
+
+            <ImageButton
+                android:id="@+id/btnSend"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/cd_send"
+                android:src="@drawable/ic_send"
+                app:tint="@color/nine_accent" />
+        </LinearLayout>
+
+        <!-- Orb + tombol samping -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="200dp">
+
+            <id.nine.assistant.ui.NineOrbView
+                android:id="@+id/orb"
+                android:layout_width="190dp"
+                android:layout_height="190dp"
+                android:layout_gravity="center"
+                android:clickable="true"
+                android:contentDescription="@string/cd_mic"
+                android:focusable="true" />
+
+            <ImageButton
+                android:id="@+id/btnKeyboard"
+                android:layout_width="52dp"
+                android:layout_height="52dp"
+                android:layout_gravity="start|center_vertical"
+                android:layout_marginStart="24dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/cd_keyboard"
+                android:src="@drawable/ic_keyboard"
+                app:tint="@color/nine_muted" />
+
+            <ImageButton
+                android:id="@+id/btnHelp"
+                android:layout_width="52dp"
+                android:layout_height="52dp"
+                android:layout_gravity="end|center_vertical"
+                android:layout_marginEnd="24dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/cd_help"
+                android:src="@drawable/ic_help"
+                app:tint="@color/nine_muted" />
+        </FrameLayout>
+
+        <TextView
+            android:id="@+id/txtStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:paddingBottom="16dp"
+            android:text="@string/status_idle"
+            android:textColor="@color/nine_muted"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <id.nine.assistant.ui.EdgeGlowView
+        android:id="@+id/edgeGlow"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+</FrameLayout>

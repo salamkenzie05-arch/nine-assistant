@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Nine</string>
+    <string name="settings">Settings</string>
+    <string name="back">Back</string>
+    <string name="hint_input">Type a message for Nine…</string>
+    <string name="cd_send">Send</string>
+    <string name="cd_mic">Talk to Nine</string>
+    <string name="cd_language">Switch language</string>
+    <string name="cd_theme">Toggle light/dark theme</string>
+    <string name="cd_keyboard">Type</string>
+    <string name="cd_help">Help</string>
+    <string name="status_idle">Tap the orb to speak</string>
+    <string name="status_listening">Listening…</string>
+    <string name="status_thinking">Thinking…</string>
+    <string name="status_speaking">Speaking · tap to stop</string>
+    <string name="welcome">Welcome. I\'m Nine, your personal assistant, running entirely on this device. Tap the orb and say something like \"set an alarm for 6 AM\", or simply chat with me.</string>
+
+    <string name="brain_none">Command mode · AI brain not enabled</string>
+    <string name="brain_idle">Gemma 4 · standing by</string>
+    <string name="brain_loading">Loading Gemma 4…</string>
+    <string name="brain_ready">Gemma 4 · offline · %1$s</string>
+    <string name="brain_error">AI brain failed to load</string>
+
+    <string name="model_card_title">Enable Nine\'s AI brain</string>
+    <string name="model_card_text">Download Gemma 4 E2B (about 2.6 GB, once; Wi-Fi recommended). Then Nine can chat and answer questions without the internet.</string>
+    <string name="model_download">Download Gemma 4 (2.6 GB)</string>
+    <string name="model_import">Import model file (.litertlm)</string>
+    <string name="model_delete">Delete model</string>
+    <string name="model_cancel">Cancel download</string>
+    <string name="model_later">Later</string>
+    <string name="model_retry">Retry</string>
+    <string name="model_downloading">Downloading %1$s / %2$s</string>
+    <string name="model_importing">Copying %1$s / %2$s</string>
+    <string name="model_ready">Gemma 4 E2B installed (%1$s)</string>
+    <string name="model_missing">Not installed</string>
+    <string name="model_fail_token">The server requires a Hugging Face login. Open the model page in a browser, accept the license, create a \"Read\" token at huggingface.co/settings/tokens, paste it below, then retry. Or download the model file in a browser and use \"Import model file\".</string>
+    <string name="model_fail_network">Download failed (%1$s). Check your connection and retry.</string>
+    <string name="model_fail_storage">Not enough storage (about 3 GB free needed).</string>
+    <string name="model_fail_corrupt">The model file is incomplete. Please download again.</string>
+    <string name="model_fail_import">Import failed: %1$s</string>
+    <string name="model_delete_confirm">Delete the Gemma model (about 2.6 GB)? Nine returns to command mode.</string>
+    <string name="hf_token_hint">Hugging Face token (optional)</string>
+    <string name="hf_token_help">Only needed if the download is refused for requiring a login. The token stays on this device.</string>
+
+    <string name="sec_brain">AI brain (Gemma 4)</string>
+    <string name="sec_look">Appearance</string>
+    <string name="theme_system">Follow system</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="sec_language">Language &amp; form of address</string>
+    <string name="honorific_label">Nine addresses you as (Indonesian / English):</string>
+    <string name="sec_voice">Nine\'s voice</string>
+    <string name="speak_replies">Speak replies</string>
+    <string name="voice_label">Voice (active language):</string>
+    <string name="voice_auto">Automatic (best male voice)</string>
+    <string name="voice_preview">Play sample</string>
+    <string name="voice_help">For the best voice, install \"Speech Services by Google\" from the Play Store, then download the English (United Kingdom) and Indonesian voices in Text-to-speech settings.</string>
+    <string name="voice_sample_id">Selamat malam, Tuan. Semua sistem berjalan normal. Ada yang bisa saya bantu?</string>
+    <string name="voice_sample_en">Good evening, sir. All systems are running smoothly. How may I assist you?</string>
+    <string name="sec_assistant">Default assistant</string>
+    <string name="assistant_help">Make Nine your digital assistant so you can summon it by holding the side key (set in Settings > Advanced features > Side key > Press and hold > Wake digital assistant).</string>
+    <string name="assistant_button">Choose Nine as digital assistant</string>
+    <string name="sec_privacy">Privacy</string>
+    <string name="privacy_text">Your voice, commands, conversations and notes are processed and stored only on this device. The internet is used once, to download the Gemma model from Hugging Face.</string>
+</resources>

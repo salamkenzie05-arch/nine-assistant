@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Nine</string>
+    <string name="settings">Pengaturan</string>
+    <string name="back">Kembali</string>
+    <string name="hint_input">Ketik pesan untuk Nine…</string>
+    <string name="cd_send">Kirim</string>
+    <string name="cd_mic">Bicara dengan Nine</string>
+    <string name="cd_language">Ganti bahasa</string>
+    <string name="cd_theme">Ganti tema terang/gelap</string>
+    <string name="cd_keyboard">Ketik</string>
+    <string name="cd_help">Bantuan</string>
+    <string name="status_idle">Ketuk orb untuk bicara</string>
+    <string name="status_listening">Mendengarkan…</string>
+    <string name="status_thinking">Berpikir…</string>
+    <string name="status_speaking">Berbicara · ketuk untuk berhenti</string>
+    <string name="welcome">Selamat datang. Saya Nine, asisten pribadi Anda yang bekerja sepenuhnya di perangkat ini. Ketuk orb dan ucapkan perintah, misalnya \"pasang alarm jam 6 pagi\", atau ajak saya mengobrol.</string>
+
+    <string name="brain_none">Mode perintah · otak AI belum aktif</string>
+    <string name="brain_idle">Gemma 4 · siaga</string>
+    <string name="brain_loading">Memuat Gemma 4…</string>
+    <string name="brain_ready">Gemma 4 · offline · %1$s</string>
+    <string name="brain_error">Otak AI gagal dimuat</string>
+
+    <string name="model_card_title">Aktifkan otak AI Nine</string>
+    <string name="model_card_text">Unduh Gemma 4 E2B (±2,6 GB, sekali saja; disarankan lewat Wi-Fi). Setelah itu Nine bisa diajak mengobrol dan menjawab pertanyaan tanpa internet.</string>
+    <string name="model_download">Unduh Gemma 4 (2,6 GB)</string>
+    <string name="model_import">Impor file model (.litertlm)</string>
+    <string name="model_delete">Hapus model</string>
+    <string name="model_cancel">Batalkan unduhan</string>
+    <string name="model_later">Nanti</string>
+    <string name="model_retry">Coba lagi</string>
+    <string name="model_downloading">Mengunduh %1$s / %2$s</string>
+    <string name="model_importing">Menyalin %1$s / %2$s</string>
+    <string name="model_ready">Gemma 4 E2B terpasang (%1$s)</string>
+    <string name="model_missing">Belum terpasang</string>
+    <string name="model_fail_token">Server meminta login Hugging Face. Buka halaman model di browser, setujui lisensinya, buat token \"Read\" di huggingface.co/settings/tokens, tempel di bawah, lalu coba lagi. Atau unduh file model di browser lalu pilih \"Impor file model\".</string>
+    <string name="model_fail_network">Unduhan gagal (%1$s). Periksa koneksi lalu coba lagi.</string>
+    <string name="model_fail_storage">Ruang penyimpanan tidak cukup (butuh ±3 GB kosong).</string>
+    <string name="model_fail_corrupt">File model tidak lengkap. Silakan unduh ulang.</string>
+    <string name="model_fail_import">Gagal mengimpor file: %1$s</string>
+    <string name="model_delete_confirm">Hapus model Gemma (±2,6 GB)? Nine kembali ke mode perintah.</string>
+    <string name="hf_token_hint">Token Hugging Face (opsional)</string>
+    <string name="hf_token_help">Hanya diperlukan bila unduhan ditolak karena butuh login. Token disimpan di perangkat ini saja.</string>
+
+    <string name="sec_brain">Otak AI (Gemma 4)</string>
+    <string name="sec_look">Tampilan</string>
+    <string name="theme_system">Ikuti sistem</string>
+    <string name="theme_light">Terang</string>
+    <string name="theme_dark">Gelap</string>
+    <string name="sec_language">Bahasa &amp; panggilan</string>
+    <string name="honorific_label">Nine memanggil Anda (Indonesia / English):</string>
+    <string name="sec_voice">Suara Nine</string>
+    <string name="speak_replies">Ucapkan jawaban</string>
+    <string name="voice_label">Pilih suara (bahasa aktif):</string>
+    <string name="voice_auto">Otomatis (suara pria terbaik)</string>
+    <string name="voice_preview">Dengarkan contoh</string>
+    <string name="voice_help">Untuk karakter suara terbaik, pasang \"Speech Services by Google\" dari Play Store lalu unduh suara Inggris (Inggris Raya) dan Indonesia di pengaturan Teks ke ucapan.</string>
+    <string name="voice_sample_id">Selamat malam, Tuan. Semua sistem berjalan normal. Ada yang bisa saya bantu?</string>
+    <string name="voice_sample_en">Good evening, sir. All systems are running smoothly. How may I assist you?</string>
+    <string name="sec_assistant">Asisten default</string>
+    <string name="assistant_help">Jadikan Nine asisten digital agar bisa dipanggil dengan menekan lama tombol samping (atur di Pengaturan > Fitur lanjutan > Tombol samping > Tekan dan tahan > Aktifkan asisten digital).</string>
+    <string name="assistant_button">Pilih Nine sebagai asisten digital</string>
+    <string name="sec_privacy">Privasi</string>
+    <string name="privacy_text">Suara, perintah, percakapan, dan catatan Anda diproses dan disimpan hanya di perangkat ini. Koneksi internet hanya dipakai satu kali untuk mengunduh model Gemma dari Hugging Face.</string>
+</resources>

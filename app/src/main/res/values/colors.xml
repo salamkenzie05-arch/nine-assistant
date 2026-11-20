@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="white">#FFFFFF</color>
+    <color name="nine_bg">#F4F6FB</color>
+    <color name="nine_on_bg">#0B1220</color>
+    <color name="nine_muted">#5B6577</color>
+    <color name="nine_pill">#E3E8F2</color>
+    <color name="nine_card">#FFFFFF</color>
+    <color name="nine_accent">#2E6BFF</color>
+    <color name="nine_gold">#D99A12</color>
+    <color name="ic_launcher_background">#05070D</color>
+</resources>

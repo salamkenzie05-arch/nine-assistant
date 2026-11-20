@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="nine_bg">#000000</color>
+    <color name="nine_on_bg">#F2F5FA</color>
+    <color name="nine_muted">#8A93A6</color>
+    <color name="nine_pill">#1A1F2B</color>
+    <color name="nine_card">#10141C</color>
+    <color name="nine_accent">#35E0FF</color>
+    <color name="nine_gold">#FFC24D</color>
+</resources>

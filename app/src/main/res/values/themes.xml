@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Nine" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/nine_accent</item>
+        <item name="colorOnPrimary">@color/nine_bg</item>
+        <item name="colorSecondary">@color/nine_gold</item>
+        <item name="colorSurface">@color/nine_card</item>
+        <item name="colorOnSurface">@color/nine_on_bg</item>
+        <item name="android:colorBackground">@color/nine_bg</item>
+        <item name="android:windowBackground">@color/nine_bg</item>
+        <item name="android:textColorPrimary">@color/nine_on_bg</item>
+        <item name="android:textColorSecondary">@color/nine_muted</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+
+    <style name="Nine.SectionTitle" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">24dp</item>
+        <item name="android:layout_marginBottom">8dp</item>
+        <item name="android:textColor">@color/nine_accent</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.12</item>
+        <item name="android:textAllCaps">true</item>
+    </style>
+
+    <style name="Nine.Body" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/nine_muted</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:lineSpacingMultiplier">1.15</item>
+    </style>
+</resources>

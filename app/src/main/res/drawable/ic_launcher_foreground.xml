@@ -1,0 +1,31 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Cincin luar (emas) -->
+    <path
+        android:pathData="M54,25a29,29 0,1 1,0 58a29,29 0,1 1,0 -58"
+        android:strokeWidth="2.5"
+        android:strokeColor="#FFC24D"
+        android:fillColor="#00000000" />
+    <!-- Cincin dalam (cyan) -->
+    <path
+        android:pathData="M54,31a23,23 0,1 1,0 46a23,23 0,1 1,0 -46"
+        android:strokeWidth="1.5"
+        android:strokeColor="#8035E0FF"
+        android:fillColor="#00000000" />
+    <!-- Angka 9: kepala bulat -->
+    <path
+        android:pathData="M54,38.5a8.5,8.5 0,1 1,0 17a8.5,8.5 0,1 1,0 -17"
+        android:strokeWidth="5"
+        android:strokeColor="#35E0FF"
+        android:fillColor="#00000000" />
+    <!-- Angka 9: ekor -->
+    <path
+        android:pathData="M62.5,47L62.5,58C62.5,65 58,69.5 51,69.5"
+        android:strokeWidth="5"
+        android:strokeColor="#35E0FF"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+</vector>

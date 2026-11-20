@@ -1,0 +1,73 @@
+name: Build Nine APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Unit tests + release APK
+        shell: bash
+        run: |
+          chmod +x gradlew
+          set -o pipefail
+          ./gradlew --no-daemon --stacktrace -PversionCode=${{ github.run_number }} \
+            testReleaseUnitTest assembleRelease 2>&1 | tee build.log
+
+      # Bila gagal: tampilkan ringkasan error sebagai anotasi (bisa dibaca tanpa login di repo publik).
+      - name: Report build errors
+        if: failure()
+        shell: bash
+        run: |
+          if [ ! -f build.log ]; then exit 0; fi
+          grep -nE "^e: |error:|ERROR:|FAILED|What went wrong|Could not|Unresolved|> .*Exception|AssertionError|expected:" build.log \
+            | grep -v "^.*warning:" | head -60 > errors.txt || true
+          if [ ! -s errors.txt ]; then tail -60 build.log > errors.txt; fi
+          i=0
+          while IFS= read -r line; do
+            i=$((i+1))
+            msg="${line//'%'/'%25'}"
+            echo "::error title=build-error-$i::${msg:0:900}"
+            if [ $i -ge 45 ]; then break; fi
+          done < errors.txt
+
+      - name: Rename APK
+        shell: bash
+        run: cp app/build/outputs/apk/release/app-release.apk Nine.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Nine-apk
+          path: Nine.apk
+
+      - name: Publish release (latest)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: Nine build ${{ github.run_number }}
+          body: |
+            APK Nine untuk Android (arm64, Android 8.0+).
+            Unduh **Nine.apk** di bawah langsung dari HP, lalu pasang.
+            Link tetap ke versi terbaru: https://github.com/${{ github.repository }}/releases/latest/download/Nine.apk
+          files: Nine.apk
+          make_latest: true
