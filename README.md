@@ -7,9 +7,24 @@ Nine adalah asisten suara seperti Siri yang berjalan **sepenuhnya di perangkat**
 - **Alarm Nine**: berbunyi tepat waktu walau HP tidur, tampil di layar kunci, bisa berulang (setiap hari, hari kerja, akhir pekan, hari tertentu), dan bisa dinyalakan, dimatikan, atau dihapus lewat suara ("matikan alarm jam 6", "hapus alarm gym"). Bisa dialihkan ke aplikasi Jam di Pengaturan.
 - **Mode internet (opsional)**: Gemini + Google Search untuk pertanyaan terkini (cuaca, berita, kurs). Butuh API key gratis dari Google AI Studio; otomatis kembali ke Gemma saat offline.
 - **Wake word** "hey nine" (bisa diubah), dideteksi offline dengan Vosk.
-- **Widget layar utama**: orb Nine berbentuk bola 3D dengan bayangan lembut (terang/gelap; ekspresinya ikut keadaan: dicas, baterai lemah, malam, baru diajak bicara), tersedia ukuran kecil dan **4x4**, serta "Hari ini" (tugas yang belum selesai). Gerak mata memakai frame 70 ms yang diperhalus, jadi melirik dan berkedipnya mulus.
+- **Widget layar utama**: orb Nine berbentuk bola 3D yang tampak melayang (tepi tanpa garis, bayangan gaussian yang lembut), warnanya **mengikuti tema Nine di aplikasi** (Terang/Gelap/Ikuti sistem) dan ekspresinya ikut keadaan (dicas, baterai lemah, malam, baru diajak bicara). Ukuran kecil dan **4x4**, serta "Hari ini" (tugas yang belum selesai). Gerak mata memakai frame 70 ms yang diperhalus, jadi melirik dan berkedipnya mulus.
 - **Otak AI: Gemma 4 E2B** (Google, Apache-2.0) lewat LiteRT-LM, memakai GPU HP dan otomatis pindah ke CPU bila GPU gagal. Untuk obrolan dan pertanyaan bebas, jawabannya mulai diucapkan per kalimat sebelum seluruh jawaban selesai dibuat.
 - **Wajah Nine**: dua mata ekspresif ala robot meja yang berkedip, melirik, mengikuti jari, senang saat dielus, kesal bila diketuk berkali-kali, kaget lalu senang saat dicas, lesu saat baterai lemah, mengantuk saat lama diam, dan bereaksi pada percakapan (mendengar, berpikir, berbicara, senang, bingung, sedih). Bilah atas hanya "NINE"; ketuk untuk menu (alarm, tugas, pengaturan, bahasa, tema).
+
+### Baru di 2.7
+
+- **Musik**: "putar <judul>" memutar lagu pilihan di YouTube Music (butuh layanan aksesibilitas Nine, lihat bawah); "jeda", "lanjutkan", "lagu berikutnya", "lagu sebelumnya", "naikkan/turunkan volume" mengendalikan pemutar yang sedang aktif.
+- **Obrolan ala SimSimi**: pertanyaan "kenapa/mengapa" dan obrolan acak dijawab santai. Bila Nine tidak tahu atau butuh pencarian, ia membuka Google dengan pertanyaannya sudah terketik.
+- **Usap orb 5 detik** → hati bermuncratan seperti di live IG (maksimal 3 kali sehari).
+- **Ekspresi**: sedih/takut saat dihina atau dimarahi; "buat ekspresi sedih/takut/senang/kaget/bingung/kedip/tertawa…" membuat Nine memperagakannya.
+- **Nyanyi**: "nyanyikan lagu …" atau "nyanyi dong" (melodi dengan suara droid, tanpa lirik; ada beberapa lagu anak/klasik, sisanya karangan sendiri).
+- **Tuner gitar 6 senar**: "tuning gitar" lalu petik senar mana saja (dikenali otomatis), atau "stem senar 3", "bunyikan senar 5" untuk nada acuan. Tampil di panel tuner dengan jarum cent.
+- **Reaksi musik**: saat layar Nine terbuka, wajah ikut bergoyang mengikuti ketukan, bass, dan nada musik yang terdengar lewat mikrofon (tidak direkam; bisa dimatikan di Pengaturan atau "matikan reaksi musik").
+- **Telepon masuk**: "angkat telepon" / "tolak telepon".
+- **Pengaturan lewat suara**: "ganti tema ke gelap", "ganti bahasa ke English", "matikan/nyalakan wake phrase", "keluar dari aplikasi", "nyalakan/matikan tombol melayang", serta Wi-Fi, Bluetooth, hotspot, mode pesawat.
+- **Tombol melayang** (seperti AssistiveTouch): tombol transparan yang bisa digeser, ketuk untuk panel (Nine, Home, Back, Recents, Notifikasi, Kunci layar, Volume, Pengaturan). Nyalakan di Pengaturan atau lewat suara.
+- **Kedekatan** baru mencapai level tertinggi setelah **90 hari pemakaian** (hari berbeda saat kamu bicara dengan Nine), seberapa banyak pun XP-nya.
+- **Tombol power**: layar Nine kini transparan dengan vinyet lembut (seperti Google), dan tidak lagi membuat layar "nyangkut" setelah Nine membuka aplikasi lain.
 
 ## Pasang di HP (Galaxy S23)
 
@@ -37,7 +52,10 @@ Internet hanya dipakai untuk mengunduh model. Percakapan, suara, dan catatan tid
 - Suara Nine adalah "bahasa droid" yang dibuat dengan sintesis sendiri (FM, luncuran nada, getar): kata yang sama selalu berbunyi sama, "?" naik, "!" riang, "." turun. Terinspirasi gaya droid fiksi, tetapi **bukan sampel atau tiruan suara karakter mana pun**. Isi jawaban tetap tampil sebagai teks di layar.
 - Ingatan Nine disisipkan ke prompt (maksimal beberapa puluh fakta), bukan fine-tuning; model Gemma tidak berubah.
 - Campur bahasa ditekan dengan aturan bahasa yang ketat, suhu sampling lebih rendah, dan pengecekan jawaban: jawaban Gemma yang bercampur diminta ditulis ulang. Pengecekan ini heuristik, jadi sesekali masih bisa lolos.
-- Android tidak mengizinkan aplikasi biasa menyalakan atau mematikan Wi-Fi/Bluetooth/mode pesawat. Nine membuka panel pengaturannya.
+- Android tidak mengizinkan aplikasi biasa menyalakan atau mematikan Wi-Fi/Bluetooth/hotspot/mode pesawat. Nine melakukannya lewat **layanan aksesibilitas** (Pengaturan Nine → "Izinkan kontrol Nine"): ia membuka Panel Cepat lalu mengetuk ubinnya, jadi hasilnya bergantung pada susunan One UI di HP-mu dan belum diuji di semua perangkat. Tanpa layanan itu, Nine hanya membuka panel pengaturannya. Pada Android 13+ untuk aplikasi di luar Play Store, aktifkan dulu **Info aplikasi → ⋮ → Izinkan setelan terbatas**.
+- Memutar lagu pilihan di YouTube Music juga memakai layanan aksesibilitas (mengetuk hasil lagu pertama); tanpa itu Nine hanya membuka hasil pencarian. Jeda/lanjut/berikutnya/sebelumnya/volume memakai tombol media sistem dan bekerja di pemutar apa pun.
+- Terima/tolak telepon butuh izin **Telepon** dan hanya lewat perintah suara: Nine tidak otomatis menyebut siapa yang menelepon.
+- Nyanyian adalah melodi bersuara droid, tanpa lirik. Reaksi musik memakai mikrofon hanya saat layar Nine terbuka dan Nine sedang diam; layar kunci dan aplikasi lain tidak diawasi.
 - Pengingat lebih dari 24 jam dibuka di Kalender, karena alarm Android hanya berlaku 24 jam ke depan.
 - Kunci tanda tangan `app/nine-sideload.jks` sengaja ada di repo agar setiap build CI bisa memperbarui aplikasi. Kunci itu bukan rahasia; jangan pakai untuk Play Store.
 - Wake word memakai model bahasa Inggris, jadi frasanya harus kata-kata Inggris. Layar Nine hanya bisa muncul dari latar belakang bila Nine dijadikan asisten digital default atau diberi izin "tampil di atas aplikasi lain"; selain itu muncul notifikasi untuk diketuk.
@@ -54,7 +72,10 @@ Internet hanya dipakai untuk mengunduh model. Percakapan, suara, dan catatan tid
 | `llm/` | `ModelManager` (unduh/impor), `LlmBrain` (Gemma via LiteRT-LM), `TextClean`, `LangGuard` (deteksi bahasa campur) |
 | `core/` | `AssistantController` (alur dengar → pahami → jalankan/tanya Gemma → ucapkan), `Persona`, `Prefs`, `MemoryStore` + `FactExtractor` (ingatan jangka panjang) |
 | `skills/` | Eksekusi perintah perangkat, kontak, catatan |
-| `speech/` | Pengenal suara on-device & `DroidVoice` (suara droid sintetis) |
+| `speech/` | Pengenal suara on-device, `DroidVoice` (suara droid sintetis), `DroidSinger` (nyanyian) |
+| `audio/` | Deteksi nada (YIN) + tuner gitar, analisis ketukan musik, daftar lagu |
+| `a11y/` | Layanan aksesibilitas: ubin pengaturan cepat, YouTube Music, tombol melayang |
+| `call/` | Terima/tolak telepon masuk |
 | `ui/` | `NineOrbView`, `EdgeGlowView`, daftar pesan |
 | `widget/` | Widget orb (kecil dan 4x4) dan "Hari ini"; frame wajah dibuat `tools/face_sphere.py` |
 | `service/` | Peran asisten digital default |
