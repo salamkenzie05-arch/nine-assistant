@@ -14,6 +14,7 @@ import id.nine.assistant.nlu.CommandParser
 import id.nine.assistant.nlu.Pending
 import id.nine.assistant.nlu.SlotFiller
 import id.nine.assistant.nlu.SlotOutcome
+import id.nine.assistant.recorder.RecorderService
 import id.nine.assistant.skills.CalendarSkill
 import id.nine.assistant.skills.NoteStore
 import id.nine.assistant.skills.TodoStore
@@ -39,6 +40,13 @@ class AssistantController(context: Context, private val ui: Ui) {
         fun onLaunch(intent: Intent, fallback: Intent?): Boolean
         fun onLanguageChanged(lang: AppLang)
         fun onNotice(text: String)
+        /** Interaksi tercatat untuk affinity (badge diperbarui; naik level dirayakan). */
+        fun onAffinity(event: Affinity.Event) {}
+        /** HP terkunci: minta pengguna membuka kunci, lalu jalankan [then]. */
+        fun onRequestUnlock(then: () -> Unit) {}
+        fun onRecordingChanged() {}
+        /** True bila layar sedang terkunci (Nine dipanggil di atas layar kunci). */
+        fun isLocked(): Boolean = false
     }
 
     private data class Retry(val command: Command, val confirmed: Boolean)
@@ -225,6 +233,11 @@ class AssistantController(context: Context, private val ui: Ui) {
     private fun handleUtterance(text: String) {
         setState(State.THINKING)
         log.add(true, text)
+        try {
+            ui.onAffinity(nine.affinity.record())
+        } catch (e: Exception) {
+            // affinity tidak boleh mengganggu perintah
+        }
 
         val p = pending
         if (p != null) {
@@ -244,7 +257,42 @@ class AssistantController(context: Context, private val ui: Ui) {
         execute(parser.parse(text), confirmed = false)
     }
 
+    /** Perintah yang aman dijalankan walau HP terkunci (tidak membuka data pribadi). */
+    private fun safeWhileLocked(c: Command): Boolean = when (c) {
+        is Command.SetAlarm, is Command.SetTimer, is Command.Flashlight, is Command.Volume,
+        Command.CurrentTime, Command.CurrentDate, Command.Battery, Command.StopSpeaking, Command.Greeting,
+        Command.Thanks, Command.WhoAreYou, Command.HowAreYou, Command.Help, is Command.SwitchLanguage,
+        is Command.NeedInfo, Command.AffinityStatus -> true
+        is Command.Camera -> true // kamera aman tersedia di layar kunci
+        else -> false
+    }
+
+    /** Tindakan berisiko yang diusulkan AI (bisa saja terpengaruh isi web) selalu dikonfirmasi dulu. */
+    private fun aiNeedsConfirm(c: Command): String? = when (c) {
+        is Command.Call -> lang.t("menelepon ${c.target}", "call ${c.target}")
+        is Command.WhatsApp -> lang.t("membuka WhatsApp ke ${c.target}", "open WhatsApp to ${c.target}")
+        is Command.OpenUrl -> lang.t("membuka ${c.url}", "open ${c.url}")
+        is Command.RecordAudio -> if (c.start) lang.t("mulai merekam suara", "start recording audio") else null
+        is Command.SendSms -> lang.t("menyiapkan SMS ke ${c.target}", "prepare a text to ${c.target}")
+        else -> null
+    }
+
     private fun execute(cmd: Command, confirmed: Boolean, fromAi: Boolean = false) {
+        if (ui.isLocked() && !safeWhileLocked(cmd) && cmd !is Command.Unknown) {
+            reply(lang.t("Buka kunci HP dulu${prefs.persona.sfx(lang)}.", "Please unlock your phone first${prefs.persona.sfx(lang)}."), listenAfter = false)
+            ui.onRequestUnlock { execute(cmd, confirmed, fromAi) }
+            return
+        }
+        if (fromAi && !confirmed) {
+            aiNeedsConfirm(cmd)?.let { what ->
+                pending = Pending.Confirm(cmd)
+                reply(
+                    lang.t("Saya akan $what. Lanjutkan? Katakan ya atau tidak.", "I'm about to $what. Shall I go ahead? Say yes or no."),
+                    listenAfter = true
+                )
+                return
+            }
+        }
         val res = executor.execute(cmd, lang, confirmed, denied)
 
         if (res.needPermissions.isNotEmpty()) {
@@ -267,6 +315,13 @@ class AssistantController(context: Context, private val ui: Ui) {
             return
         }
 
+        res.deferred?.let { work ->
+            log.add(false, res.reply)
+            setState(State.THINKING)
+            work { text -> reply(text, listenAfter = false) }
+            return
+        }
+
         val chat = res.chat
         if (chat != null && fromAi) {
             // Perintah dari AI ternyata tidak dikenali: jangan bertanya ke AI lagi (hindari putaran).
@@ -280,6 +335,12 @@ class AssistantController(context: Context, private val ui: Ui) {
             return
         }
         if (chat != null && (gemini.isUsable() || brain.isUsable)) {
+            if (ui.isLocked()) {
+                // Jawaban AI memakai konteks pribadi (tugas, acara, lokasi): minta buka kunci dulu.
+                reply(lang.t("Buka kunci HP dulu${prefs.persona.sfx(lang)}.", "Please unlock your phone first${prefs.persona.sfx(lang)}."), listenAfter = false)
+                ui.onRequestUnlock { askAi(chat) }
+                return
+            }
             askAi(chat)
             return
         }
@@ -298,7 +359,22 @@ class AssistantController(context: Context, private val ui: Ui) {
             }
         }
         pending = nextPending
+        if (res.startRecording) {
+            reply(text, listenAfter = false) {
+                RecorderService.start(app)
+                ui.onRecordingChanged()
+            }
+            return
+        }
         reply(text, listenAfter = nextPending != null)
+    }
+
+    /** Hentikan rekaman suara (dipanggil saat orb diketuk ketika sedang merekam). */
+    fun stopRecording() {
+        if (!RecorderService.recording) return
+        RecorderService.stop(app)
+        ui.onRecordingChanged()
+        reply(lang.t("Rekaman disimpan di folder Recordings/Nine${prefs.persona.sfx(lang)}.", "Recording saved to Recordings/Nine${prefs.persona.sfx(lang)}."), listenAfter = false)
     }
 
     // ------------------------------------------------------------------ Gemma
@@ -328,6 +404,19 @@ class AssistantController(context: Context, private val ui: Ui) {
             } catch (e: Exception) {
                 // abaikan
             }
+        }
+        try {
+            val st = nine.affinity.state()
+            parts += l.t(
+                "Tingkat kedekatan dengan pengguna: level ${st.level.number}/9 (${st.level.name(l)}), streak ${st.streak} hari. Makin tinggi levelnya, makin hangat dan akrab nadamu, tetap sopan.",
+                "Closeness with the user: level ${st.level.number}/9 (${st.level.name(l)}), ${st.streak}-day streak. The higher the level, the warmer and more familiar your tone, while staying polite."
+            )
+        } catch (e: Exception) {
+            // abaikan
+        }
+        if (nine.location.enabled()) {
+            nine.location.describe()?.let { parts += l.t("Lokasi pengguna saat ini: ", "User's current location: ") + it }
+            nine.location.refresh() // untuk pertanyaan berikutnya
         }
         return parts.joinToString("\n")
     }
@@ -368,7 +457,12 @@ class AssistantController(context: Context, private val ui: Ui) {
     private fun cmdOf(t: String): String? {
         val x = t.trimStart().trimStart('`', '"', '*', ' ')
         if (!x.uppercase().startsWith("CMD:")) return null
-        return x.substring(4).lineSequence().first().trim().trim('"', '`', '*', '.', ' ').ifEmpty { null }
+        var c = x.substring(4).lineSequence().first().trim().trim('"', '`', '*', '.', ' ')
+        // Model kecil kadang menambahkan sapaan ("…, sir"): buang agar tidak ikut jadi judul acara.
+        val hons = listOf(prefs.honorificId, prefs.honorificEn, "tuan", "sir", "nyonya", "madam", "bos", "boss", "pak", "bu")
+            .filter { it.isNotBlank() }.map { Regex.escape(it) }.distinct().joinToString("|")
+        c = c.replace(Regex("""(?:[,\s]+(?:$hons))+[.!]?$""", RegexOption.IGNORE_CASE), "").trim().trim(',', '.', ' ')
+        return c.ifEmpty { null }
     }
 
     /** Masih mungkin awal dari "CMD:"? (tahan dulu sebelum ditampilkan/diucapkan) */
@@ -427,7 +521,7 @@ class AssistantController(context: Context, private val ui: Ui) {
                 if (action != null) {
                     // AI memahami permintaan sebagai tindakan: jalankan lewat modul perintah yang sebenarnya.
                     output.stop()
-                    log.update(index, "→ $action")
+                    log.remove(index) // perintah internal tidak ditampilkan; hanya hasilnya
                     val parsed = parser.parse(action)
                     execute(parsed, confirmed = false, fromAi = true)
                     return
@@ -511,14 +605,16 @@ class AssistantController(context: Context, private val ui: Ui) {
 
     // ------------------------------------------------------------------ menjawab
 
-    private fun reply(text: String, listenAfter: Boolean) {
+    private fun reply(text: String, listenAfter: Boolean, then: (() -> Unit)? = null) {
         if (text.isBlank()) {
             setState(State.IDLE)
+            then?.invoke()
             return
         }
         log.add(false, text)
         val after: () -> Unit = {
             setState(State.IDLE)
+            then?.invoke()
             if (listenAfter) startListening()
         }
         if (prefs.speakReplies) {

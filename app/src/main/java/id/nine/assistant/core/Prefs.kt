@@ -45,10 +45,10 @@ class Prefs(context: Context) {
         sp.edit().apply { if (name == null) remove("voice_" + lang.name) else putString("voice_" + lang.name, name) }.apply()
     }
 
-    /** Token Hugging Face (opsional) bila model memerlukan login. */
+    /** Token Hugging Face (opsional) bila model memerlukan login. Disimpan terenkripsi (Android Keystore). */
     var hfToken: String
-        get() = sp.getString("hf_token", "") ?: ""
-        set(value) = sp.edit().putString("hf_token", value.trim()).apply()
+        get() = SecureStore.decrypt(sp.getString("hf_token", "") ?: "")
+        set(value) = sp.edit().putString("hf_token", SecureStore.encrypt(value.trim())).apply()
 
     /** "gpu" atau "cpu": backend yang terakhir terbukti berjalan. */
     var llmBackend: String
@@ -65,9 +65,35 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("net_mode", false)
         set(value) = sp.edit().putBoolean("net_mode", value).apply()
 
+    /** API key Gemini, disimpan terenkripsi (Android Keystore). */
     var geminiKey: String
-        get() = sp.getString("gemini_key", "") ?: ""
-        set(value) = sp.edit().putString("gemini_key", value.trim()).apply()
+        get() = SecureStore.decrypt(sp.getString("gemini_key", "") ?: "")
+        set(value) = sp.edit().putString("gemini_key", SecureStore.encrypt(value.trim())).apply()
+
+    /** Enkripsi ulang rahasia yang masih tersimpan polos dari versi lama. */
+    fun migrateSecrets() {
+        for (k in listOf("gemini_key", "hf_token")) {
+            val v = sp.getString(k, "") ?: ""
+            if (v.isNotEmpty() && !SecureStore.isEncrypted(v)) sp.edit().putString(k, SecureStore.encrypt(v)).apply()
+        }
+    }
+
+    // --- Lokasi
+    var useLocation: Boolean
+        get() = sp.getBoolean("use_location", false)
+        set(value) = sp.edit().putBoolean("use_location", value).apply()
+
+    /**
+     * Token acak per instalasi. Intent internal (widget, notifikasi, layanan asisten) menyertakannya agar aplikasi lain
+     * tidak bisa menyuruh Nine langsung mendengarkan.
+     */
+    val launchToken: String
+        get() {
+            sp.getString("launch_token", null)?.let { return it }
+            val t = java.util.UUID.randomUUID().toString()
+            sp.edit().putString("launch_token", t).apply()
+            return t
+        }
 
     var geminiModel: String
         get() = (sp.getString("gemini_model", null) ?: "").ifBlank { DEFAULT_GEMINI_MODEL }

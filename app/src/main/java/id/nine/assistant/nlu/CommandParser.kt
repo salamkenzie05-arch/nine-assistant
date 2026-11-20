@@ -53,7 +53,8 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
 
     private fun answersQuestion(c: Command): Boolean = when (c) {
         Command.CurrentTime, Command.CurrentDate, Command.Battery, Command.DeviceInfo, Command.Help,
-        Command.WhoAreYou, Command.HowAreYou, Command.TodoList, Command.ReadNotes, Command.ShowAlarms -> true
+        Command.WhoAreYou, Command.HowAreYou, Command.TodoList, Command.ReadNotes, Command.ShowAlarms,
+        Command.AffinityStatus, Command.WhereAmI -> true
         is Command.ShowAgenda -> true
         else -> false
     }
@@ -62,6 +63,10 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
         return parseLanguage(raw)
             ?: parseReset(raw)
             ?: parseControl(raw)
+            ?: parseAffinity(raw)
+            ?: parseLocation(raw)
+            ?: parseRecorder(raw)
+            ?: parseCamera(norm)
             ?: parseTodo(raw)
             ?: parseAlarm(norm, now)
             ?: parseTimer(norm)
@@ -437,10 +442,10 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
         rx("""^(?:schedule|book)\s+()(.+)$""")
     )
     private val reEventToCalendar = listOf(
-        rx("""^(?:tambah(?:kan)?|masukkan|masukin|catat(?:kan)?|simpan|taruh)\s+(.+?)\s+(?:ke|di)\s+(?:dalam\s+)?kalender(?:\s+(.*))?$"""),
-        rx("""^(?:add|put|save)\s+(.+?)\s+(?:to|on|in)\s+(?:my\s+|the\s+)?calendar(?:\s+(.*))?$""")
+        rx("""^(?:tambah(?:kan)?|masukkan|masukin|catat(?:kan)?|simpan|taruh|set)\s+(.+?)\s+(?:ke|di)\s+(?:dalam\s+)?kalend[ae]r(?:\s+(.*))?$"""),
+        rx("""^(?:add|put|save|set|schedule|insert)\s+(.+?)\s+(?:to|on|in|into)\s+(?:my\s+|the\s+)?calend[ae]rs?(?:\s+(.*))?$""")
     )
-    private val reCalendarWords = rx("""\s*\b(?:ke|di|to|on|in)\s+(?:dalam\s+)?(?:my\s+|the\s+)?(?:kalender|calendar)\b\s*""")
+    private val reCalendarWords = rx("""\s*\b(?:ke|di|to|on|in|into)\s+(?:dalam\s+)?(?:my\s+|the\s+)?(?:kalend[ae]r|calend[ae]rs?)\b\s*""")
     private val reAgendaWord = rx("""\b(?:what\s+do\s+i\s+have|jadwal|agenda|acara|kegiatan|kalender|calendar|schedule|events?|appointments?|meetings?|rapat)\b""")
     private val reAgendaCue = rx("""^(?:apa|ada|cek|lihat|tampilkan|bacakan|baca|tunjukkan|gimana|bagaimana|what|show|check|read|any|do\s+i\s+have|my|jadwal|agenda|acara|kegiatan)\b""")
     private val reAgendaAsk = rx("""\b(?:apa|ada|cek|lihat|tampilkan|bacakan|baca|tunjukkan|gimana|bagaimana|what|show|check|read|any|do\s+i\s+have)\b""")
@@ -637,6 +642,40 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
             return Command.PlayMedia(q, app)
         }
         return null
+    }
+
+    // ------------------------------------------------------------------ affinity & lokasi
+
+    private val reAffinity = rx("""\b(?:streak|affinity|tingkat\s+kedekatan|level\s+kedekatan|level\s+(?:kita|aku|saya)|kedekatan\s+kita|seberapa\s+dekat\s+kita|how\s+close\s+are\s+we|our\s+level|my\s+level)\b""")
+
+    private fun parseAffinity(raw: String): Command? = if (reAffinity.containsMatchIn(raw)) Command.AffinityStatus else null
+
+    private val reWhere = rx("""^(?:(?:aku|saya|gue)\s+(?:lagi\s+|sedang\s+)?(?:di\s+mana|dimana)|(?:di\s+mana|dimana)\s+(?:aku|saya|gue|posisi\s+(?:aku|saya))(?:\s+sekarang)?|lokasi\s+(?:aku|saya|ku)(?:\s+sekarang)?|posisi\s+(?:aku|saya)(?:\s+sekarang)?|where\s+am\s+i(?:\s+(?:now|right\s+now))?|what(?:'s|\s+is)\s+my\s+(?:location|current\s+location|address))$""")
+
+    private fun parseLocation(raw: String): Command? = if (reWhere.matches(raw)) Command.WhereAmI else null
+
+    // ------------------------------------------------------------------ perekam suara & kamera
+
+    private val reRecStart = rx("""^(?:mulai\s+|tolong\s+)?(?:rekam|merekam|rekamkan|rekamin)(?:\s+(?:suara|audio|voice|memo(?:\s+suara)?|pembicaraan|percakapan|rapat|ini))?$|^(?:nyalakan|aktifkan|hidupkan|mulai|jalankan)\s+(?:perekam(?:\s+suara)?|rekaman(?:\s+suara)?|voice\s+recorder?)$|^(?:start\s+)?(?:a\s+)?(?:voice\s+)?(?:recording|record)(?:\s+(?:audio|voice|a\s+voice\s+memo|my\s+voice|a\s+memo|this|the\s+meeting))?$|^(?:start\s+)?(?:a\s+)?voice\s+(?:memo|note|recording)$""")
+    private val reRecStop = rx("""^(?:stop|berhenti|hentikan|selesai|akhiri|matikan|stop\s+the)\s+(?:merekam|rekam(?:an)?(?:\s+suara)?|perekam(?:\s+suara)?|recording|record)$|^(?:stop|end|finish)\s+(?:the\s+)?(?:recording|voice\s+memo)$""")
+
+    private fun parseRecorder(raw: String): Command? = when {
+        reRecStop.matches(raw) -> Command.RecordAudio(false)
+        reRecStart.matches(raw) -> Command.RecordAudio(true)
+        else -> null
+    }
+
+    private val reCamVideo = rx("""^(?:mulai\s+|tolong\s+)?(?:rekam|merekam|ambil|buat|bikin|take|record|shoot|start(?:\s+recording)?|capture)\s+(?:sebuah\s+|a\s+)?(?:video|vidio)\b|^(?:buka|nyalakan|aktifkan|open|start)\s+(?:the\s+)?(?:kamera\s+video|video\s+camera|mode\s+video|video\s+mode)\b""")
+    private val reCamPhoto = rx("""^(?:ambil|jepret|potret|take|snap|capture)\s+(?:sebuah\s+|a\s+|satu\s+)?(?:foto|gambar|photo|picture|pic|selfie|swafoto)\b|^(?:foto(?:in|kan)?|selfie|swafoto)(?:\s+(?:aku|saya|dong|sekarang|ya|kita))*(?:\s+(?:dalam|in)\s+\d{1,2}\s*(?:detik|seconds?))?$|^(?:buka|nyalakan|aktifkan|open|start|launch)\s+(?:the\s+)?(?:kamera|camera)(?:\s+(?:depan|belakang|foto|front|selfie|photo))?\s*$""")
+    private val reFront = rx("""\b(?:selfie|swafoto|kamera\s+depan|front(?:\s+camera)?|depan)\b""")
+    private val reCamTimer = rx("""\b(?:dalam|in|after|setelah|timer)\s+(\d{1,2})\s*(?:detik|seconds?|secs?|s)\b""")
+
+    private fun parseCamera(norm: String): Command? {
+        val video = reCamVideo.containsMatchIn(norm)
+        val photo = !video && reCamPhoto.containsMatchIn(norm)
+        if (!video && !photo) return null
+        val timer = reCamTimer.find(norm)?.groupValues?.get(1)?.toIntOrNull()?.coerceIn(1, 30)
+        return Command.Camera(video, reFront.containsMatchIn(norm), timer)
     }
 
     // ------------------------------------------------------------------ util untuk SlotFiller

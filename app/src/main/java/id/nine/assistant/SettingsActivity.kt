@@ -118,6 +118,19 @@ class SettingsActivity : AppCompatActivity() {
         }
         renderWake()
 
+        // --- Lokasi
+        binding.switchLocation.isChecked = prefs.useLocation && nine.location.hasPermission()
+        binding.switchLocation.setOnCheckedChangeListener { _, checked ->
+            if (checked && !nine.location.hasPermission()) {
+                locPermission.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
+            } else {
+                prefs.useLocation = checked
+                if (checked) nine.location.refresh { renderLocation() }
+                renderLocation()
+            }
+        }
+        renderLocation()
+
         // --- Kalender tujuan
         binding.spinnerCalendar.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
@@ -220,6 +233,21 @@ class SettingsActivity : AppCompatActivity() {
         renderInternet()
         renderWake()
         populateCalendars()
+    }
+
+    private val locPermission =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
+            val ok = result.values.any { it }
+            prefs.useLocation = ok
+            binding.switchLocation.isChecked = ok
+            if (ok) nine.location.refresh { renderLocation() }
+            renderLocation()
+        }
+
+    private fun renderLocation() {
+        binding.txtLocationStatus.text = if (prefs.useLocation && nine.location.hasPermission()) {
+            nine.location.describe()?.let { getString(R.string.location_status_fmt, it) } ?: getString(R.string.location_status_none)
+        } else ""
     }
 
     private var calendarIds: List<Long> = listOf(-1L)

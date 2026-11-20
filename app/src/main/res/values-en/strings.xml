@@ -118,4 +118,31 @@
     <string name="wake_phrase_hint">Wake phrase, e.g. hey nine</string>
     <string name="model_import_short">Import file</string>
     <string name="advanced">Advanced</string>
+
+    <string name="affinity_title">Closeness with Nine</string>
+    <string name="affinity_levels">9 levels</string>
+    <string name="affinity_level_fmt">Lv %1$d</string>
+    <string name="affinity_streak_fmt">🔥 %1$d-day streak · best %2$d</string>
+    <string name="affinity_xp_fmt">%1$d XP · %2$d XP to %3$s</string>
+    <string name="affinity_xp_max">%1$d XP · top level reached</string>
+    <string name="affinity_how">Talk to Nine every day to keep the streak alive. The first interaction each day earns the most XP, plus a bonus for longer streaks. Each level will unlock a small surprise later on.</string>
+    <string name="affinity_locked">locked · %1$d XP · surprise coming soon</string>
+    <string name="affinity_unlocked">unlocked</string>
+    <string name="affinity_levelup">Level %1$d reached: %2$s!</string>
+    <string name="affinity_levelup_line">We\'ve reached level %1$d of 9: %2$s. Thank you for relying on me.</string>
+
+    <string name="rec_channel">Nine voice recorder</string>
+    <string name="rec_notif_title">Nine is recording</string>
+    <string name="rec_notif_text">Saving to Recordings/Nine</string>
+    <string name="rec_stop">Stop</string>
+    <string name="rec_banner">● Recording %1$s · tap the orb to stop</string>
+
+    <string name="sec_location">Location</string>
+    <string name="location_switch">Use location for accuracy</string>
+    <string name="location_help">Nine uses your approximate location for weather, nearby places and local time. It's only sent to Gemini when Internet mode is on, and never stored.</string>
+    <string name="location_status_fmt">Last: %1$s</string>
+    <string name="location_status_none">No location yet.</string>
+
+    <string name="widget_orb_dark_desc">Dark Nine orb: tap to talk</string>
+    <string name="unlock_reason">Unlock to continue your Nine command</string>
 </resources>

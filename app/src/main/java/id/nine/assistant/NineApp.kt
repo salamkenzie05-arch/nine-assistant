@@ -21,10 +21,18 @@ class NineApp : Application() {
     lateinit var gemini: GeminiClient
         private set
     val log = ConversationLog()
+    lateinit var location: id.nine.assistant.core.LocationHelper
+        private set
+    lateinit var affinity: id.nine.assistant.core.Affinity
+        private set
 
     override fun onCreate() {
         super.onCreate()
         prefs = Prefs(this)
+        prefs.migrateSecrets()
+        location = id.nine.assistant.core.LocationHelper(this, prefs)
+        affinity = id.nine.assistant.core.Affinity(this)
+        location.refresh()
         AppCompatDelegate.setDefaultNightMode(prefs.theme.nightMode)
         models = ModelManager(this, prefs)
         brain = LlmBrain(this, prefs, models)

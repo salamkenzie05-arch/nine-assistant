@@ -23,7 +23,11 @@ import android.telephony.SmsManager
 import androidx.core.content.ContextCompat
 import id.nine.assistant.core.AppLang
 import id.nine.assistant.core.Fmt
+import id.nine.assistant.NineApp
+import id.nine.assistant.core.Affinity
+import id.nine.assistant.core.LocationHelper
 import id.nine.assistant.core.Persona
+import id.nine.assistant.recorder.RecorderService
 import id.nine.assistant.core.Prefs
 import id.nine.assistant.nlu.NumberWords
 import id.nine.assistant.nlu.TimeParser
@@ -49,7 +53,11 @@ data class SkillResult(
     val stopSpeaking: Boolean = false,
     /** Bukan perintah perangkat: teruskan ke otak AI (Gemma). */
     val chat: String? = null,
-    val resetChat: Boolean = false
+    val resetChat: Boolean = false,
+    /** Mulai perekam suara setelah jawaban selesai diucapkan (agar suara Nine tidak ikut terekam). */
+    val startRecording: Boolean = false,
+    /** Jawaban yang butuh waktu (mis. lokasi): dipanggil oleh controller, lalu [done] dengan teks jawaban. */
+    val deferred: ((done: (String) -> Unit) -> Unit)? = null
 )
 
 /**
@@ -62,6 +70,8 @@ class SkillExecutor(context: Context, private val notes: NoteStore, private val 
     private val contacts = ContactsLookup(ctx)
     private val calendar = CalendarSkill(ctx)
     private val todos = TodoStore(ctx)
+    private val affinity = Affinity(ctx)
+    private val location: LocationHelper get() = (ctx as NineApp).location
     private var persona: Persona = personaOf()
 
     /** ", Tuan" / ", sir" */
@@ -209,6 +219,10 @@ class SkillExecutor(context: Context, private val notes: NoteStore, private val 
             )
         }
         is Command.WhatsApp -> whatsApp(cmd, lang, denied)
+        is Command.Camera -> camera(cmd, lang)
+        is Command.RecordAudio -> recordAudio(cmd, lang, denied)
+        Command.AffinityStatus -> affinityStatus(lang)
+        Command.WhereAmI -> whereAmI(lang, denied)
     }
 
     // ------------------------------------------------------------ alarm, timer, pengingat
@@ -723,6 +737,103 @@ class SkillExecutor(context: Context, private val notes: NoteStore, private val 
         }
     }
 
+    // ------------------------------------------------------------ kamera & perekam
+
+    private fun camera(cmd: Command.Camera, lang: AppLang): SkillResult {
+        val i = Intent(if (cmd.video) MediaStore.INTENT_ACTION_VIDEO_CAMERA else MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA)
+        if (cmd.front) {
+            i.putExtra("android.intent.extras.CAMERA_FACING", 1)
+            i.putExtra("android.intent.extras.LENS_FACING_FRONT", 1)
+            i.putExtra("android.intent.extra.USE_FRONT_CAMERA", true)
+            i.putExtra("com.google.assistant.extra.USE_FRONT_CAMERA", true)
+        }
+        cmd.timerSeconds?.let {
+            i.putExtra("android.intent.extra.TIMER_DURATION_SECONDS", it)
+            i.putExtra("com.google.assistant.extra.TIMER_DURATION_SECONDS", it)
+        }
+        val fallback = findApp("camera")?.let { hit ->
+            Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER).setClassName(hit.pkg, hit.cls)
+        }
+        val reply = when {
+            cmd.video -> lang.t("Kamera video siap${s(lang)}. Tekan tombol rekam bila sudah siap.", "Video camera ready${s(lang)}. Press record when you're ready.")
+            cmd.front -> lang.t("Kamera depan siap${s(lang)}. Silakan tersenyum.", "Front camera ready${s(lang)}. Do smile.")
+            else -> lang.t("Kamera siap${s(lang)}.", "Camera ready${s(lang)}.")
+        }
+        return SkillResult(reply, intent = i, fallback = fallback)
+    }
+
+    private fun recordAudio(cmd: Command.RecordAudio, lang: AppLang, denied: Set<String>): SkillResult {
+        if (!cmd.start) {
+            if (!RecorderService.recording) {
+                return SkillResult(lang.t("Tidak ada rekaman yang sedang berjalan${s(lang)}.", "Nothing is being recorded${s(lang)}."))
+            }
+            RecorderService.stop(ctx)
+            return SkillResult(lang.t("Rekaman dihentikan dan disimpan di folder Recordings/Nine${s(lang)}.", "Recording stopped and saved to Recordings/Nine${s(lang)}."))
+        }
+        if (RecorderService.recording) {
+            return SkillResult(lang.t("Saya sudah merekam${s(lang)}. Ketuk orb untuk berhenti.", "I'm already recording${s(lang)}. Tap the orb to stop."))
+        }
+        if (!has(Manifest.permission.RECORD_AUDIO)) {
+            return SkillResult(lang.t("Saya perlu izin mikrofon${s(lang)}.", "I need microphone access${s(lang)}."), needPermissions = listOf(Manifest.permission.RECORD_AUDIO))
+        }
+        return SkillResult(
+            lang.t("Mulai merekam${s(lang)}. Ketuk orb untuk berhenti.", "Recording now${s(lang)}. Tap the orb to stop."),
+            startRecording = true
+        )
+    }
+
+    // ------------------------------------------------------------ affinity & lokasi
+
+    private fun affinityStatus(lang: AppLang): SkillResult {
+        val st = affinity.state()
+        val streak = if (st.streak > 0) {
+            lang.t("Streak kita ${st.streak} hari (terbaik ${st.bestStreak}).", "Our streak is ${st.streak} ${if (st.streak == 1) "day" else "days"} (best ${st.bestStreak}).")
+        } else {
+            lang.t("Streak kita sedang kosong; bicara dengan saya hari ini untuk memulainya lagi.", "Our streak is at zero; talk to me today to start it again.")
+        }
+        val next = st.next?.let { n ->
+            lang.t(" ${n.minXp - st.xp} XP lagi menuju level ${n.number}, ${n.name(lang)}.", " ${n.minXp - st.xp} XP to level ${n.number}, ${n.name(lang)}.")
+        } ?: lang.t(" Kita sudah di puncak. Saya terharu.", " We've reached the top. I'm quite touched.")
+        return SkillResult(
+            lang.t(
+                "Kedekatan kita level ${st.level.number} dari 9: ${st.level.name(lang)}${s(lang)}. $streak$next",
+                "We're at level ${st.level.number} of 9: ${st.level.name(lang)}${s(lang)}. $streak$next"
+            )
+        )
+    }
+
+    private fun whereAmI(lang: AppLang, denied: Set<String>): SkillResult {
+        val loc = location
+        if (!loc.hasPermission()) {
+            prefs.useLocation = true
+            if (Manifest.permission.ACCESS_FINE_LOCATION in denied && Manifest.permission.ACCESS_COARSE_LOCATION in denied) {
+                return SkillResult(lang.t("Tanpa izin lokasi saya tidak bisa melihat posisi Anda${s(lang)}.", "Without location access I can't see where you are${s(lang)}."))
+            }
+            return SkillResult(
+                lang.t("Saya perlu izin lokasi${s(lang)}.", "I need location access${s(lang)}."),
+                needPermissions = listOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
+            )
+        }
+        prefs.useLocation = true
+        return SkillResult(
+            lang.t("Sebentar, saya cek lokasinya.", "One moment, checking your location."),
+            deferred = { done ->
+                loc.refresh { p ->
+                    done(
+                        when {
+                            p == null -> lang.t("Maaf${s(lang)}, lokasi belum bisa ditentukan. Pastikan Lokasi di HP menyala.", "Sorry${s(lang)}, I can't get a fix. Make sure Location is on.")
+                            p.label != null -> lang.t("Anda berada di sekitar ${p.label}${s(lang)}.", "You're around ${p.label}${s(lang)}.")
+                            else -> lang.t(
+                                "Posisi Anda di koordinat ${"%.4f".format(p.lat)}, ${"%.4f".format(p.lon)}${s(lang)}.",
+                                "You're at ${"%.4f".format(p.lat)}, ${"%.4f".format(p.lon)}${s(lang)}."
+                            )
+                        }
+                    )
+                }
+            }
+        )
+    }
+
     // ------------------------------------------------------------ bantuan
 
     // ------------------------------------------------------------ kalender
@@ -1049,6 +1160,8 @@ class SkillExecutor(context: Context, private val notes: NoteStore, private val 
             "• \"Tambah tugas beli susu\" / \"Apa tugas saya hari ini\"\n" +
             "• \"Putar lagu Tulus di Spotify\" / \"Navigasi ke Monas\"\n" +
             "• \"Kirim WA ke Budi isinya aku otw\"\n" +
+            "• \"Ambil foto\" / \"Selfie\" / \"Rekam video\" / \"Rekam suara\"\n" +
+            "• \"Level kita berapa?\" / \"Di mana saya?\"\n" +
             "• \"Buka WhatsApp\" / \"Buka pengaturan Wi-Fi\"\n" +
             "• \"Nyalakan senter\" / \"Volume 50 persen\"\n" +
             "• \"Berapa sisa baterai?\" / \"Jam berapa sekarang?\"\n" +
@@ -1064,6 +1177,8 @@ class SkillExecutor(context: Context, private val notes: NoteStore, private val 
             "• \"Add buy milk to my to-do list\" / \"What's on my to-do list\"\n" +
             "• \"Play some jazz on Spotify\" / \"Navigate to the airport\"\n" +
             "• \"Send a WhatsApp to John saying I'm on my way\"\n" +
+            "• \"Take a photo\" / \"Take a selfie\" / \"Record a video\" / \"Start recording\"\n" +
+            "• \"What's our level?\" / \"Where am I?\"\n" +
             "• \"Open WhatsApp\" / \"Open Wi-Fi settings\"\n" +
             "• \"Turn on the flashlight\" / \"Set volume to 50 percent\"\n" +
             "• \"How much battery is left?\" / \"What time is it?\"\n" +

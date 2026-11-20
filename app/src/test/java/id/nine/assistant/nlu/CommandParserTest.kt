@@ -153,7 +153,7 @@ class CommandParserTest {
     @Test
     fun bukaAplikasi() {
         check("buka whatsapp", "OpenApp(query=whatsapp)")
-        check("open the camera", "OpenApp(query=camera)")
+        check("open the camera", "Camera(video=false, front=false, timerSeconds=null)")
         check("buka aplikasi kalkulator", "OpenApp(query=kalkulator)")
         check("open Google Maps app", "OpenApp(query=Google Maps)")
         check("buka", "NeedInfo(pending=AppName)")
@@ -270,6 +270,26 @@ class CommandParserTest {
         check("berapa sisa baterai", "Battery")
         check("apa jadwal saya hari senin", "ShowAgenda(date=2026-11-23)")
         check("bisakah kamu pasang alarm jam 7 pagi", "SetAlarm(time=2026-11-21T07:00, label=null)")
+    }
+
+    @Test
+    fun cameraRecorderAffinityLocation() {
+        check("ambil foto", "Camera(video=false, front=false, timerSeconds=null)")
+        check("take a selfie", "Camera(video=false, front=true, timerSeconds=null)")
+        check("selfie dalam 3 detik", "Camera(video=false, front=true, timerSeconds=3)")
+        check("buka kamera", "Camera(video=false, front=false, timerSeconds=null)")
+        check("rekam video", "Camera(video=true, front=false, timerSeconds=null)")
+        check("record a video", "Camera(video=true, front=false, timerSeconds=null)")
+        check("rekam suara", "RecordAudio(start=true)")
+        check("nyalakan perekam suara", "RecordAudio(start=true)")
+        check("start recording", "RecordAudio(start=true)")
+        check("berhenti merekam", "RecordAudio(start=false)")
+        check("buka perekam suara", "OpenApp(query=perekam suara)")
+        check("level kita berapa", "AffinityStatus")
+        check("berapa streak kita", "AffinityStatus")
+        check("di mana saya sekarang", "WhereAmI")
+        check("where am I", "WhereAmI")
+        check("Set rNPS Agreement for 2nd december 2026 to my calender", "AddEvent(title=rNPS Agreement, start=2026-12-02T00:00, end=null, allDay=true)")
     }
 
     @Test

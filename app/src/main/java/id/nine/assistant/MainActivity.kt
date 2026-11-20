@@ -1,10 +1,21 @@
 package id.nine.assistant
 
+import android.app.KeyguardManager
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
+import android.widget.LinearLayout
+import android.widget.TextView
+import androidx.core.content.ContextCompat
+import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.progressindicator.LinearProgressIndicator
+import id.nine.assistant.core.Affinity
+import id.nine.assistant.recorder.RecorderService
 import android.text.format.Formatter
 import android.view.View
 import android.view.inputmethod.EditorInfo
@@ -57,6 +68,10 @@ class MainActivity : AppCompatActivity(), AssistantController.Ui {
         override fun onChanged(index: Int) {
             adapter.notifyItemChanged(index)
             binding.list.scrollToPosition(index)
+        }
+
+        override fun onRemoved(index: Int) {
+            adapter.notifyItemRemoved(index)
         }
 
         override fun onCleared() {
@@ -114,6 +129,10 @@ class MainActivity : AppCompatActivity(), AssistantController.Ui {
         if (nine.log.entries.isEmpty()) nine.log.add(false, welcomeText())
 
         binding.orb.setOnClickListener {
+            if (RecorderService.recording) {
+                controller.stopRecording()
+                return@setOnClickListener
+            }
             when (controller.state) {
                 AssistantController.State.LISTENING -> controller.stopListening()
                 AssistantController.State.SPEAKING, AssistantController.State.THINKING -> controller.cancel()
@@ -129,6 +148,8 @@ class MainActivity : AppCompatActivity(), AssistantController.Ui {
         }
         binding.btnKeyboard.setOnClickListener { toggleKeyboard() }
         binding.btnTodo.setOnClickListener { startActivity(Intent(this, TodoActivity::class.java)) }
+        binding.txtAffinity.setOnClickListener { showAffinitySheet() }
+        renderAffinity()
         binding.btnSend.setOnClickListener { sendTyped() }
         binding.inputText.setOnEditorActionListener { _, actionId, event ->
             val enter = event != null && event.keyCode == android.view.KeyEvent.KEYCODE_ENTER && event.action == android.view.KeyEvent.ACTION_DOWN
@@ -175,7 +196,9 @@ class MainActivity : AppCompatActivity(), AssistantController.Ui {
     /** Dibuka lewat tombol asisten (ACTION_ASSIST / sesi asisten): langsung mendengarkan. */
     private fun handleLaunchIntent(i: Intent?) {
         if (i == null) return
-        val auto = i.getBooleanExtra(EXTRA_AUTO_LISTEN, false) || i.action == Intent.ACTION_ASSIST
+        // Hanya intent dari Nine sendiri (token rahasia) atau tombol asisten sistem yang boleh langsung membuka mikrofon.
+        val trusted = i.getStringExtra(EXTRA_TOKEN) == nine.prefs.launchToken
+        val auto = (i.getBooleanExtra(EXTRA_AUTO_LISTEN, false) && trusted) || i.action == Intent.ACTION_ASSIST
         if (auto) {
             // Dipanggil dari tombol samping / wake word: boleh tampil di atas layar kunci.
             if (Build.VERSION.SDK_INT >= 27) {
@@ -194,14 +217,16 @@ class MainActivity : AppCompatActivity(), AssistantController.Ui {
         renderBrain()
         // Layar Nine terbuka: hapus notifikasi "ketuk untuk bicara" dan lepaskan mikrofon dari wake word.
         NotificationManagerCompat.from(this).cancel(WakeWordService.ALERT_ID)
-        if (nine.prefs.wakeEnabled) WakeWordService.pause(this)
+        if (nine.prefs.wakeEnabled && !RecorderService.recording) WakeWordService.pause(this)
+        renderAffinity()
+        renderRecording()
     }
 
     override fun onStop() {
         super.onStop()
         visible = false
         controller.onBackground()
-        if (nine.prefs.wakeEnabled) WakeWordService.resume(this)
+        if (nine.prefs.wakeEnabled && !RecorderService.recording) WakeWordService.resume(this)
     }
 
     override fun onDestroy() {
@@ -402,9 +427,104 @@ class MainActivity : AppCompatActivity(), AssistantController.Ui {
         Toast.makeText(this, text, Toast.LENGTH_LONG).show()
     }
 
+    // ------------------------------------------------------------ affinity
+
+    private fun renderAffinity() {
+        val st = nine.affinity.state()
+        binding.txtAffinity.text = if (st.streak > 0) "🔥${st.streak} · Lv${st.level.number}" else "Lv${st.level.number}"
+    }
+
+    override fun onAffinity(event: Affinity.Event) {
+        renderAffinity()
+        if (event.leveledUp) {
+            val lv = event.state.level
+            val name = lv.name(controller.lang)
+            Toast.makeText(this, getString(R.string.affinity_levelup, lv.number, name), Toast.LENGTH_LONG).show()
+            nine.log.add(false, getString(R.string.affinity_levelup_line, lv.number, name))
+            binding.txtAffinity.animate().scaleX(1.25f).scaleY(1.25f).setDuration(220).withEndAction {
+                binding.txtAffinity.animate().scaleX(1f).scaleY(1f).setDuration(220).start()
+            }.start()
+        }
+    }
+
+    private fun showAffinitySheet() {
+        val st = nine.affinity.state()
+        val lang = controller.lang
+        val sheet = BottomSheetDialog(this)
+        val v = layoutInflater.inflate(R.layout.sheet_affinity, null)
+        v.findViewById<TextView>(R.id.affLevel).text = getString(R.string.affinity_level_fmt, st.level.number)
+        v.findViewById<TextView>(R.id.affName).text = st.level.name(lang)
+        v.findViewById<TextView>(R.id.affStreak).text = getString(R.string.affinity_streak_fmt, st.streak, st.bestStreak)
+        val progress = v.findViewById<LinearProgressIndicator>(R.id.affProgress)
+        progress.max = 1000
+        progress.setProgressCompat((st.progress * 1000).toInt(), false)
+        v.findViewById<TextView>(R.id.affXp).text = st.next?.let {
+            getString(R.string.affinity_xp_fmt, st.xp, it.minXp - st.xp, it.name(lang))
+        } ?: getString(R.string.affinity_xp_max, st.xp)
+        val list = v.findViewById<LinearLayout>(R.id.affLevels)
+        for (lv in Affinity.LEVELS) {
+            val row = TextView(this)
+            val open = st.xp >= lv.minXp
+            row.text = (if (open) "✓  " else "🔒  ") + "${lv.number}. ${lv.name(lang)}  ·  " +
+                (if (open) getString(R.string.affinity_unlocked) else getString(R.string.affinity_locked, lv.minXp))
+            row.setTextColor(ContextCompat.getColor(this, if (open) R.color.nine_on_bg else R.color.nine_muted))
+            row.textSize = 14f
+            row.setPadding(0, (8 * resources.displayMetrics.density).toInt(), 0, (8 * resources.displayMetrics.density).toInt())
+            if (lv.number == st.level.number) row.setTextColor(ContextCompat.getColor(this, R.color.nine_gold))
+            list.addView(row)
+        }
+        sheet.setContentView(v)
+        sheet.show()
+    }
+
+    // ------------------------------------------------------------ perekam & kunci layar
+
+    private val ticker = Handler(Looper.getMainLooper())
+    private val tick = object : Runnable {
+        override fun run() {
+            renderRecording()
+            if (RecorderService.recording) ticker.postDelayed(this, 1000)
+        }
+    }
+
+    private fun renderRecording() {
+        if (RecorderService.recording) {
+            val sec = ((SystemClock.elapsedRealtime() - RecorderService.startedAt) / 1000).toInt()
+            binding.txtRecording.text = getString(R.string.rec_banner, String.format("%02d:%02d", sec / 60, sec % 60))
+            binding.txtRecording.visibility = View.VISIBLE
+            ticker.removeCallbacks(tick)
+            ticker.postDelayed(tick, 1000)
+        } else {
+            binding.txtRecording.visibility = View.GONE
+            ticker.removeCallbacks(tick)
+        }
+    }
+
+    override fun onRecordingChanged() {
+        // Layanan butuh sesaat untuk mulai/berhenti.
+        ticker.postDelayed({ renderRecording() }, 400)
+    }
+
+    override fun isLocked(): Boolean =
+        (getSystemService(KEYGUARD_SERVICE) as KeyguardManager).isKeyguardLocked
+
+    override fun onRequestUnlock(then: () -> Unit) {
+        val km = getSystemService(KEYGUARD_SERVICE) as KeyguardManager
+        if (!km.isKeyguardLocked) {
+            then()
+            return
+        }
+        km.requestDismissKeyguard(this, object : KeyguardManager.KeyguardDismissCallback() {
+            override fun onDismissSucceeded() {
+                then()
+            }
+        })
+    }
+
     companion object {
         const val EXTRA_AUTO_LISTEN = "id.nine.assistant.AUTO_LISTEN"
         const val EXTRA_FROM_WAKE = "id.nine.assistant.FROM_WAKE"
+        const val EXTRA_TOKEN = "id.nine.assistant.TOKEN"
 
         /** True saat layar utama Nine sedang tampil (dipakai layanan wake word). */
         @Volatile

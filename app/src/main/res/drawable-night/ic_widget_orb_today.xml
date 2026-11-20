@@ -1,0 +1,26 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- bayangan lembut -->
+    <path android:pathData="M2.00,56.00a52.00,52.00 0 1,0 104.00,0a52.00,52.00 0 1,0 -104.00,0Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="radial" android:centerX="54" android:centerY="56" android:gradientRadius="52">
+                <item android:offset="0.82" android:color="#33000000" />
+                <item android:offset="1" android:color="#00000000" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- orb putih dengan sedikit kedalaman -->
+    <path android:pathData="M7.00,54.00a47.00,47.00 0 1,0 94.00,0a47.00,47.00 0 1,0 -94.00,0Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="radial" android:centerX="46" android:centerY="40" android:gradientRadius="66">
+                <item android:offset="0" android:color="#FF2A3142" />
+                <item android:offset="0.7" android:color="#FF151A26" />
+                <item android:offset="1" android:color="#FF0A0D14" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path android:pathData="M7.00,54.00a47.00,47.00 0 1,0 94.00,0a47.00,47.00 0 1,0 -94.00,0Z" android:strokeWidth="0.8" android:strokeColor="#33FFFFFF" android:fillColor="#00000000" />
+    <path android:fillColor="#FFF2F5FA" android:pathData="M29 59.78H30.05V52.39C30.05 51.81 30.03 50.9 29.99 49.69C30.73 50.86 31.33 51.82 31.73 52.4L36.68 59.78H37.87V48.22H36.82V56.12C36.82 56.61 36.84 57.56 36.86 58.33C36.37 57.54 35.84 56.7 35.48 56.16L30.18 48.22H29ZM46.87 48.22H45.83V59.78H46.87ZM54.84 59.78H55.88V52.39C55.88 51.81 55.87 50.9 55.83 49.69C56.57 50.86 57.17 51.82 57.57 52.4L62.51 59.78H63.71V48.22H62.65V56.12C62.65 56.61 62.68 57.56 62.69 58.33C62.2 57.54 61.68 56.7 61.32 56.16L56.02 48.22H54.84ZM71.66 59.78H79V58.83H72.71V54.34H78.5V53.4H72.71V49.17H79V48.22H71.66Z" />
+</vector>

@@ -118,4 +118,31 @@
     <string name="wake_phrase_hint">Frasa pemanggil, mis. hey nine</string>
     <string name="model_import_short">Impor file</string>
     <string name="advanced">Lanjutan</string>
+
+    <string name="affinity_title">Kedekatan dengan Nine</string>
+    <string name="affinity_levels">9 level</string>
+    <string name="affinity_level_fmt">Lv %1$d</string>
+    <string name="affinity_streak_fmt">🔥 Streak %1$d hari · terbaik %2$d</string>
+    <string name="affinity_xp_fmt">%1$d XP · %2$d XP lagi menuju %3$s</string>
+    <string name="affinity_xp_max">%1$d XP · level tertinggi tercapai</string>
+    <string name="affinity_how">Bicara dengan Nine setiap hari untuk menjaga streak. Interaksi pertama tiap hari memberi XP terbesar, ditambah bonus sesuai panjang streak. Setiap level nantinya membuka kejutan kecil.</string>
+    <string name="affinity_locked">terkunci · %1$d XP · kejutan segera hadir</string>
+    <string name="affinity_unlocked">terbuka</string>
+    <string name="affinity_levelup">Naik ke level %1$d: %2$s!</string>
+    <string name="affinity_levelup_line">Kita naik ke level %1$d dari 9: %2$s. Terima kasih sudah mengandalkan saya.</string>
+
+    <string name="rec_channel">Perekam suara Nine</string>
+    <string name="rec_notif_title">Nine sedang merekam</string>
+    <string name="rec_notif_text">Disimpan ke Recordings/Nine</string>
+    <string name="rec_stop">Berhenti</string>
+    <string name="rec_banner">● Merekam %1$s · ketuk orb untuk berhenti</string>
+
+    <string name="sec_location">Lokasi</string>
+    <string name="location_switch">Gunakan lokasi untuk akurasi</string>
+    <string name="location_help">Nine memakai lokasi perkiraan untuk cuaca, tempat terdekat, dan waktu setempat. Lokasi hanya dikirim ke Gemini bila Mode internet aktif, dan tidak pernah disimpan.</string>
+    <string name="location_status_fmt">Terakhir: %1$s</string>
+    <string name="location_status_none">Belum ada lokasi.</string>
+
+    <string name="widget_orb_dark_desc">Orb Nine gelap: ketuk untuk bicara</string>
+    <string name="unlock_reason">Buka kunci untuk melanjutkan perintah Nine</string>
 </resources>

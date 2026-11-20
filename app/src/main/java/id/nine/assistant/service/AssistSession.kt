@@ -14,6 +14,7 @@ class AssistSession(context: Context) : VoiceInteractionSession(context) {
         val intent = Intent(context, MainActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
             putExtra(MainActivity.EXTRA_AUTO_LISTEN, true)
+            putExtra(MainActivity.EXTRA_TOKEN, (context.applicationContext as id.nine.assistant.NineApp).prefs.launchToken)
         }
         try {
             startAssistantActivity(intent)

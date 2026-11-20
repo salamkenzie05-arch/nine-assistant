@@ -91,6 +91,14 @@ sealed class Command {
     data class OpenUrl(val url: String) : Command()
     data class WhatsApp(val target: String, val body: String?) : Command()
 
+    // --- Kamera & perekam
+    data class Camera(val video: Boolean, val front: Boolean, val timerSeconds: Int?) : Command()
+    data class RecordAudio(val start: Boolean) : Command()
+
+    // --- Affinity & lokasi
+    data object AffinityStatus : Command()
+    data object WhereAmI : Command()
+
     /** Perintah belum lengkap; tanyakan informasi yang kurang. */
     data class NeedInfo(val pending: Pending) : Command()
 

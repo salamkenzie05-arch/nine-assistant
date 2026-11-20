@@ -22,6 +22,7 @@ object WidgetUpdater {
         val i = Intent(ctx, MainActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
             putExtra(MainActivity.EXTRA_AUTO_LISTEN, true)
+            putExtra(MainActivity.EXTRA_TOKEN, Prefs(ctx).launchToken)
         }
         return PendingIntent.getActivity(ctx, 10, i, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
     }
@@ -37,6 +38,8 @@ object WidgetUpdater {
         try {
             val orbIds = mgr.getAppWidgetIds(ComponentName(app, OrbWidgetProvider::class.java))
             for (id in orbIds) mgr.updateAppWidget(id, orbViews(app))
+            val darkIds = mgr.getAppWidgetIds(ComponentName(app, OrbDarkWidgetProvider::class.java))
+            for (id in darkIds) mgr.updateAppWidget(id, orbViews(app, dark = true))
             val todayIds = mgr.getAppWidgetIds(ComponentName(app, TodayWidgetProvider::class.java))
             for (id in todayIds) mgr.updateAppWidget(id, todayViews(app))
         } catch (e: Exception) {
@@ -44,7 +47,8 @@ object WidgetUpdater {
         }
     }
 
-    fun orbViews(ctx: Context): RemoteViews = RemoteViews(ctx.packageName, R.layout.widget_orb).apply {
+    fun orbViews(ctx: Context, dark: Boolean = false): RemoteViews =
+        RemoteViews(ctx.packageName, if (dark) R.layout.widget_orb_dark else R.layout.widget_orb).apply {
         setOnClickPendingIntent(R.id.widgetOrb, listenIntent(ctx))
     }
 

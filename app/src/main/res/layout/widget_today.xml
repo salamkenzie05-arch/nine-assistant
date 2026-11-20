@@ -13,7 +13,7 @@
         android:layout_height="84dp"
         android:contentDescription="@string/cd_mic"
         android:scaleType="fitCenter"
-        android:src="@drawable/ic_widget_orb" />
+        android:src="@drawable/ic_widget_orb_today" />
 
     <LinearLayout
         android:id="@+id/widgetTasks"

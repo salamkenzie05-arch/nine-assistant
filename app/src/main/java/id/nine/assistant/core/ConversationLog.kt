@@ -8,6 +8,7 @@ class ConversationLog {
         fun onAdded(index: Int)
         fun onChanged(index: Int)
         fun onCleared()
+        fun onRemoved(index: Int) {}
     }
 
     val entries = ArrayList<Entry>()
@@ -32,6 +33,12 @@ class ConversationLog {
         if (index !in entries.indices) return
         entries[index].text = text
         for (l in listeners.toList()) l.onChanged(index)
+    }
+
+    fun remove(index: Int) {
+        if (index !in entries.indices) return
+        entries.removeAt(index)
+        for (l in listeners.toList()) l.onRemoved(index)
     }
 
     fun clear() {

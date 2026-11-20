@@ -152,6 +152,7 @@ class WakeWordService : Service(), RecognitionListener {
         val i = Intent(this, MainActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
             if (listen) putExtra(MainActivity.EXTRA_AUTO_LISTEN, true)
+            putExtra(MainActivity.EXTRA_TOKEN, (application as NineApp).prefs.launchToken)
         }
         return PendingIntent.getActivity(this, if (listen) 2 else 1, i, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
     }
@@ -304,6 +305,7 @@ class WakeWordService : Service(), RecognitionListener {
                 Intent(this, MainActivity::class.java).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
                     putExtra(MainActivity.EXTRA_AUTO_LISTEN, true)
+            putExtra(MainActivity.EXTRA_TOKEN, (application as NineApp).prefs.launchToken)
                     putExtra(MainActivity.EXTRA_FROM_WAKE, true)
                 }
             )

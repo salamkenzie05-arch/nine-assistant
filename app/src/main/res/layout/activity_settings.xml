@@ -485,6 +485,38 @@
                     android:text="@string/assistant_button" />
             </LinearLayout>
 
+            <TextView style="@style/Nine.SectionTitle" android:text="@string/sec_location" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_card"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switchLocation"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="48dp"
+                    android:text="@string/location_switch"
+                    android:textColor="@color/nine_on_bg"
+                    android:textSize="15sp" />
+
+                <TextView
+                    style="@style/Nine.Body"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/location_help"
+                    android:textSize="13sp" />
+
+                <TextView
+                    android:id="@+id/txtLocationStatus"
+                    style="@style/Nine.Body"
+                    android:layout_marginTop="8dp"
+                    android:textColor="@color/nine_gold"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
             <TextView style="@style/Nine.SectionTitle" android:text="@string/sec_calendar" />
 
             <LinearLayout
