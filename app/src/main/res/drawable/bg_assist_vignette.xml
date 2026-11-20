@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Vinyet lembut di tepi layar, seperti overlay asisten Google: bagian tengah bening, tepi menggelap. -->
+<!-- Vinyet lembut berwarna emas Nine di tepi layar: bagian tengah bening, tepi memudar ke emas. -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
     <gradient
         android:centerX="0.5"
         android:centerY="0.55"
         android:endColor="@color/nine_vignette_edge"
         android:gradientRadius="105%"
-        android:startColor="@color/nine_bg_clear"
+        android:startColor="@color/nine_vignette_clear"
         android:type="radial" />
 </shape>

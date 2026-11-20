@@ -56,6 +56,10 @@ object WidgetUpdater {
             for (id in largeIds) mgr.updateAppWidget(id, orbLargeViews(app))
             val todayIds = mgr.getAppWidgetIds(ComponentName(app, TodayWidgetProvider::class.java))
             for (id in todayIds) mgr.updateAppWidget(id, todayViews(app))
+            // Versi putih (tetap putih, tidak ikut tema)
+            for (id in mgr.getAppWidgetIds(ComponentName(app, OrbWhiteWidgetProvider::class.java))) mgr.updateAppWidget(id, orbViews(app, white = true))
+            for (id in mgr.getAppWidgetIds(ComponentName(app, OrbLargeWhiteWidgetProvider::class.java))) mgr.updateAppWidget(id, orbLargeViews(app, white = true))
+            for (id in mgr.getAppWidgetIds(ComponentName(app, TodayWhiteWidgetProvider::class.java))) mgr.updateAppWidget(id, todayViews(app, white = true))
         } catch (e: Exception) {
             // launcher bisa menolak update saat belum siap; abaikan
         }
@@ -155,23 +159,26 @@ object WidgetUpdater {
         }
     }
 
-    fun orbViews(ctx: Context): RemoteViews =
-        RemoteViews(ctx.packageName, R.layout.widget_orb).apply {
-            fillFace(ctx, this, R.id.widgetFlipper, faceTheme(ctx), face(ctx))
+    /** Tema bingkai: versi putih selalu "light"; selain itu mengikuti tema Nine di aplikasi. */
+    private fun themeFor(ctx: Context, white: Boolean): String = if (white) "light" else faceTheme(ctx)
+
+    fun orbViews(ctx: Context, white: Boolean = false): RemoteViews =
+        RemoteViews(ctx.packageName, if (white) R.layout.widget_orb_white else R.layout.widget_orb).apply {
+            fillFace(ctx, this, R.id.widgetFlipper, themeFor(ctx, white), face(ctx))
             setOnClickPendingIntent(R.id.widgetRoot, listenIntent(ctx))
         }
 
-    /** Widget 4x4: bola Nine besar; warnanya mengikuti tema Nine di aplikasi. */
-    fun orbLargeViews(ctx: Context): RemoteViews =
-        RemoteViews(ctx.packageName, R.layout.widget_orb_large).apply {
-            fillFace(ctx, this, R.id.widgetFlipper, faceTheme(ctx), face(ctx))
+    /** Widget 4x4: bola Nine besar; warnanya mengikuti tema Nine di aplikasi (atau putih tetap bila [white]). */
+    fun orbLargeViews(ctx: Context, white: Boolean = false): RemoteViews =
+        RemoteViews(ctx.packageName, if (white) R.layout.widget_orb_large_white else R.layout.widget_orb_large).apply {
+            fillFace(ctx, this, R.id.widgetFlipper, themeFor(ctx, white), face(ctx))
             setOnClickPendingIntent(R.id.widgetRoot, listenIntent(ctx))
         }
 
-    fun todayViews(ctx: Context): RemoteViews {
+    fun todayViews(ctx: Context, white: Boolean = false): RemoteViews {
         val lang = Prefs(ctx).lang
-        val v = RemoteViews(ctx.packageName, R.layout.widget_today)
-        fillFace(ctx, v, R.id.widgetFaceFlipper, faceTheme(ctx), face(ctx))
+        val v = RemoteViews(ctx.packageName, if (white) R.layout.widget_today_white else R.layout.widget_today)
+        fillFace(ctx, v, R.id.widgetFaceFlipper, themeFor(ctx, white), face(ctx))
         v.setOnClickPendingIntent(R.id.widgetOrb, listenIntent(ctx))
         v.setOnClickPendingIntent(R.id.widgetTasks, todoIntent(ctx))
         val today = LocalDate.now()

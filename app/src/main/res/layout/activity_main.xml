@@ -111,12 +111,14 @@
                 android:paddingBottom="20dp" />
 
             <View
+                android:id="@+id/fadeTop"
                 android:layout_width="match_parent"
                 android:layout_height="28dp"
                 android:layout_gravity="top"
                 android:background="@drawable/fade_top" />
 
             <View
+                android:id="@+id/fadeBottom"
                 android:layout_width="match_parent"
                 android:layout_height="20dp"
                 android:layout_gravity="bottom"

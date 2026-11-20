@@ -64,8 +64,8 @@
     <string name="todo_clear_done">Hapus yang selesai</string>
     <string name="todo_empty">Belum ada tugas. Ketik di bawah, atau katakan ke Nine: \"tambah tugas beli susu\".</string>
 
-    <string name="widget_orb_desc">Orb Nine: ketuk untuk bicara</string>
-    <string name="widget_today_desc">Nine · tugas hari ini</string>
+    <string name="widget_orb_desc">Orb Nine (ikut tema): ketuk untuk bicara</string>
+    <string name="widget_today_desc">Nine (ikut tema) · tugas hari ini</string>
 
     <string name="sec_internet">Mode internet (lebih pintar)</string>
     <string name="internet_switch">Gunakan Gemini + Google Search bila online</string>
@@ -127,7 +127,7 @@
     <string name="location_status_none">Belum ada lokasi.</string>
 
     <string name="widget_orb_dark_desc">Orb Nine (ikut tema): ketuk untuk bicara</string>
-    <string name="widget_orb_large_desc">Orb Nine besar 4×4: ketuk untuk bicara</string>
+    <string name="widget_orb_large_desc">Orb Nine besar 4×4 (ikut tema): ketuk untuk bicara</string>
     <string name="unlock_reason">Buka kunci untuk melanjutkan perintah Nine</string>
 
     <string name="cd_menu">Menu Nine</string>
@@ -173,4 +173,7 @@
     <string name="touch_switch">Tombol melayang (seperti AssistiveTouch)</string>
     <string name="music_switch">Nine bereaksi pada musik</string>
     <string name="music_help">Saat layar Nine terbuka, Nine mendengar musik lewat mikrofon dan wajahnya ikut bergoyang mengikuti ketukan, bass, dan nada. Suara tidak direkam atau disimpan.</string>
+    <string name="widget_orb_white_desc">Orb Nine putih: ketuk untuk bicara</string>
+    <string name="widget_orb_large_white_desc">Orb Nine putih besar 4×4: ketuk untuk bicara</string>
+    <string name="widget_today_white_desc">Nine putih · tugas hari ini</string>
 </resources>

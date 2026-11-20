@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_widget_white"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:padding="12dp">
+
+    <FrameLayout
+        android:id="@+id/widgetOrb"
+        android:layout_width="84dp"
+        android:layout_height="84dp"
+        android:contentDescription="@string/cd_mic">
+
+        <ViewFlipper
+            android:id="@+id/widgetFaceFlipper"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:autoStart="true"
+            android:flipInterval="70">
+
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:importantForAccessibility="no"
+                android:scaleType="fitCenter"
+                android:src="@drawable/face_light_neutral" />
+        </ViewFlipper>
+    </FrameLayout>
+
+    <LinearLayout
+        android:id="@+id/widgetTasks"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_marginStart="12dp"
+        android:layout_weight="1"
+        android:gravity="center_vertical"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/widgetDate"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:maxLines="1"
+            android:textColor="@color/widget_text_white"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <TextView android:id="@+id/widgetTask1" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:ellipsize="end" android:maxLines="1" android:textColor="@color/widget_text_white" android:textSize="13sp" android:visibility="gone" />
+        <TextView android:id="@+id/widgetTask2" android:layout_width="match_parent" android:layout_height="wrap_content" android:ellipsize="end" android:maxLines="1" android:textColor="@color/widget_text_white" android:textSize="13sp" android:visibility="gone" />
+        <TextView android:id="@+id/widgetTask3" android:layout_width="match_parent" android:layout_height="wrap_content" android:ellipsize="end" android:maxLines="1" android:textColor="@color/widget_text_white" android:textSize="13sp" android:visibility="gone" />
+        <TextView android:id="@+id/widgetTask4" android:layout_width="match_parent" android:layout_height="wrap_content" android:ellipsize="end" android:maxLines="1" android:textColor="@color/widget_text_white" android:textSize="13sp" android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/widgetSummary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:maxLines="2"
+            android:textColor="@color/widget_muted_white"
+            android:textSize="12sp" />
+    </LinearLayout>
+</LinearLayout>

@@ -4,37 +4,8 @@
     xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
-    <!-- sphere3d v2 -->
-    <path android:pathData="M8,63a46,46 0 1,0 92,0a46,46 0 1,0 -92,0Z">
-        <aapt:attr name="android:fillColor">
-            <gradient android:type="radial" android:centerX="54" android:centerY="63" android:gradientRadius="46">
-                <item android:offset="0" android:color="#4C000000" />
-                <item android:offset="0.25" android:color="#40000000" />
-                <item android:offset="0.4" android:color="#30000000" />
-                <item android:offset="0.55" android:color="#1F000000" />
-                <item android:offset="0.68" android:color="#13000000" />
-                <item android:offset="0.8" android:color="#0A000000" />
-                <item android:offset="0.9" android:color="#04000000" />
-                <item android:offset="1" android:color="#00000000" />
-            </gradient>
-        </aapt:attr>
-    </path>
-    <group android:pivotX="54" android:pivotY="100" android:scaleY="0.15">
-        <path android:pathData="M23,100a31,31 0 1,0 62,0a31,31 0 1,0 -62,0Z">
-            <aapt:attr name="android:fillColor">
-                <gradient android:type="radial" android:centerX="54" android:centerY="100" android:gradientRadius="31">
-                    <item android:offset="0" android:color="#57000000" />
-                    <item android:offset="0.25" android:color="#47000000" />
-                    <item android:offset="0.4" android:color="#34000000" />
-                    <item android:offset="0.55" android:color="#20000000" />
-                    <item android:offset="0.68" android:color="#12000000" />
-                    <item android:offset="0.8" android:color="#09000000" />
-                    <item android:offset="0.9" android:color="#03000000" />
-                    <item android:offset="1" android:color="#00000000" />
-                </gradient>
-            </aapt:attr>
-        </path>
-    </group>
+    <!-- sphere3d v3 -->
+    <group android:translateY="4">
     <path android:pathData="M6,50a48,48 0 1,0 96,0a48,48 0 1,0 -96,0Z">
         <aapt:attr name="android:fillColor">
             <gradient android:type="radial" android:centerX="54" android:centerY="50" android:gradientRadius="48">
@@ -85,7 +56,8 @@
             </aapt:attr>
         </path>
     </group>
-    <group android:translateY="-4">
+    </group>
+    <group android:translateY="0">
     <path android:pathData="M44.57,58.88L44.57,59.49L44.57,60.09L44.57,60.7L44.57,61.3L44.51,62.11L44.32,62.89L44.01,63.64L43.58,64.33L43.06,64.95L42.44,65.47L41.75,65.9L41,66.21L40.22,66.4L39.41,66.46L38.8,66.46L38.19,66.46L37.59,66.46L36.98,66.46L36.37,66.46L35.77,66.46L35.16,66.46L34.55,66.46L33.74,66.4L32.96,66.21L32.21,65.9L31.52,65.47L30.9,64.95L30.38,64.33L29.95,63.64L29.64,62.89L29.45,62.11L29.39,61.3L29.39,60.7L29.39,60.09L29.39,59.49L29.39,58.88L30.02,58.64L30.66,58.64L31.29,58.64L31.92,58.64L32.55,58.64L33.19,58.64L33.82,58.64L34.45,58.64L35.08,58.64L35.72,58.64L36.35,58.64L36.98,58.64L37.61,58.64L38.25,58.64L38.88,58.64L39.51,58.64L40.14,58.64L40.78,58.64L41.41,58.64L42.04,58.64L42.67,58.64L43.31,58.64L43.94,58.64L44.57,58.64Z" android:fillColor="#13151A" />
     <path android:pathData="M44.57,58.88L44.57,59.49L44.57,60.09L44.57,60.7L44.57,61.3L44.51,62.11L44.32,62.89L44.01,63.64L43.58,64.33L43.06,64.95L42.44,65.47L41.75,65.9L41,66.21L40.22,66.4L39.41,66.46L38.8,66.46L38.19,66.46L37.59,66.46L36.98,66.46L36.37,66.46L35.77,66.46L35.16,66.46L34.55,66.46L33.74,66.4L32.96,66.21L32.21,65.9L31.52,65.47L30.9,64.95L30.38,64.33L29.95,63.64L29.64,62.89L29.45,62.11L29.39,61.3L29.39,60.7L29.39,60.09L29.39,59.49L29.39,58.88L30.02,58.64L30.66,58.64L31.29,58.64L31.92,58.64L32.55,58.64L33.19,58.64L33.82,58.64L34.45,58.64L35.08,58.64L35.72,58.64L36.35,58.64L36.98,58.64L37.61,58.64L38.25,58.64L38.88,58.64L39.51,58.64L40.14,58.64L40.78,58.64L41.41,58.64L42.04,58.64L42.67,58.64L43.31,58.64L43.94,58.64L44.57,58.64Z">
         <aapt:attr name="android:fillColor">

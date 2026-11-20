@@ -24,8 +24,10 @@ class AssistActivity : MainActivity() {
         super.onCreate(savedInstanceState)
         instance = WeakReference(this)
 
+        // Hanya vinyet emas Nine di tepi + cahaya tepi; tanpa selubung/gradasi di atas aplikasi lain.
         binding.root.setBackgroundResource(R.drawable.bg_assist_vignette)
-        binding.content.setBackgroundResource(R.drawable.bg_assist_scrim)
+        binding.fadeTop.visibility = View.GONE
+        binding.fadeBottom.visibility = View.GONE
         binding.content.gravity = Gravity.BOTTOM
         binding.topBar.visibility = View.GONE
         binding.modelCard.visibility = View.GONE
@@ -38,6 +40,28 @@ class AssistActivity : MainActivity() {
             binding.listFrame.layoutParams = this
         }
         binding.root.setOnClickListener { closeOverlay() }
+
+        // Tanpa selubung, teks dibuat terbaca dengan alas kartu/pil semi-solid.
+        adapter.bubbles = true
+        @Suppress("NotifyDataSetChanged")
+        adapter.notifyDataSetChanged()
+        val d = resources.displayMetrics.density
+        binding.txtStatus.apply {
+            setBackgroundResource(R.drawable.bg_assist_pill)
+            setPadding((16 * d).toInt(), (6 * d).toInt(), (16 * d).toInt(), (6 * d).toInt())
+            layoutParams = (layoutParams as LinearLayout.LayoutParams).apply {
+                width = LinearLayout.LayoutParams.WRAP_CONTENT
+                gravity = Gravity.CENTER_HORIZONTAL
+                bottomMargin = (16 * d).toInt()
+            }
+        }
+    }
+
+    override fun onPartial(text: String) {
+        super.onPartial(text)
+        // Transkrip langsung hanya beralas kartu saat ada isinya.
+        if (text.isBlank()) binding.txtPartial.background = null
+        else binding.txtPartial.setBackgroundResource(R.drawable.bg_assist_bubble)
     }
 
     override fun onLaunch(intent: Intent, fallback: Intent?): Boolean {

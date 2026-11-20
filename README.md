@@ -7,7 +7,7 @@ Nine adalah asisten suara seperti Siri yang berjalan **sepenuhnya di perangkat**
 - **Alarm Nine**: berbunyi tepat waktu walau HP tidur, tampil di layar kunci, bisa berulang (setiap hari, hari kerja, akhir pekan, hari tertentu), dan bisa dinyalakan, dimatikan, atau dihapus lewat suara ("matikan alarm jam 6", "hapus alarm gym"). Bisa dialihkan ke aplikasi Jam di Pengaturan.
 - **Mode internet (opsional)**: Gemini + Google Search untuk pertanyaan terkini (cuaca, berita, kurs). Butuh API key gratis dari Google AI Studio; otomatis kembali ke Gemma saat offline.
 - **Wake word** "hey nine" (bisa diubah), dideteksi offline dengan Vosk.
-- **Widget layar utama**: orb Nine berbentuk bola 3D yang tampak melayang (tepi tanpa garis, bayangan gaussian yang lembut), warnanya **mengikuti tema Nine di aplikasi** (Terang/Gelap/Ikuti sistem) dan ekspresinya ikut keadaan (dicas, baterai lemah, malam, baru diajak bicara). Ukuran kecil dan **4x4**, serta "Hari ini" (tugas yang belum selesai). Gerak mata memakai frame 70 ms yang diperhalus, jadi melirik dan berkedipnya mulus.
+- **Widget layar utama**: orb Nine berbentuk bola 3D (tepi tanpa garis, tanpa bayangan di bawahnya), warnanya **mengikuti tema Nine di aplikasi** (Terang/Gelap/Ikuti sistem); tiap ukuran (2×2, 4×4, Hari ini) juga punya **versi putih** yang selalu putih dan ekspresinya ikut keadaan (dicas, baterai lemah, malam, baru diajak bicara). Ukuran kecil dan **4x4**, serta "Hari ini" (tugas yang belum selesai). Gerak mata memakai frame 70 ms yang diperhalus, jadi melirik dan berkedipnya mulus.
 - **Otak AI: Gemma 4 E2B** (Google, Apache-2.0) lewat LiteRT-LM, memakai GPU HP dan otomatis pindah ke CPU bila GPU gagal. Untuk obrolan dan pertanyaan bebas, jawabannya mulai diucapkan per kalimat sebelum seluruh jawaban selesai dibuat.
 - **Wajah Nine**: dua mata ekspresif ala robot meja yang berkedip, melirik, mengikuti jari, senang saat dielus, kesal bila diketuk berkali-kali, kaget lalu senang saat dicas, lesu saat baterai lemah, mengantuk saat lama diam, dan bereaksi pada percakapan (mendengar, berpikir, berbicara, senang, bingung, sedih). Bilah atas hanya "NINE"; ketuk untuk menu (alarm, tugas, pengaturan, bahasa, tema).
 
@@ -24,7 +24,7 @@ Nine adalah asisten suara seperti Siri yang berjalan **sepenuhnya di perangkat**
 - **Pengaturan lewat suara**: "ganti tema ke gelap", "ganti bahasa ke English", "matikan/nyalakan wake phrase", "keluar dari aplikasi", "nyalakan/matikan tombol melayang", serta Wi-Fi, Bluetooth, hotspot, mode pesawat.
 - **Tombol melayang** (seperti AssistiveTouch): tombol transparan yang bisa digeser, ketuk untuk panel (Nine, Home, Back, Recents, Notifikasi, Kunci layar, Volume, Pengaturan). Nyalakan di Pengaturan atau lewat suara.
 - **Kedekatan** baru mencapai level tertinggi setelah **90 hari pemakaian** (hari berbeda saat kamu bicara dengan Nine), seberapa banyak pun XP-nya.
-- **Tombol power**: layar Nine kini transparan dengan vinyet lembut (seperti Google), dan tidak lagi membuat layar "nyangkut" setelah Nine membuka aplikasi lain.
+- **Tombol power**: layar Nine kini transparan, hanya dengan vinyet emas Nine di tepi dan cahaya tepi berwarna Nine (dominan emas, sedikit aksen biru-kehijauan); jawaban Nine beralas kartu semi-solid agar terbaca tanpa selubung gradasi, dan tidak lagi membuat layar "nyangkut" setelah Nine membuka aplikasi lain.
 
 ## Dua edisi: pilih yang mana?
 

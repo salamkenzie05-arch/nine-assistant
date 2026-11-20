@@ -30,13 +30,19 @@ class EdgeGlowView @JvmOverloads constructor(
     private val rect = RectF()
     private val matrix = Matrix()
     private val density = resources.displayMetrics.density
+    // Palet Nine: dominan emas (#C7861A / #F2B245 / krem), dengan satu semburat jingga dan sedikit biru-kehijauan (#35E0FF, aksen Nine).
     private val colors = intArrayOf(
-        Color.rgb(0x35, 0xE0, 0xFF),
-        Color.rgb(0x3D, 0x6B, 0xFF),
-        Color.rgb(0x8B, 0x5C, 0xFF),
         Color.rgb(0xC7, 0x86, 0x1A),
-        Color.rgb(0x35, 0xE0, 0xFF)
+        Color.rgb(0xF2, 0xB2, 0x45),
+        Color.rgb(0xFF, 0xE5, 0xAD),
+        Color.rgb(0xF2, 0xB2, 0x45),
+        Color.rgb(0xC7, 0x86, 0x1A),
+        Color.rgb(0xF2, 0x8A, 0x3A),
+        Color.rgb(0x35, 0xE0, 0xFF),
+        Color.rgb(0xF2, 0xB2, 0x45),
+        Color.rgb(0xC7, 0x86, 0x1A)
     )
+    private val stops = floatArrayOf(0f, 0.13f, 0.27f, 0.41f, 0.55f, 0.68f, 0.80f, 0.91f, 1f)
     private var gradient: SweepGradient? = null
 
     init {
@@ -58,7 +64,7 @@ class EdgeGlowView @JvmOverloads constructor(
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        gradient = SweepGradient(w / 2f, h / 2f, colors, null)
+        gradient = SweepGradient(w / 2f, h / 2f, colors, stops)
     }
 
     override fun onDraw(canvas: Canvas) {

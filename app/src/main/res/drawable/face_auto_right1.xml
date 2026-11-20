@@ -4,37 +4,8 @@
     xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
-    <!-- sphere3d v2 -->
-    <path android:pathData="M8,63a46,46 0 1,0 92,0a46,46 0 1,0 -92,0Z">
-        <aapt:attr name="android:fillColor">
-            <gradient android:type="radial" android:centerX="54" android:centerY="63" android:gradientRadius="46">
-                <item android:offset="0" android:color="#4C000000" />
-                <item android:offset="0.25" android:color="#40000000" />
-                <item android:offset="0.4" android:color="#30000000" />
-                <item android:offset="0.55" android:color="#1F000000" />
-                <item android:offset="0.68" android:color="#13000000" />
-                <item android:offset="0.8" android:color="#0A000000" />
-                <item android:offset="0.9" android:color="#04000000" />
-                <item android:offset="1" android:color="#00000000" />
-            </gradient>
-        </aapt:attr>
-    </path>
-    <group android:pivotX="54" android:pivotY="100" android:scaleY="0.15">
-        <path android:pathData="M23,100a31,31 0 1,0 62,0a31,31 0 1,0 -62,0Z">
-            <aapt:attr name="android:fillColor">
-                <gradient android:type="radial" android:centerX="54" android:centerY="100" android:gradientRadius="31">
-                    <item android:offset="0" android:color="#57000000" />
-                    <item android:offset="0.25" android:color="#47000000" />
-                    <item android:offset="0.4" android:color="#34000000" />
-                    <item android:offset="0.55" android:color="#20000000" />
-                    <item android:offset="0.68" android:color="#12000000" />
-                    <item android:offset="0.8" android:color="#09000000" />
-                    <item android:offset="0.9" android:color="#03000000" />
-                    <item android:offset="1" android:color="#00000000" />
-                </gradient>
-            </aapt:attr>
-        </path>
-    </group>
+    <!-- sphere3d v3 -->
+    <group android:translateY="4">
     <path android:pathData="M6,50a48,48 0 1,0 96,0a48,48 0 1,0 -96,0Z">
         <aapt:attr name="android:fillColor">
             <gradient android:type="radial" android:centerX="54" android:centerY="50" android:gradientRadius="48">
@@ -85,7 +56,8 @@
             </aapt:attr>
         </path>
     </group>
-    <group android:translateY="-4">
+    </group>
+    <group android:translateY="0">
     <path android:pathData="M36.95,40.66H41.81A5.16,5.16 0 0,1 46.97,45.82V58.5A5.16,5.16 0 0,1 41.81,63.66H36.95A5.16,5.16 0 0,1 31.79,58.5V45.82A5.16,5.16 0 0,1 36.95,40.66Z" android:fillColor="#13151A" />
     <path android:pathData="M36.95,40.66H41.81A5.16,5.16 0 0,1 46.97,45.82V58.5A5.16,5.16 0 0,1 41.81,63.66H36.95A5.16,5.16 0 0,1 31.79,58.5V45.82A5.16,5.16 0 0,1 36.95,40.66Z">
         <aapt:attr name="android:fillColor">

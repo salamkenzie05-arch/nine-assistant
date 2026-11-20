@@ -19,10 +19,13 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent / "app" / "src" / "main"
 RES = ROOT / "res"
 FRAMES_KT = ROOT / "java" / "id" / "nine" / "assistant" / "widget" / "FaceFrames.kt"
 
-MARK = "<!-- sphere3d v2 -->"
+MARK = "<!-- sphere3d v3 -->"
 MARK_PREFIX = "<!-- sphere3d"  # semua versi lama juga dikenali
 HEAD_END = 'android:viewportWidth="108" android:viewportHeight="108">\n'
-GROUP_OPEN = '    <group android:translateY="-4">\n'
+# v3: bola digeser +4 (di dalam group SPHERE_SHIFT) supaya terpusat, jadi isi wajah tidak perlu digeser lagi (translateY 0).
+# v1/v2 menggeser isi wajah -4; keduanya dikenali saat membaca berkas lama.
+GROUP_OPEN = '    <group android:translateY="0">\n'
+GROUP_OPEN_OLD = '    <group android:translateY="-4">\n'
 GROUP_CLOSE = '    </group>\n</vector>\n'
 
 # (folder, awalan nama file, tema warna)
@@ -95,17 +98,9 @@ def gauss_stops(peak: float, k: float, t_from: float = 0.0, steps=(0.0, 0.25, 0.
 
 def sphere(theme: str) -> str:
     light = theme == "light"
-    out = [f"    {MARK}\n"]
-    # bayangan sekitar: gumpalan gaussian yang agak ke bawah (orb tampak melayang di atas layar)
-    out.append(f'    <path android:pathData="{_circle(54, 63, 46)}">\n')
-    out.append(_grad(54, 63, 46, gauss_stops(0.30 if light else 0.52, 2.6)))
-    out.append("    </path>\n")
-    # bayangan alas (kontak) yang jauh di bawah, melebar dan sangat lembut
-    out.append('    <group android:pivotX="54" android:pivotY="100" android:scaleY="0.15">\n')
-    out.append(f'        <path android:pathData="{_circle(54, 100, 31)}">\n')
-    out.append(_grad(54, 100, 31, gauss_stops(0.34 if light else 0.56, 3.0), ind=12))
-    out.append("        </path>\n    </group>\n")
-    # pendar tepi luar: hanya kegelapan tipis yang memudar, supaya siluet bola tidak terlihat bergaris
+    out = [f"    {MARK}\n", '    <group android:translateY="4">\n']
+    # Tanpa bayangan di bawah orb (dulu: gumpalan dan bayangan alas yang membuat orb tampak "terbang").
+    # pendar tepi luar: hanya kegelapan tipis yang memudar, sepusat dengan bola, supaya siluetnya tidak terlihat bergaris
     out.append(f'    <path android:pathData="{_circle(54, 50, 48)}">\n')
     halo = [("0", "#00000000"), ("0.86", "#00000000")]
     for t, c in gauss_stops(0.11 if light else 0.30, 3.2, t_from=43 / 48):
@@ -135,6 +130,7 @@ def sphere(theme: str) -> str:
     hi = [(0, "#F2FFFFFF"), (0.5, "#99FFFFFF"), (1, "#00FFFFFF")] if light else [(0, "#66FFFFFF"), (0.5, "#33FFFFFF"), (1, "#00FFFFFF")]
     out.append(_grad(37, 26, 15, hi, ind=12))
     out.append("        </path>\n    </group>\n")
+    out.append("    </group>\n")
     return "".join(out)
 
 
@@ -144,9 +140,15 @@ def split(text: str):
     head, body = text[:i], text[i:]
     head = re.sub(r"<!--.*?-->", "<!-- Bingkai wajah Nine untuk widget (tools/face_sphere.py). -->", head, count=1, flags=re.S)
     if MARK_PREFIX in body:
-        a = body.index(GROUP_OPEN) + len(GROUP_OPEN)
+        opener = GROUP_OPEN if GROUP_OPEN in body else GROUP_OPEN_OLD
+        a = body.index(opener) + len(opener)
         b = body.rindex(GROUP_CLOSE)
-        return head, body[a:b]
+        content = body[a:b]
+        if opener == GROUP_OPEN_OLD:
+            # isi wajah v1/v2 ada di dalam group translateY -4; v3 menaruhnya di group translateY 0 setelah bola digeser +4.
+            # Posisi relatif wajah terhadap bola tetap sama, jadi isinya tidak perlu diubah.
+            pass
+        return head, content
     body = re.sub(r'    <path android:pathData="M2,56a52,52[^>]*>\n.*?\n    </path>\n', "", body, count=1, flags=re.S)
     body, n = re.subn(r'    <path android:pathData="M8,54a46,46[^\n]*/>\n', "", body)
     assert n == 2, f"piringan lama tidak ditemukan ({n})"

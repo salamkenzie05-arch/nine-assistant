@@ -4,37 +4,8 @@
     xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
-    <!-- sphere3d v2 -->
-    <path android:pathData="M8,63a46,46 0 1,0 92,0a46,46 0 1,0 -92,0Z">
-        <aapt:attr name="android:fillColor">
-            <gradient android:type="radial" android:centerX="54" android:centerY="63" android:gradientRadius="46">
-                <item android:offset="0" android:color="#4C000000" />
-                <item android:offset="0.25" android:color="#40000000" />
-                <item android:offset="0.4" android:color="#30000000" />
-                <item android:offset="0.55" android:color="#1F000000" />
-                <item android:offset="0.68" android:color="#13000000" />
-                <item android:offset="0.8" android:color="#0A000000" />
-                <item android:offset="0.9" android:color="#04000000" />
-                <item android:offset="1" android:color="#00000000" />
-            </gradient>
-        </aapt:attr>
-    </path>
-    <group android:pivotX="54" android:pivotY="100" android:scaleY="0.15">
-        <path android:pathData="M23,100a31,31 0 1,0 62,0a31,31 0 1,0 -62,0Z">
-            <aapt:attr name="android:fillColor">
-                <gradient android:type="radial" android:centerX="54" android:centerY="100" android:gradientRadius="31">
-                    <item android:offset="0" android:color="#57000000" />
-                    <item android:offset="0.25" android:color="#47000000" />
-                    <item android:offset="0.4" android:color="#34000000" />
-                    <item android:offset="0.55" android:color="#20000000" />
-                    <item android:offset="0.68" android:color="#12000000" />
-                    <item android:offset="0.8" android:color="#09000000" />
-                    <item android:offset="0.9" android:color="#03000000" />
-                    <item android:offset="1" android:color="#00000000" />
-                </gradient>
-            </aapt:attr>
-        </path>
-    </group>
+    <!-- sphere3d v3 -->
+    <group android:translateY="4">
     <path android:pathData="M6,50a48,48 0 1,0 96,0a48,48 0 1,0 -96,0Z">
         <aapt:attr name="android:fillColor">
             <gradient android:type="radial" android:centerX="54" android:centerY="50" android:gradientRadius="48">
@@ -85,7 +56,8 @@
             </aapt:attr>
         </path>
     </group>
-    <group android:translateY="-4">
+    </group>
+    <group android:translateY="0">
     <path android:pathData="M44.57,49.63L44.57,50.24L44.57,50.84L44.57,51.44L44.57,52.05L44.57,52.65L44.57,53.25L44.57,53.86L44.57,54.46L44.57,55.07L44.57,55.67L44.57,56.27L44.57,56.88L44.57,57.48L44.57,58.08L44.57,58.69L44.57,59.29L44.57,59.9L44.57,60.5L44.51,61.31L44.32,62.09L44.01,62.84L43.58,63.53L43.06,64.15L42.44,64.67L41.75,65.1L41,65.41L40.22,65.6L39.41,65.66L38.8,65.66L38.19,65.66L37.59,65.66L36.98,65.66L36.37,65.66L35.77,65.66L35.16,65.66L34.55,65.66L33.74,65.6L32.96,65.41L32.21,65.1L31.52,64.67L30.9,64.15L30.38,63.53L29.95,62.84L29.64,62.09L29.45,61.31L29.39,60.5L29.39,59.9L29.39,59.29L29.39,58.69L29.39,58.08L29.39,57.48L29.39,56.88L29.39,56.27L29.39,55.67L29.39,55.07L29.39,54.46L29.39,53.86L29.39,53.25L29.39,52.83L30.02,52.67L30.66,52.52L31.29,52.36L31.92,52.2L32.55,52.04L33.19,51.89L33.82,51.73L34.45,51.57L35.08,51.41L35.72,51.26L36.35,51.1L36.98,50.94L37.61,50.78L38.25,50.62L38.88,50.47L39.51,50.31L40.14,50.15L40.78,49.99L41.41,49.84L42.04,49.68L42.67,49.52L43.31,49.36L43.94,49.21L44.57,49.05Z" android:fillColor="#13151A" />
     <path android:pathData="M44.57,49.63L44.57,50.24L44.57,50.84L44.57,51.44L44.57,52.05L44.57,52.65L44.57,53.25L44.57,53.86L44.57,54.46L44.57,55.07L44.57,55.67L44.57,56.27L44.57,56.88L44.57,57.48L44.57,58.08L44.57,58.69L44.57,59.29L44.57,59.9L44.57,60.5L44.51,61.31L44.32,62.09L44.01,62.84L43.58,63.53L43.06,64.15L42.44,64.67L41.75,65.1L41,65.41L40.22,65.6L39.41,65.66L38.8,65.66L38.19,65.66L37.59,65.66L36.98,65.66L36.37,65.66L35.77,65.66L35.16,65.66L34.55,65.66L33.74,65.6L32.96,65.41L32.21,65.1L31.52,64.67L30.9,64.15L30.38,63.53L29.95,62.84L29.64,62.09L29.45,61.31L29.39,60.5L29.39,59.9L29.39,59.29L29.39,58.69L29.39,58.08L29.39,57.48L29.39,56.88L29.39,56.27L29.39,55.67L29.39,55.07L29.39,54.46L29.39,53.86L29.39,53.25L29.39,52.83L30.02,52.67L30.66,52.52L31.29,52.36L31.92,52.2L32.55,52.04L33.19,51.89L33.82,51.73L34.45,51.57L35.08,51.41L35.72,51.26L36.35,51.1L36.98,50.94L37.61,50.78L38.25,50.62L38.88,50.47L39.51,50.31L40.14,50.15L40.78,49.99L41.41,49.84L42.04,49.68L42.67,49.52L43.31,49.36L43.94,49.21L44.57,49.05Z">
         <aapt:attr name="android:fillColor">

@@ -64,8 +64,8 @@
     <string name="todo_clear_done">Clear completed</string>
     <string name="todo_empty">No tasks yet. Type below, or tell Nine: \"add buy milk to my to-do list\".</string>
 
-    <string name="widget_orb_desc">Nine orb: tap to talk</string>
-    <string name="widget_today_desc">Nine · today\'s tasks</string>
+    <string name="widget_orb_desc">Nine orb (follows theme): tap to talk</string>
+    <string name="widget_today_desc">Nine (follows theme) · today\'s tasks</string>
 
     <string name="sec_internet">Internet mode (smarter)</string>
     <string name="internet_switch">Use Gemini + Google Search when online</string>
@@ -127,7 +127,7 @@
     <string name="location_status_none">No location yet.</string>
 
     <string name="widget_orb_dark_desc">Nine orb (follows theme): tap to talk</string>
-    <string name="widget_orb_large_desc">Large Nine orb 4×4: tap to talk</string>
+    <string name="widget_orb_large_desc">Large Nine orb 4×4 (follows theme): tap to talk</string>
     <string name="unlock_reason">Unlock to continue your Nine command</string>
 
     <string name="cd_menu">Nine menu</string>
@@ -173,4 +173,7 @@
     <string name="touch_switch">Floating button (AssistiveTouch style)</string>
     <string name="music_switch">Nine reacts to music</string>
     <string name="music_help">While the Nine screen is open, Nine listens to music through the microphone and its face moves with the beat, bass and tone. Audio is never recorded or stored.</string>
+    <string name="widget_orb_white_desc">White Nine orb: tap to talk</string>
+    <string name="widget_orb_large_white_desc">Large white Nine orb 4×4: tap to talk</string>
+    <string name="widget_today_white_desc">Nine white · today\'s tasks</string>
 </resources>

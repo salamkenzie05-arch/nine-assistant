@@ -54,7 +54,7 @@ open class MainActivity : AppCompatActivity(), AssistantController.Ui {
     protected lateinit var binding: ActivityMainBinding
     protected lateinit var controller: AssistantController
     protected lateinit var nine: NineApp
-    private lateinit var adapter: MessageAdapter
+    protected lateinit var adapter: MessageAdapter
     private var modelCardDismissed = false
 
     // --- tuner gitar & reaksi musik (keduanya memakai mikrofon, hanya saat Nine diam dan layarnya terbuka)
