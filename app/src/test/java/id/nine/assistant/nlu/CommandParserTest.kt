@@ -376,6 +376,16 @@ class CommandParserTest {
         check("remove lunch with Sarah from my calendar", "DeleteEvent(query=lunch with Sarah, date=null, hour=null, minute=null, ambiguous=false)")
         check("hapus acara besok jam 10", "DeleteEvent(query=, date=2026-11-21, hour=10, minute=0, ambiguous=true)")
         check("hapus acara ulang tahun mama di kalender", "DeleteEvent(query=ulang tahun mama, date=null, hour=null, minute=null, ambiguous=false)")
+        // Perintah dari AI dengan tanggal ISO atau nama hari + tanggal (bug "RNPS Agreement 2026-12-02")
+        check("hapus acara RNPS Agreement 2026-12-02", "DeleteEvent(query=RNPS Agreement, date=2026-12-02, hour=null, minute=null, ambiguous=false)")
+        check("hapus acara RNPS Agreement hari Rabu, 2 Desember", "DeleteEvent(query=RNPS Agreement, date=2026-12-02, hour=null, minute=null, ambiguous=false)")
+        check("delete the RNPS Agreement event on Wednesday, 2 December", "DeleteEvent(query=RNPS Agreement, date=2026-12-02, hour=null, minute=null, ambiguous=false)")
+        // tanpa kata "acara": diperiksa ke kalender saat dijalankan
+        check("delete the RNPS agreement", "DeleteMaybeEvent(text=delete the RNPS agreement, event=DeleteEvent(query=RNPS agreement, date=null, hour=null, minute=null, ambiguous=false))")
+        check("hapus RNPS Agreement besok", "DeleteMaybeEvent(text=hapus RNPS Agreement besok, event=DeleteEvent(query=RNPS Agreement, date=2026-11-21, hour=null, minute=null, ambiguous=false))")
+        check("hapus percakapan", "ResetChat")
+        check("hapus semua alarm", "AlarmDelete(ref=${ref(all = true)})")
+        check("tambah acara rapat tim 2026-12-03 jam 10", "AddEvent(title=rapat tim, start=2026-12-03T10:00, end=null, allDay=false)")
         // tetap ke perintah lama
         check("hapus acara tadi", "DeleteLastEvent")
         check("hapus semua catatan", "ClearNotes")
@@ -399,6 +409,11 @@ class CommandParserTest {
         slot(p, "semua", "Help")
         slot(p, "rapat", "NotAnAnswer")
         slot(p, "tidak jadi", "Cancelled")
+        slot(p, "Both", "Help")
+        slot(p, "keduanya", "Help")
+        slot(p, "all of them", "Help")
+        // tanpa pilihan "semua": tidak dianggap jawaban
+        slot(Pending.Choose(p.options), "both", "NotAnAnswer")
     }
 
     @Test
@@ -408,6 +423,10 @@ class CommandParserTest {
         assertTrue(EventMatch.score("rapat", "Meeting tim") > 0)
         assertTrue(EventMatch.score("dentis", "Dentist") > 0)
         assertTrue(EventMatch.score("ulang tahun mama", "Ulang tahun papa") == 0)
+        // angka sisa tanggal dan sapaan tidak wajib ada di judul
+        assertTrue(EventMatch.score("RNPS Agreement 2026 12 02", "RNPS Agreement") > 0)
+        assertTrue(EventMatch.score("RNPS Agreement sir", "RNPS Agreement") > 0)
+        assertTrue(EventMatch.score("RNPS Agreement", "RNPS Agreement") >= EventMatch.score("RNPS Agreement", "RNPS Agreement sir") + 5)
         assertTrue(EventMatch.score("ulang tahun mama", "Ulang Tahun Mama") > EventMatch.score("ulang tahun", "Ulang Tahun Mama"))
     }
 }

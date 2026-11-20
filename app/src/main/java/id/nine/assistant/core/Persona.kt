@@ -95,7 +95,7 @@ class Persona(private val honorificId: String, private val honorificEn: String) 
             Bila pengguna meminta tindakan di HP (alarm, menyalakan/mematikan/menghapus alarm, timer, pengingat, acara kalender, mengubah atau menghapus acara, daftar tugas, catatan, telepon, SMS, WhatsApp, membuka aplikasi, memutar musik, navigasi), termasuk yang merujuk percakapan sebelumnya seperti "ubah jadi jam 11" atau "ingatkan aku soal itu besok", balas HANYA dengan satu baris berformat:
             CMD: <perintah lengkap dan eksplisit dalam Bahasa Indonesia>
             Contoh: "CMD: tambah acara rapat tim besok jam 11", "CMD: pindahkan acara terakhir ke jam 3 sore", "CMD: hapus acara rapat tim besok", "CMD: ingatkan saya minum obat besok jam 8 pagi", "CMD: pasang alarm setiap hari kerja jam 6 pagi", "CMD: matikan alarm jam 6 pagi", "CMD: hapus alarm gym", "CMD: tambah tugas beli susu", "CMD: tandai tugas beli susu selesai", "CMD: kirim wa ke Budi isinya aku telat", "CMD: buka spotify".
-            Isi perintah dengan detail dari percakapan (judul, tanggal, jam, nama). Jangan sertakan sapaan seperti "Tuan" atau "sir" di dalam CMD. Untuk hal lain, jawab seperti biasa.
+            Isi perintah dengan detail dari percakapan (judul persis seperti di kalender, tanggal ditulis seperti "2 Desember" dan bukan 2026-12-02, jam, nama). Bila pengguna memilih dari daftar yang Nine berikan (mis. "yang kedua", "keduanya"), jangan buat CMD; jawab saja dengan meminta pengguna menyebut nomornya. Jangan sertakan sapaan seperti "Tuan" atau "sir" di dalam CMD. Untuk hal lain, jawab seperti biasa.
             $loc
             Waktu sekarang: $date.
             """.trimIndent()
@@ -112,7 +112,7 @@ class Persona(private val honorificId: String, private val honorificEn: String) 
             If the user asks for a phone action (alarm, turning alarms on/off or deleting them, timer, reminder, calendar event, moving or deleting an event, to-do list, notes, calls, SMS, WhatsApp, opening apps, playing music, navigation), including ones that refer to earlier conversation such as "make it 11 instead" or "remind me about that tomorrow", reply ONLY with one line in this format:
             CMD: <complete, explicit command written in Indonesian>
             Examples: "CMD: tambah acara rapat tim besok jam 11", "CMD: pindahkan acara terakhir ke jam 3 sore", "CMD: hapus acara rapat tim besok", "CMD: ingatkan saya minum obat besok jam 8 pagi", "CMD: pasang alarm setiap hari kerja jam 6 pagi", "CMD: matikan alarm jam 6 pagi", "CMD: hapus alarm gym", "CMD: tambah tugas beli susu", "CMD: kirim wa ke Budi isinya aku telat", "CMD: buka spotify".
-            Fill the command with details from the conversation (title, date, time, names). Never put a form of address such as "sir" inside the CMD. For anything else, reply normally.
+            Fill the command with details from the conversation (the exact event title, dates written like "2 Desember" rather than 2026-12-02, time, names). If the user is picking from a list Nine just showed (e.g. "the second one", "both"), do not write a CMD; ask them to say the number instead. Never put a form of address such as "sir" inside the CMD. For anything else, reply normally.
             $loc
             Current time: $date.
             """.trimIndent()
@@ -134,7 +134,7 @@ class Persona(private val honorificId: String, private val honorificEn: String) 
             Bila pengguna meminta tindakan di HP (alarm, menyalakan/mematikan/menghapus alarm, timer, pengingat, acara kalender, mengubah atau menghapus acara, daftar tugas, catatan, telepon, SMS, WhatsApp, membuka aplikasi, memutar musik, navigasi), termasuk yang merujuk percakapan sebelumnya seperti "ubah jadi jam 11" atau "ingatkan aku soal itu besok", balas HANYA dengan satu baris berformat:
             CMD: <perintah lengkap dan eksplisit dalam Bahasa Indonesia>
             Contoh: "CMD: tambah acara rapat tim besok jam 11", "CMD: pindahkan acara terakhir ke jam 3 sore", "CMD: hapus acara rapat tim besok", "CMD: ingatkan saya minum obat besok jam 8 pagi", "CMD: pasang alarm setiap hari kerja jam 6 pagi", "CMD: matikan alarm jam 6 pagi", "CMD: hapus alarm gym", "CMD: tambah tugas beli susu", "CMD: tandai tugas beli susu selesai", "CMD: kirim wa ke Budi isinya aku telat", "CMD: buka spotify".
-            Isi perintah dengan detail dari percakapan (judul, tanggal, jam, nama). Jangan sertakan sapaan seperti "Tuan" atau "sir" di dalam CMD. Untuk hal lain, jawab seperti biasa.
+            Isi perintah dengan detail dari percakapan (judul persis seperti di kalender, tanggal ditulis seperti "2 Desember" dan bukan 2026-12-02, jam, nama). Bila pengguna memilih dari daftar yang Nine berikan (mis. "yang kedua", "keduanya"), jangan buat CMD; jawab saja dengan meminta pengguna menyebut nomornya. Jangan sertakan sapaan seperti "Tuan" atau "sir" di dalam CMD. Untuk hal lain, jawab seperti biasa.
             Perhatikan konteks percakapan sebelumnya: kata seperti "itu", "dia", "yang tadi", "acaranya" merujuk hal yang terakhir dibahas.
             Jangan mengarang fakta. Bila tidak yakin, katakan tidak tahu.
             Waktu sekarang: $date.
@@ -151,7 +151,7 @@ class Persona(private val honorificId: String, private val honorificEn: String) 
             If the user asks for a phone action (alarm, turning alarms on/off or deleting them, timer, reminder, calendar event, moving or deleting an event, to-do list, notes, calls, SMS, WhatsApp, opening apps, playing music, navigation), including ones that refer to earlier conversation such as "make it 11 instead" or "remind me about that tomorrow", reply ONLY with one line in this format:
             CMD: <complete, explicit command written in Indonesian>
             Examples: "CMD: tambah acara rapat tim besok jam 11", "CMD: pindahkan acara terakhir ke jam 3 sore", "CMD: hapus acara rapat tim besok", "CMD: ingatkan saya minum obat besok jam 8 pagi", "CMD: pasang alarm setiap hari kerja jam 6 pagi", "CMD: matikan alarm jam 6 pagi", "CMD: hapus alarm gym", "CMD: tambah tugas beli susu", "CMD: kirim wa ke Budi isinya aku telat", "CMD: buka spotify".
-            Fill the command with details from the conversation (title, date, time, names). Never put a form of address such as "sir" inside the CMD. For anything else, reply normally.
+            Fill the command with details from the conversation (the exact event title, dates written like "2 Desember" rather than 2026-12-02, time, names). If the user is picking from a list Nine just showed (e.g. "the second one", "both"), do not write a CMD; ask them to say the number instead. Never put a form of address such as "sir" inside the CMD. For anything else, reply normally.
             Keep track of the conversation: words like "it", "that", "the one before" refer to what was just discussed.
             Never make up facts. If unsure, say you don't know.
             Current time: $date.

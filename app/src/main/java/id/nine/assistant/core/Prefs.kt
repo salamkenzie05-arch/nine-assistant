@@ -72,9 +72,13 @@ class Prefs(context: Context) {
 
     /** Enkripsi ulang rahasia yang masih tersimpan polos dari versi lama. */
     fun migrateSecrets() {
-        for (k in listOf("gemini_key", "hf_token", "claude_key")) {
+        for (k in listOf("gemini_key", "hf_token")) {
             val v = sp.getString(k, "") ?: ""
             if (v.isNotEmpty() && !SecureStore.isEncrypted(v)) sp.edit().putString(k, SecureStore.encrypt(v)).apply()
+        }
+        // Integrasi Claude dihapus: buang key & pengaturannya bila pernah diisi di versi 2.4.
+        if (sp.contains("claude_key") || sp.contains("online_provider") || sp.contains("claude_model")) {
+            sp.edit().remove("claude_key").remove("online_provider").remove("claude_model").apply()
         }
     }
 
@@ -143,25 +147,9 @@ class Prefs(context: Context) {
 
     val nineAlarms: Boolean get() = alarmEngine != "clock"
 
-    // --- Otak online
-    /** "gemini" atau "claude". */
-    var onlineProvider: String
-        get() = sp.getString("online_provider", "gemini") ?: "gemini"
-        set(value) = sp.edit().putString("online_provider", value).apply()
-
-    /** API key Claude (Anthropic), disimpan terenkripsi (Android Keystore). */
-    var claudeKey: String
-        get() = SecureStore.decrypt(sp.getString("claude_key", "") ?: "")
-        set(value) = sp.edit().putString("claude_key", SecureStore.encrypt(value.trim())).apply()
-
-    var claudeModel: String
-        get() = (sp.getString("claude_model", null) ?: "").ifBlank { DEFAULT_CLAUDE_MODEL }
-        set(value) = sp.edit().putString("claude_model", value.trim()).apply()
-
     val persona: Persona get() = Persona(honorificId, honorificEn)
 
     companion object {
         const val DEFAULT_GEMINI_MODEL = "gemini-flash-latest"
-        const val DEFAULT_CLAUDE_MODEL = "claude-sonnet-5-5"
     }
 }

@@ -431,7 +431,7 @@ class MainActivity : AppCompatActivity(), AssistantController.Ui {
         if (state == AssistantController.State.IDLE) {
             binding.orb.setLevel(0f)
             binding.edgeGlow.setLevel(0f)
-            WidgetUpdater.refresh(this)
+            WidgetUpdater.refreshFace(this)
         }
     }
 

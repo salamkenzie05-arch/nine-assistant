@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Dibuat oleh gen_faces.py: bingkai wajah Nine untuk widget. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:pathData="M2,56a52,52 0 1,0 104,0a52,52 0 1,0 -104,0Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="radial" android:centerX="54" android:centerY="56" android:gradientRadius="52">
+                <item android:offset="0.8" android:color="#33000000" />
+                <item android:offset="1" android:color="#00000000" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path android:pathData="M8,54a46,46 0 1,0 92,0a46,46 0 1,0 -92,0Z" android:fillColor="#FFFFFF" />
+    <path android:pathData="M8,54a46,46 0 1,0 92,0a46,46 0 1,0 -92,0Z" android:fillColor="#00000000" android:strokeColor="#1F0B1220" android:strokeWidth="0.9" android:strokeLineCap="round" android:strokeLineJoin="round" />
+    <path android:pathData="M36.95,40.66H41.81A5.16,5.16 0 0,1 46.97,45.82V58.5A5.16,5.16 0 0,1 41.81,63.66H36.95A5.16,5.16 0 0,1 31.79,58.5V45.82A5.16,5.16 0 0,1 36.95,40.66Z" android:fillColor="#13151A" />
+    <path android:pathData="M36.95,40.66H41.81A5.16,5.16 0 0,1 46.97,45.82V58.5A5.16,5.16 0 0,1 41.81,63.66H36.95A5.16,5.16 0 0,1 31.79,58.5V45.82A5.16,5.16 0 0,1 36.95,40.66Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="0" android:startY="29.16" android:endX="0" android:endY="31.46" android:tileMode="repeat">
+                <item android:offset="0" android:color="#00000000" />
+                <item android:offset="0.64" android:color="#00000000" />
+                <item android:offset="0.64" android:color="#3DFFFFFF" />
+                <item android:offset="1" android:color="#3DFFFFFF" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path android:pathData="M70.99,40.66H75.85A5.16,5.16 0 0,1 81.01,45.82V58.5A5.16,5.16 0 0,1 75.85,63.66H70.99A5.16,5.16 0 0,1 65.83,58.5V45.82A5.16,5.16 0 0,1 70.99,40.66Z" android:fillColor="#13151A" />
+    <path android:pathData="M70.99,40.66H75.85A5.16,5.16 0 0,1 81.01,45.82V58.5A5.16,5.16 0 0,1 75.85,63.66H70.99A5.16,5.16 0 0,1 65.83,58.5V45.82A5.16,5.16 0 0,1 70.99,40.66Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="0" android:startY="29.16" android:endX="0" android:endY="31.46" android:tileMode="repeat">
+                <item android:offset="0" android:color="#00000000" />
+                <item android:offset="0.64" android:color="#00000000" />
+                <item android:offset="0.64" android:color="#3DFFFFFF" />
+                <item android:offset="1" android:color="#3DFFFFFF" />
+            </gradient>
+        </aapt:attr>
+    </path>
+</vector>

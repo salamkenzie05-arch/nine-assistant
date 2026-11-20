@@ -4,7 +4,7 @@ Nine adalah asisten suara seperti Siri yang berjalan **sepenuhnya di perangkat**
 
 - **Perintah perangkat** (cepat, berbasis aturan): alarm, timer, pengingat, **acara kalender** (tambah, pindah, hapus & baca agenda), **daftar tugas harian**, buka aplikasi dan pengaturan, YouTube/Spotify/Maps/WhatsApp/Google, kamera, perekam suara, senter, volume, baterai/jam/tanggal, catatan, telepon, SMS.
 - **Alarm Nine**: berbunyi tepat waktu walau HP tidur, tampil di layar kunci, bisa berulang (setiap hari, hari kerja, akhir pekan, hari tertentu), dan bisa dinyalakan, dimatikan, atau dihapus lewat suara ("matikan alarm jam 6", "hapus alarm gym"). Bisa dialihkan ke aplikasi Jam di Pengaturan.
-- **Mode internet (opsional)**: Gemini + Google Search (API key gratis dari Google AI Studio) **atau Claude** + pencarian web (API key berbayar dari Claude Console, default `claude-sonnet-5-5`). Otomatis kembali ke Gemma saat offline.
+- **Mode internet (opsional)**: Gemini + Google Search untuk pertanyaan terkini (cuaca, berita, kurs). Butuh API key gratis dari Google AI Studio; otomatis kembali ke Gemma saat offline.
 - **Wake word** "hey nine" (bisa diubah), dideteksi offline dengan Vosk.
 - **Widget layar utama**: wajah Nine (terang/gelap; ekspresinya ikut keadaan: dicas, baterai lemah, malam, baru diajak bicara) dan "Hari ini" (tugas yang belum selesai).
 - **Otak AI: Gemma 4 E2B** (Google, Apache-2.0) lewat LiteRT-LM, memakai GPU HP dan otomatis pindah ke CPU bila GPU gagal. Untuk obrolan dan pertanyaan bebas, jawabannya mulai diucapkan per kalimat sebelum seluruh jawaban selesai dibuat.
@@ -38,7 +38,7 @@ Internet hanya dipakai untuk mengunduh model. Percakapan, suara, dan catatan tid
 - Pengingat lebih dari 24 jam dibuka di Kalender, karena alarm Android hanya berlaku 24 jam ke depan.
 - Kunci tanda tangan `app/nine-sideload.jks` sengaja ada di repo agar setiap build CI bisa memperbarui aplikasi. Kunci itu bukan rahasia; jangan pakai untuk Play Store.
 - Wake word memakai model bahasa Inggris, jadi frasanya harus kata-kata Inggris. Layar Nine hanya bisa muncul dari latar belakang bila Nine dijadikan asisten digital default atau diberi izin "tampil di atas aplikasi lain"; selain itu muncul notifikasi untuk diketuk.
-- Gemma/Gemini/Claude belum memutuskan tindakan HP lewat function calling; mereka menulis perintah yang lalu dijalankan parser. Tindakan berisiko (telepon, WhatsApp, membuka situs, merekam, menghapus) yang diusulkan AI selalu dikonfirmasi dulu.
+- Gemma/Gemini belum memutuskan tindakan HP lewat function calling; mereka menulis perintah yang lalu dijalankan parser. Tindakan berisiko (telepon, WhatsApp, membuka situs, merekam, menghapus) yang diusulkan AI selalu dikonfirmasi dulu.
 - Alarm yang dibuat di aplikasi Jam tidak bisa dinyalakan/dimatikan/dihapus oleh aplikasi lain; itu sebabnya Nine punya alarm sendiri.
 - Widget hanya berganti ekspresi saat proses Nine hidup atau setiap ±30 menit, jadi reaksi "dicas" di widget bisa sedikit tertunda.
 - Font logo & wordmark: Inter Display Light (SIL Open Font License).

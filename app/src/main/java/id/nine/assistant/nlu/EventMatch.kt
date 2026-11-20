@@ -16,8 +16,15 @@ object EventMatch {
 
     fun tokens(query: String): List<String> = norm(query).split(' ').filter { it.isNotEmpty() }
 
-    /** Kata kunci yang wajib ada di judul. Kosong = cocok dengan acara apa saja (biasanya disaring tanggal/jam). */
-    fun keyTokens(query: String): List<String> = tokens(query).filter { it !in soft }
+    /** Sapaan yang kadang ikut terucap/tertulis ("… sir"); bukan bagian judul yang dicari. */
+    private val honorifics = setOf("sir", "tuan", "nyonya", "madam", "maam", "bos", "boss", "pak", "bu", "mas", "mbak", "kak")
+
+    /**
+     * Kata kunci yang wajib ada di judul. Kosong = cocok dengan acara apa saja (biasanya disaring tanggal/jam).
+     * Angka (sisa tanggal/jam seperti "2026", "02") dan sapaan tidak diwajibkan.
+     */
+    fun keyTokens(query: String): List<String> =
+        tokens(query).filter { it !in soft && it !in honorifics && !it.all { c -> c.isDigit() } }
 
     private fun lev(a: String, b: String): Int {
         val d = IntArray(b.length + 1) { it }
@@ -45,7 +52,7 @@ object EventMatch {
         val words = t.split(' ')
         val keys = keyTokens(query)
         if (keys.any { !tokenHit(it, t, words) }) return 0
-        val softHits = tokens(query).count { it in soft && it.length >= 4 && t.contains(it) }
+        val softHits = tokens(query).count { it !in keys && it.length >= 2 && words.contains(it) }
         val exact = if (t == norm(query)) 5 else 0
         return 1 + keys.size * 3 + softHits + exact
     }

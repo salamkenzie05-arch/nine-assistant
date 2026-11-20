@@ -104,22 +104,6 @@ class SettingsActivity : AppCompatActivity() {
                 // tidak ada browser
             }
         }
-        // --- Penyedia otak online: Gemini atau Claude
-        binding.editClaudeKey.setText(prefs.claudeKey)
-        binding.editClaudeModel.setText(if (prefs.claudeModel == Prefs.DEFAULT_CLAUDE_MODEL) "" else prefs.claudeModel)
-        binding.groupProvider.check(if (prefs.onlineProvider == "claude") R.id.providerClaude else R.id.providerGemini)
-        binding.groupProvider.setOnCheckedChangeListener { _, id ->
-            saveKeys()
-            prefs.onlineProvider = if (id == R.id.providerClaude) "claude" else "gemini"
-            renderInternet()
-        }
-        binding.btnGetClaudeKey.setOnClickListener {
-            try {
-                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://platform.claude.com/settings/keys")))
-            } catch (e: Exception) {
-                // tidak ada browser
-            }
-        }
         renderInternet()
 
         // --- Alarm
@@ -273,7 +257,6 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun saveKeys() {
         prefs.geminiKey = binding.editGeminiKey.text.toString()
-        prefs.claudeKey = binding.editClaudeKey.text.toString()
     }
 
     private fun renderAlarms() {
@@ -331,7 +314,6 @@ class SettingsActivity : AppCompatActivity() {
         super.onPause()
         saveKeys()
         prefs.geminiModel = binding.editGeminiModel.text.toString()
-        prefs.claudeModel = binding.editClaudeModel.text.toString()
         prefs.city = binding.editCity.text.toString()
         val phrase = binding.editWakePhrase.text.toString().trim()
         if (phrase.isNotEmpty() && phrase != prefs.wakePhrases) {
@@ -390,14 +372,7 @@ class SettingsActivity : AppCompatActivity() {
     private fun size(b: Long): String = Formatter.formatShortFileSize(this, b)
 
     private fun renderInternet() {
-        val claude = prefs.onlineProvider == "claude"
-        binding.geminiFields.visibility = if (claude) View.GONE else View.VISIBLE
-        binding.claudeFields.visibility = if (claude) View.VISIBLE else View.GONE
-        val noKey = if (claude) {
-            prefs.claudeKey.isBlank() && binding.editClaudeKey.text.isNullOrBlank()
-        } else {
-            prefs.geminiKey.isBlank() && binding.editGeminiKey.text.isNullOrBlank()
-        }
+        val noKey = prefs.geminiKey.isBlank() && binding.editGeminiKey.text.isNullOrBlank()
         binding.txtInternetStatus.setText(
             when {
                 !prefs.internetMode -> R.string.internet_status_off

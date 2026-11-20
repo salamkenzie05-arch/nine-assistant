@@ -1,15 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Wajah Nine yang "hidup": ViewFlipper berganti bingkai sendiri di launcher (berkedip, melirik, tersenyum). -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widgetRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:contentDescription="@string/cd_mic"
     android:padding="6dp">
 
-    <ImageView
-        android:id="@+id/widgetOrb"
+    <ViewFlipper
+        android:id="@+id/widgetFlipper"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_gravity="center"
-        android:contentDescription="@string/cd_mic"
-        android:scaleType="fitCenter"
-        android:src="@drawable/face_light_neutral" />
+        android:autoStart="true"
+        android:flipInterval="160">
+
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:importantForAccessibility="no"
+            android:scaleType="fitCenter"
+            android:src="@drawable/face_light_neutral" />
+    </ViewFlipper>
 </FrameLayout>

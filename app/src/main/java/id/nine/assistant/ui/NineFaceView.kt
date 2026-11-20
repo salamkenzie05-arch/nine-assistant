@@ -7,6 +7,8 @@ import android.content.IntentFilter
 import android.content.res.Configuration
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.LinearGradient
+import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RadialGradient
@@ -387,6 +389,12 @@ class NineFaceView @JvmOverloads constructor(
     }
     private val extraPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER; isFakeBoldText = true }
+    /** Garis-garis tipis di mata (tekstur layar digital), bergulir pelan. */
+    private val scanPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val scanMatrix = Matrix()
+    private var scanGap = 0f
+    private var scanDark: Boolean? = null
+    private val chevFill = Path()
     private val eyePath = Path()
     private val cutPath = Path()
     private val tmpPath = Path()
@@ -480,6 +488,9 @@ class NineFaceView @JvmOverloads constructor(
         eyePaint.color = eyeColor
         if (dark && Build.VERSION.SDK_INT >= 28) eyePaint.setShadowLayer(r * 0.13f, 0f, 0f, alpha(goldBright, 0.75f))
         else eyePaint.clearShadowLayer()
+        ensureScan(r, dark)
+        scanMatrix.setTranslate(0f, (t * scanGap * 0.6f) % scanGap)
+        scanPaint.shader?.setLocalMatrix(scanMatrix)
         val blink = blinkFactor(now)
         val sep = r * 0.37f
         val ey = cy - r * 0.04f
@@ -495,8 +506,11 @@ class NineFaceView @JvmOverloads constructor(
             canvas.drawOval(cx - sep - r * 0.17f + gx, ey + r * 0.30f + gy, cx - sep + r * 0.13f + gx, ey + r * 0.42f + gy, extraPaint)
             canvas.drawOval(cx + sep - r * 0.13f + gx, ey + r * 0.30f + gy, cx + sep + r * 0.17f + gx, ey + r * 0.42f + gy, extraPaint)
         }
-        if (charging) drawBolt(canvas, cx, cy + r * 0.56f, r * 0.15f, if (dark) goldBright else gold, 0.55f + 0.45f * abs(sin(t * 2.2f)))
-        else if (lowBattery()) drawBattery(canvas, cx, cy + r * 0.58f, r * 0.11f, if (dark) Color.rgb(0x9A, 0xA0, 0xAE) else Color.rgb(0x6B, 0x72, 0x80))
+        if (charging) {
+            drawBolt(canvas, cx, cy + r * 0.56f, r * 0.15f, if (dark) goldBright else gold, 0.55f + 0.45f * abs(sin(t * 2.2f)))
+            canvas.drawPath(tmpPath, scanPaint)
+        }
+        if (!charging && lowBattery()) drawBattery(canvas, cx, cy + r * 0.58f, r * 0.11f, if (dark) Color.rgb(0x9A, 0xA0, 0xAE) else Color.rgb(0x6B, 0x72, 0x80))
         if (m == Mood.SLEEPY || (m == null && sleepyNow(now))) drawZzz(canvas, cx + r * 0.52f, cy - r * 0.42f, r, dark)
         canvas.restore()
 
@@ -528,6 +542,7 @@ class NineFaceView @JvmOverloads constructor(
             eyePaint.color = heartColor
             canvas.drawPath(tmpPath, eyePaint)
             eyePaint.color = color
+            canvas.drawPath(tmpPath, scanPaint)
             return
         }
         // > <
@@ -542,6 +557,9 @@ class NineFaceView @JvmOverloads constructor(
             tmpPath.lineTo(ex + w * dir, ey)
             tmpPath.lineTo(ex - w * dir, ey + h)
             canvas.drawPath(tmpPath, strokePaint)
+            @Suppress("DEPRECATION")
+            strokePaint.getFillPath(tmpPath, chevFill)
+            canvas.drawPath(chevFill, scanPaint)
             return
         }
         val w = baseW * e.sx
@@ -580,6 +598,23 @@ class NineFaceView @JvmOverloads constructor(
         }
         if (cut) eyePath.op(cutPath, Path.Op.DIFFERENCE)
         canvas.drawPath(eyePath, eyePaint)
+        // Mata yang hampir tertutup (berkedip) tidak perlu garis.
+        if (h > baseH * 0.2f) canvas.drawPath(eyePath, scanPaint)
+    }
+
+    /** Siapkan shader garis berulang (sekali per ukuran/tema). */
+    private fun ensureScan(r: Float, dark: Boolean) {
+        val gap = (r * 0.052f).coerceAtLeast(3f)
+        if (gap == scanGap && dark == scanDark) return
+        scanGap = gap
+        scanDark = dark
+        val line = if (dark) Color.argb(110, 0x0B, 0x0C, 0x0F) else Color.argb(64, 255, 255, 255)
+        scanPaint.shader = LinearGradient(
+            0f, 0f, 0f, gap,
+            intArrayOf(Color.TRANSPARENT, Color.TRANSPARENT, line, line),
+            floatArrayOf(0f, 0.62f, 0.62f, 1f),
+            Shader.TileMode.REPEAT
+        )
     }
 
     private fun heartPath(p: Path, cx: Float, cy: Float, s: Float) {

@@ -35,8 +35,17 @@ object WidgetUpdater {
         return PendingIntent.getActivity(ctx, 11, i, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
     }
 
+    @Volatile
+    private var lastFace: Face? = null
+
+    /** Perbarui widget hanya bila ekspresinya berubah (agar animasi tidak terus diulang dari awal). */
+    fun refreshFace(ctx: Context) {
+        if (face(ctx) != lastFace) refresh(ctx)
+    }
+
     fun refresh(ctx: Context) {
         val app = ctx.applicationContext
+        lastFace = face(app)
         val mgr = AppWidgetManager.getInstance(app) ?: return
         try {
             val orbIds = mgr.getAppWidgetIds(ComponentName(app, OrbWidgetProvider::class.java))
@@ -73,40 +82,54 @@ object WidgetUpdater {
         return Face.NEUTRAL
     }
 
-    private fun faceRes(f: Face, theme: String): Int = when (theme) {
-        "dark" -> when (f) {
-            Face.NEUTRAL -> R.drawable.face_dark_neutral
-            Face.HAPPY -> R.drawable.face_dark_happy
-            Face.SLEEPY -> R.drawable.face_dark_sleepy
-            Face.CHARGING -> R.drawable.face_dark_charging
-            Face.LOWBAT -> R.drawable.face_dark_lowbat
+    private fun rep(name: String, n: Int): List<String> = List(n) { name }
+
+    /**
+     * Urutan bingkai animasi (tiap bingkai 160 ms, diulang terus oleh launcher): berkedip, melirik kiri-kanan,
+     * mendongak, tersenyum; versi mengantuk ("zzz"), dicas (petir berdenyut), dan baterai lemah (ikon berkedip).
+     */
+    private fun sequence(f: Face): List<String> = when (f) {
+        Face.NEUTRAL -> rep("neutral", 14) + "blink" + rep("neutral", 8) +
+            "left1" + rep("left2", 5) + "left1" + rep("neutral", 3) +
+            "right1" + rep("right2", 5) + "right1" + rep("neutral", 9) +
+            "blink" + "neutral" + "blink" + rep("neutral", 8) +
+            rep("up", 4) + rep("neutral", 2) + rep("happy", 5) + rep("neutral", 4)
+        Face.HAPPY -> rep("happy", 10) + rep("neutral", 2) + "blink" + rep("neutral", 2) + rep("happy", 8) +
+            "left1" + rep("left2", 4) + "left1" + rep("happy", 6) +
+            "right1" + rep("right2", 4) + "right1" + rep("happy", 6)
+        Face.SLEEPY -> rep("sleepy1", 5) + rep("sleepy2", 5) + rep("sleepy3", 5) + rep("sleepyclosed", 8) +
+            rep("sleepy1", 5) + rep("sleepy2", 5) + rep("sleepy3", 5) + rep("sleepyclosed", 4)
+        Face.CHARGING -> rep("charge1", 4) + rep("charge2", 4) + rep("charge1", 4) + rep("charge2", 4) +
+            "chargeblink" + rep("charge1", 3) + rep("charge2", 4) + rep("charge1", 4) + rep("charge2", 4)
+        Face.LOWBAT -> rep("lowbat1", 5) + rep("lowbat2", 5) + rep("lowbat1", 5) + rep("lowbat2", 5) +
+            rep("lowbatblink", 3) + rep("lowbat1", 5) + rep("lowbat2", 5)
+    }
+
+    /** Isi ViewFlipper [flipperId] dengan bingkai wajah. [theme]: "light", "dark", atau "auto" (ikut mode gelap sistem). */
+    private fun fillFace(ctx: Context, views: RemoteViews, flipperId: Int, theme: String, face: Face) {
+        val table = when (theme) {
+            "dark" -> FaceFrames.DARK
+            "auto" -> FaceFrames.AUTO
+            else -> FaceFrames.LIGHT
         }
-        "auto" -> when (f) {
-            Face.NEUTRAL -> R.drawable.face_auto_neutral
-            Face.HAPPY -> R.drawable.face_auto_happy
-            Face.SLEEPY -> R.drawable.face_auto_sleepy
-            Face.CHARGING -> R.drawable.face_auto_charging
-            Face.LOWBAT -> R.drawable.face_auto_lowbat
-        }
-        else -> when (f) {
-            Face.NEUTRAL -> R.drawable.face_light_neutral
-            Face.HAPPY -> R.drawable.face_light_happy
-            Face.SLEEPY -> R.drawable.face_light_sleepy
-            Face.CHARGING -> R.drawable.face_light_charging
-            Face.LOWBAT -> R.drawable.face_light_lowbat
+        views.removeAllViews(flipperId)
+        for (name in sequence(face)) {
+            val frame = RemoteViews(ctx.packageName, R.layout.widget_face_frame)
+            frame.setImageViewResource(R.id.faceFrame, table[name] ?: table.getValue("neutral"))
+            views.addView(flipperId, frame)
         }
     }
 
     fun orbViews(ctx: Context, dark: Boolean = false): RemoteViews =
         RemoteViews(ctx.packageName, if (dark) R.layout.widget_orb_dark else R.layout.widget_orb).apply {
-            setImageViewResource(R.id.widgetOrb, faceRes(face(ctx), if (dark) "dark" else "light"))
-            setOnClickPendingIntent(R.id.widgetOrb, listenIntent(ctx))
+            fillFace(ctx, this, R.id.widgetFlipper, if (dark) "dark" else "light", face(ctx))
+            setOnClickPendingIntent(R.id.widgetRoot, listenIntent(ctx))
         }
 
     fun todayViews(ctx: Context): RemoteViews {
         val lang = Prefs(ctx).lang
         val v = RemoteViews(ctx.packageName, R.layout.widget_today)
-        v.setImageViewResource(R.id.widgetOrb, faceRes(face(ctx), "auto"))
+        fillFace(ctx, v, R.id.widgetFaceFlipper, "auto", face(ctx))
         v.setOnClickPendingIntent(R.id.widgetOrb, listenIntent(ctx))
         v.setOnClickPendingIntent(R.id.widgetTasks, todoIntent(ctx))
         val today = LocalDate.now()

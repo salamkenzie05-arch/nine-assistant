@@ -131,6 +131,8 @@ object TimeParser {
     private val reDateMD = rx("""\b($MONTHS)\.?\s+(\d{1,2})(?:st|nd|rd|th)?\b(?:,?\s+(\d{4}))?""")
     // "25/12", "25/12/2026", "25-12-2026" (pakai "-" hanya bila ada tahun, agar "jam 7-8" tidak dianggap tanggal)
     private val reDateSlash = rx("""(?<![\d.:])\b(\d{1,2})(?:/(\d{1,2})(?:/(\d{2,4}))?|-(\d{1,2})-(\d{2,4}))\b(?![.:]\d)""")
+    // "2026-12-02" / "2026/12/02" (format ISO, sering dipakai AI)
+    private val reDateIso = rx("""(?<![\d.:/-])\b(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})\b(?![\d.:/-])""")
     private val reDayOnly = rx("""\b(?:(?:pada\s+)?(?:tanggal|tgl\.?)\s*(\d{1,2})\b|(?:on\s+)?the\s+(\d{1,2})(?:st|nd|rd|th)\b)""")
 
     private fun monthOf(w: String): Int? {
@@ -155,6 +157,12 @@ object TimeParser {
     private class DateHit(val day: Int, val month: Int?, val year: Int?, val range: IntRange)
 
     private fun findDate(text: String): DateHit? {
+        reDateIso.find(text)?.let { m ->
+            val y = m.groupValues[1].toInt()
+            val mo = m.groupValues[2].toInt()
+            val d = m.groupValues[3].toInt()
+            if (d in 1..31 && mo in 1..12 && y in 2000..2100) return DateHit(d, mo, y, m.range)
+        }
         reDateDM.find(text)?.let { m ->
             val d = m.groupValues[1].toInt()
             val mo = monthOf(m.groupValues[2])
@@ -364,6 +372,9 @@ object TimeParser {
             weekday = weekdayOf(w)
             dayRange = m.range
             ranges.add(m.range)
+        } else {
+            // "Rabu, 2 Desember": nama hari ikut dibuang dari teks (tanggal sudah pasti) agar tidak masuk judul
+            reDay.findAll(text).firstOrNull { weekdayOf(it.groupValues[1]) != null && !overlaps(it.range, dateHit.range) }?.let { ranges.add(it.range) }
         }
 
         var part: Part? = null
@@ -405,6 +416,8 @@ object TimeParser {
         val spec = TimeSpec(hour, minute, ambiguous, dayOffset, weekday, null, dateHit?.day, dateHit?.month, dateHit?.year)
         return ParsedTime(spec, tidy(removeRanges(text, ranges)))
     }
+
+    private fun overlaps(a: IntRange, b: IntRange): Boolean = a.first <= b.last && b.first <= a.last
 
     private fun blank(text: String, r: IntRange): String {
         val sb = StringBuilder(text)

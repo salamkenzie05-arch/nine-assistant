@@ -72,8 +72,8 @@
     <string name="widget_today_desc">Nine · tugas hari ini</string>
 
     <string name="sec_internet">Mode internet (lebih pintar)</string>
-    <string name="internet_switch">Gunakan otak online (Gemini atau Claude) bila ada internet</string>
-    <string name="internet_help">Pertanyaan bebas dijawab otak online dengan pencarian web, jadi Nine bisa menjawab cuaca, berita, kurs, dan hal terbaru. Pilih penyedianya: Gemini (API key gratis dari Google AI Studio) atau Claude (API key berbayar dari Claude Console). Saat offline, Nine otomatis kembali ke Gemma di HP. Perintah HP (alarm, kalender, tugas, aplikasi) tetap diproses di perangkat.</string>
+    <string name="internet_switch">Gunakan Gemini + Google Search bila online</string>
+    <string name="internet_help">Pertanyaan bebas dijawab Gemini (Google) dengan pencarian web, jadi bisa menjawab cuaca, berita, kurs, dan hal terbaru. Butuh API key gratis dari Google AI Studio. Saat offline, Nine otomatis kembali ke Gemma di HP. Perintah HP (alarm, kalender, tugas, aplikasi) tetap diproses di perangkat.</string>
     <string name="gemini_key_hint">API key Gemini (AIza…)</string>
     <string name="gemini_get_key">Dapatkan API key gratis</string>
     <string name="city_hint">Kota Anda (opsional, untuk cuaca), mis. Jakarta</string>
@@ -156,11 +156,4 @@
     <string name="alarm_manage">Kelola alarm</string>
     <string name="alarm_fullscreen">Izinkan layar penuh saat alarm berbunyi</string>
     <string name="alarm_fullscreen_ok">Layar penuh alarm: diizinkan ✓</string>
-    <string name="provider_label">Penyedia otak online</string>
-    <string name="provider_gemini">Gemini (Google)</string>
-    <string name="provider_claude">Claude (Anthropic)</string>
-    <string name="claude_key_hint">API key Claude (sk-ant-…)</string>
-    <string name="claude_get_key">Dapatkan API key Claude</string>
-    <string name="claude_model_hint">Model Claude (kosong = claude-sonnet-5-5)</string>
-    <string name="claude_help">Claude dipakai lewat Claude API dengan API key dari Claude Console. Biayanya per pemakaian dan terpisah dari langganan Claude Pro/Max. Untuk Sonnet 5.5 sekitar US$2 per sejuta token masuk dan US$10 per sejuta token keluar; pencarian web US$10 per 1.000 pencarian. Percakapan dan konteks (tugas, acara, kota) dikirim ke Anthropic saat mode ini dipakai.</string>
 </resources>

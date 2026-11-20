@@ -12,7 +12,6 @@ import id.nine.assistant.alarm.AlarmRingService
 import id.nine.assistant.alarm.AlarmScheduler
 import id.nine.assistant.core.ConversationLog
 import id.nine.assistant.core.Prefs
-import id.nine.assistant.llm.ClaudeClient
 import id.nine.assistant.llm.GeminiClient
 import id.nine.assistant.llm.LlmBrain
 import id.nine.assistant.llm.ModelManager
@@ -30,11 +29,8 @@ class NineApp : Application() {
         private set
     lateinit var gemini: GeminiClient
         private set
-    lateinit var claude: ClaudeClient
-        private set
-
-    /** Otak online yang dipilih pengguna (Gemini atau Claude). */
-    val online: OnlineBrain get() = if (prefs.onlineProvider == "claude") claude else gemini
+    /** Otak online (Gemini). */
+    val online: OnlineBrain get() = gemini
     val log = ConversationLog()
     lateinit var location: id.nine.assistant.core.LocationHelper
         private set
@@ -52,7 +48,6 @@ class NineApp : Application() {
         models = ModelManager(this, prefs)
         brain = LlmBrain(this, prefs, models)
         gemini = GeminiClient(this, prefs)
-        claude = ClaudeClient(this, prefs)
         models.addListener { status ->
             when (status) {
                 is ModelManager.Status.Ready -> brain.preload()

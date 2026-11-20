@@ -72,8 +72,8 @@
     <string name="widget_today_desc">Nine · today\'s tasks</string>
 
     <string name="sec_internet">Internet mode (smarter)</string>
-    <string name="internet_switch">Use an online brain (Gemini or Claude) when connected</string>
-    <string name="internet_help">Open questions are answered by an online brain with web search, so Nine can handle weather, news, exchange rates and anything recent. Pick the provider: Gemini (free API key from Google AI Studio) or Claude (paid API key from the Claude Console). When offline, Nine falls back to on-device Gemma. Phone commands (alarms, calendar, tasks, apps) are still processed on the device.</string>
+    <string name="internet_switch">Use Gemini + Google Search when online</string>
+    <string name="internet_help">Open questions are answered by Gemini (Google) with web search, so Nine can handle weather, news, exchange rates and anything recent. Needs a free API key from Google AI Studio. When offline, Nine falls back to on-device Gemma. Phone commands (alarms, calendar, tasks, apps) are still processed on the device.</string>
     <string name="gemini_key_hint">Gemini API key (AIza…)</string>
     <string name="gemini_get_key">Get a free API key</string>
     <string name="city_hint">Your city (optional, for weather), e.g. Jakarta</string>
@@ -156,11 +156,4 @@
     <string name="alarm_manage">Manage alarms</string>
     <string name="alarm_fullscreen">Allow full screen when an alarm rings</string>
     <string name="alarm_fullscreen_ok">Full-screen alarms: allowed ✓</string>
-    <string name="provider_label">Online brain provider</string>
-    <string name="provider_gemini">Gemini (Google)</string>
-    <string name="provider_claude">Claude (Anthropic)</string>
-    <string name="claude_key_hint">Claude API key (sk-ant-…)</string>
-    <string name="claude_get_key">Get a Claude API key</string>
-    <string name="claude_model_hint">Claude model (empty = claude-sonnet-5-5)</string>
-    <string name="claude_help">Claude is used through the Claude API with a key from the Claude Console. It\'s billed per use, separately from a Claude Pro/Max subscription. Sonnet 5.5 costs about US$2 per million input tokens and US$10 per million output tokens; web search is US$10 per 1,000 searches. Your conversation and context (tasks, events, city) are sent to Anthropic while this mode is used.</string>
 </resources>

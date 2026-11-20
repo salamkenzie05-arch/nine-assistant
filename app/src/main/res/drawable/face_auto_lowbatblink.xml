@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Dibuat oleh gen_faces.py: bingkai wajah Nine untuk widget. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:pathData="M2,56a52,52 0 1,0 104,0a52,52 0 1,0 -104,0Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="radial" android:centerX="54" android:centerY="56" android:gradientRadius="52">
+                <item android:offset="0.8" android:color="#33000000" />
+                <item android:offset="1" android:color="#00000000" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path android:pathData="M8,54a46,46 0 1,0 92,0a46,46 0 1,0 -92,0Z" android:fillColor="#FFFFFF" />
+    <path android:pathData="M8,54a46,46 0 1,0 92,0a46,46 0 1,0 -92,0Z" android:fillColor="#00000000" android:strokeColor="#1F0B1220" android:strokeWidth="0.9" android:strokeLineCap="round" android:strokeLineJoin="round" />
+    <path android:pathData="M30.17,53.41H43.79A0.78,0.78 0 0,1 44.57,54.19V54.93A0.78,0.78 0 0,1 43.79,55.71H30.17A0.78,0.78 0 0,1 29.39,54.93V54.19A0.78,0.78 0 0,1 30.17,53.41Z" android:fillColor="#13151A" />
+    <path android:pathData="M64.21,53.41H77.83A0.78,0.78 0 0,1 78.61,54.19V54.93A0.78,0.78 0 0,1 77.83,55.71H64.21A0.78,0.78 0 0,1 63.43,54.93V54.19A0.78,0.78 0 0,1 64.21,53.41Z" android:fillColor="#13151A" />
+    <path android:pathData="M50.2,78.4H57.04A0.76,0.76 0 0,1 57.8,79.16V82.2A0.76,0.76 0 0,1 57.04,82.96H50.2A0.76,0.76 0 0,1 49.45,82.2V79.16A0.76,0.76 0 0,1 50.2,78.4Z" android:fillColor="#00000000" android:strokeColor="#6B7280" android:strokeWidth="0.81" android:strokeLineCap="round" android:strokeLineJoin="round" />
+    <path android:pathData="M58.05,79.77L58.81,79.77L58.81,81.59L58.05,81.59Z" android:fillColor="#6B7280" />
+    <path android:pathData="M50.2,79.16L52.23,79.16L52.23,82.2L50.2,82.2Z" android:fillColor="#E5484D" />
+</vector>

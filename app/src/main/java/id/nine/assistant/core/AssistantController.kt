@@ -257,7 +257,20 @@ class AssistantController(context: Context, private val ui: Ui) {
                     reply(lang.t("Baik${prefs.persona.sfx(lang)}, dibatalkan.", "Very well${prefs.persona.sfx(lang)}, cancelled."), listenAfter = false)
                     return
                 }
-                SlotOutcome.NotAnAnswer -> Unit // perlakukan sebagai perintah baru
+                SlotOutcome.NotAnAnswer -> {
+                    // Jawaban pendek yang tidak dipahami saat Nine menawarkan pilihan: tanya ulang, jangan dilempar ke AI.
+                    if (p is Pending.Choose && text.trim().split(Regex("\\s+")).size <= 4 && parser.parse(text) is Command.Unknown) {
+                        pending = p
+                        val opts = p.options.mapIndexed { i, c -> "${i + 1}. ${c.label}" }.joinToString("\n")
+                        val all = if (p.all != null) lang.t(", atau \"semua\"", ", or \"all\"") else ""
+                        ui.onMood(Mood.CONFUSED)
+                        reply(
+                            lang.t("Maaf${prefs.persona.sfx(lang)}, yang mana? Sebut nomornya$all.", "Sorry${prefs.persona.sfx(lang)}, which one? Say the number$all.") + "\n" + opts,
+                            listenAfter = true
+                        )
+                        return
+                    }
+                }
             }
         }
         execute(parser.parse(text), confirmed = false)
@@ -284,6 +297,7 @@ class AssistantController(context: Context, private val ui: Ui) {
         is Command.DeleteEvent -> lang.t("menghapus acara ${c.query.ifBlank { "itu" }}", "delete the event ${c.query.ifBlank { "you mentioned" }}")
         is Command.DeleteLastEvent -> lang.t("menghapus acara terakhir", "delete the last event")
         is Command.AlarmDelete -> lang.t("menghapus alarm", "delete the alarm")
+        is Command.DeleteEvents -> lang.t("menghapus ${c.items.size} acara", "delete ${c.items.size} events")
         else -> null
     }
 
@@ -524,7 +538,7 @@ class AssistantController(context: Context, private val ui: Ui) {
         val context = deviceContext(l)
         val index = log.add(false, "")
         val raw = StringBuilder()
-        var splitter = TextClean.SentenceSplitter()
+        val splitter = TextClean.SentenceSplitter()
         val speak = prefs.speakReplies
         if (speak) output.beginStream(l) { setState(State.SPEAKING) }
         val gen = ++askGen
@@ -598,7 +612,7 @@ class AssistantController(context: Context, private val ui: Ui) {
                 ui.onMood(if (message == "no_model") Mood.CONFUSED else Mood.SAD)
                 val text = if (message == "no_model") {
                     prefs.persona.didNotUnderstand(l, question)
-                } else if (message.contains("Gemini") || message.contains("Claude")) {
+                } else if (message.contains("Gemini")) {
                     message
                 } else {
                     l.t(
@@ -631,20 +645,6 @@ class AssistantController(context: Context, private val ui: Ui) {
                         )
                     )
                 }
-            }
-
-            override fun onReset() {
-                if (gen != askGen) return
-                // Pengantar "saya cari dulu…" dibuang; jawaban sebenarnya menyusul.
-                raw.setLength(0)
-                splitter = TextClean.SentenceSplitter()
-                holding = true
-                log.update(index, "")
-                if (speak) {
-                    output.stop()
-                    output.beginStream(l) { setState(State.SPEAKING) }
-                }
-                ui.onPartial(l.t("Mencari jawaban…", "Looking that up…"))
             }
         }
 

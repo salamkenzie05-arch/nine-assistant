@@ -82,6 +82,7 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
             ?: parseCall(raw)
             ?: parseExternal(raw)
             ?: parseOpenApp(raw)
+            ?: parseDeleteLoose(raw, now)
             ?: Command.Unknown(raw)
     }
 
@@ -654,6 +655,32 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
         q = reKindWords.replace(q, " ").replace(Regex("\\s+"), " ").trim().trim(',', '.', ':', '"', '\'')
         if (q.isEmpty() && date == null && hour == null) return null
         return Command.DeleteEvent(q, date, hour, minute, amb)
+    }
+
+    /** "delete the RNPS agreement" (tanpa kata acara): mungkin judul acara; diperiksa ke kalender saat dijalankan. */
+    private fun parseDeleteLoose(raw: String, now: LocalDateTime): Command? {
+        val m = reDelVerb.find(raw) ?: return null
+        val rest = m.groupValues[1].trim()
+        if (rest.split(Regex("\\s+")).size > 8) return null
+        val norm = NumberWords.normalize(rest)
+        val tp = TimeParser.parse(norm)
+        var date: java.time.LocalDate? = null
+        var hour: Int? = null
+        var minute: Int? = null
+        var amb = false
+        var q = norm
+        if (tp != null && (tp.spec.hasDay || tp.spec.hour != null)) {
+            if (tp.spec.hasDay) date = tp.spec.resolveDate(now)
+            if (tp.spec.hour != null) {
+                hour = tp.spec.hour
+                minute = tp.spec.minute
+                amb = tp.spec.ambiguous
+            }
+            q = tp.remainder
+        }
+        q = reKindWords.replace(q, " ").replace(Regex("\\s+"), " ").trim().trim(',', '.', ':', '"', '\'')
+        if (EventMatch.keyTokens(q).isEmpty()) return null
+        return Command.DeleteMaybeEvent(raw, Command.DeleteEvent(q, date, hour, minute, amb))
     }
 
     private fun parseCalendar(raw: String, now: LocalDateTime): Command? {

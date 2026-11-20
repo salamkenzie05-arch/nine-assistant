@@ -118,6 +118,12 @@ sealed class Command {
         val allDay: Boolean,
         val recurring: Boolean
     ) : Command()
+    /**
+     * "hapus X" tanpa kata acara/kalender: coba cari acara bernama X; bila tidak ada, teruskan [text] ke AI.
+     */
+    data class DeleteMaybeEvent(val text: String, val event: DeleteEvent) : Command()
+    /** Hapus beberapa acara sekaligus (jawaban "semua"/"keduanya" saat Nine bertanya yang mana). */
+    data class DeleteEvents(val items: List<DeleteEventInstance>) : Command()
 
     // --- Daftar tugas harian
     data class TodoAdd(val text: String) : Command()

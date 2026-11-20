@@ -169,6 +169,19 @@ class SkillExecutor(context: Context, private val notes: NoteStore, private val 
         Command.DeleteLastEvent -> deleteLastEvent(lang, confirmed, denied)
         is Command.DeleteEvent -> deleteEvent(cmd, lang, confirmed, denied, now)
         is Command.DeleteEventInstance -> deleteEventInstance(cmd, lang, confirmed, denied, now)
+        is Command.DeleteEvents -> deleteEvents(cmd, lang, confirmed, denied, now)
+        is Command.DeleteMaybeEvent -> {
+            // Hanya bila benar-benar ada acara bernama itu; selain itu biarkan AI yang menjawab.
+            val calOk = has(Manifest.permission.READ_CALENDAR) && has(Manifest.permission.WRITE_CALENDAR)
+            val found = if (calOk) {
+                try {
+                    calendar.findEvents(cmd.event.query, cmd.event.date, cmd.event.hour, cmd.event.minute, cmd.event.ambiguous, now)
+                } catch (e: Exception) {
+                    emptyList()
+                }
+            } else emptyList()
+            if (found.isNotEmpty()) deleteEvent(cmd.event, lang, confirmed, denied, now) else unknown(cmd.text, lang)
+        }
 
         is Command.TodoAdd -> {
             val item = todos.add(cmd.text)
@@ -1081,7 +1094,11 @@ class SkillExecutor(context: Context, private val notes: NoteStore, private val 
         reminderMinutes: Int = 15,
         asReminder: Boolean = false
     ): SkillResult {
-        val title = cmd.title.ifBlank { lang.t(if (asReminder) "Pengingat" else "Acara", if (asReminder) "Reminder" else "Event") }
+        // Sapaan ("… sir", "… Tuan") tidak boleh ikut jadi judul acara.
+        val hons = listOf(prefs.honorificId, prefs.honorificEn, "tuan", "sir")
+            .filter { it.isNotBlank() }.map { Regex.escape(it) }.distinct().joinToString("|")
+        val cleanTitle = cmd.title.replace(Regex("""(?:[,\s]+(?:$hons))+[.!]?$""", RegexOption.IGNORE_CASE), "").trim()
+        val title = cleanTitle.ifBlank { lang.t(if (asReminder) "Pengingat" else "Acara", if (asReminder) "Reminder" else "Event") }
             .replaceFirstChar { it.uppercase() }
         val fallback = calendar.insertIntent(title, cmd.start, cmd.end, cmd.allDay)
         calendarPermissionResult(lang, denied)?.let { res ->
@@ -1216,10 +1233,9 @@ class SkillExecutor(context: Context, private val notes: NoteStore, private val 
                 )
             )
         }
-        // Judul yang persis sama jauh lebih cocok daripada yang lain: anggap itu yang dimaksud.
+        // Lebih dari satu yang cocok (mis. judul kembar): selalu tanya, urutkan yang paling cocok di atas.
         val best = writable.first()
-        val single = writable.size == 1 || best.score >= writable[1].score + 5
-        if (!single) {
+        if (writable.size > 1) {
             val options = writable.take(5).map { f ->
                 Choice(
                     "${f.title} — ${whenText(f.start, f.allDay, lang, now)}",
@@ -1227,17 +1243,58 @@ class SkillExecutor(context: Context, private val notes: NoteStore, private val 
                 )
             }
             val lines = options.mapIndexed { i, c -> "${i + 1}. ${c.label}" }.joinToString("\n")
+            val all = Command.DeleteEvents(options.map { it.command as Command.DeleteEventInstance })
             return SkillResult(
                 lang.t(
-                    "Ada ${writable.size} acara yang cocok${s(lang)}. Yang mana yang dihapus?",
-                    "${writable.size} events match${s(lang)}. Which one should I delete?"
+                    "Ada ${options.size} acara yang cocok${s(lang)}. Yang mana yang dihapus? Sebut nomornya, atau \"semua\".",
+                    "${options.size} events match${s(lang)}. Which one should I delete? Say the number, or \"all\"."
                 ) + "\n" + lines,
-                pending = Pending.Choose(options)
+                pending = Pending.Choose(options, all = all)
             )
         }
         return deleteEventInstance(
             Command.DeleteEventInstance(best.eventId, best.title, best.start, best.beginMillis, best.allDay, best.recurring),
             lang, confirmed, denied, now
+        )
+    }
+
+    /** Hapus beberapa acara sekaligus. Dipanggil setelah pengguna menjawab "semua"/"keduanya". */
+    private fun deleteEvents(cmd: Command.DeleteEvents, lang: AppLang, confirmed: Boolean, denied: Set<String>, now: LocalDateTime): SkillResult {
+        calendarPermissionResult(lang, denied)?.let { return it }
+        if (cmd.items.isEmpty()) return SkillResult(lang.t("Tidak ada acara yang dihapus${s(lang)}.", "Nothing to delete${s(lang)}."))
+        if (!confirmed) {
+            return SkillResult(
+                lang.t("Hapus ${cmd.items.size} acara itu? Katakan ya atau tidak.", "Delete those ${cmd.items.size} events? Say yes or no."),
+                pending = Pending.Confirm(cmd)
+            )
+        }
+        val done = ArrayList<String>()
+        val failed = ArrayList<Command.DeleteEventInstance>()
+        for (e in cmd.items) {
+            val ok = if (e.recurring) {
+                calendar.cancelInstance(e.eventId, e.beginMillis) && !calendar.instanceExists(e.eventId, e.beginMillis)
+            } else {
+                calendar.delete(e.eventId) && !calendar.exists(e.eventId)
+            }
+            if (ok) {
+                done += e.title
+                if (prefs.lastEventId == e.eventId) prefs.lastEventId = -1
+            } else {
+                failed += e
+            }
+        }
+        val names = done.joinToString(", ") { "\"$it\"" }
+        if (failed.isEmpty()) {
+            return SkillResult(lang.t("${done.size} acara dihapus${s(lang)}: $names.", "Deleted ${done.size} events${s(lang)}: $names."))
+        }
+        val f = failed.first()
+        val head = if (done.isEmpty()) "" else lang.t("Dihapus: $names. ", "Deleted: $names. ")
+        return SkillResult(
+            head + lang.t(
+                "\"${f.title}\" ditolak kalender, jadi saya buka acaranya. Hapus dari sana${s(lang)}.",
+                "The calendar refused to delete \"${f.title}\", so I'm opening it. Delete it from there${s(lang)}."
+            ),
+            intent = calendar.viewIntent(f.eventId)
         )
     }
 
