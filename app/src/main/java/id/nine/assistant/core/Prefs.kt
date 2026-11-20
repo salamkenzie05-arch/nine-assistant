@@ -9,6 +9,11 @@ class Prefs(context: Context) {
     private val sp = context.applicationContext.getSharedPreferences("nine_prefs", Context.MODE_PRIVATE)
 
     init {
+        // Versi 3.3: AI berjalan di CPU secara bawaan (GPU berebut dengan tampilan dan membuat layar patah-patah).
+        // Pengguna tetap bisa menyalakan GPU lagi di Pengaturan.
+        if (!sp.getBoolean("llm_cpu_v33", false)) {
+            sp.edit().putString("llm_backend", "cpu").putBoolean("llm_cpu_v33", true).apply()
+        }
         // Versi 2.7: semua alarm pindah ke mesin alarm Nine sekali, agar bisa dimatikan/dihapus lewat suara.
         // (Alarm di aplikasi Jam tidak bisa diubah oleh aplikasi lain.) Pengguna tetap bisa memilih ulang di Pengaturan.
         if (!sp.getBoolean("alarm_engine_v27", false)) {
@@ -56,9 +61,9 @@ class Prefs(context: Context) {
         get() = SecureStore.decrypt(sp.getString("hf_token", "") ?: "")
         set(value) = sp.edit().putString("hf_token", SecureStore.encrypt(value.trim())).apply()
 
-    /** "gpu" atau "cpu": backend yang terakhir terbukti berjalan. */
+    /** "gpu" atau "cpu": backend AI. Bawaan CPU (lebih mulus untuk tampilan); GPU lebih cepat tetapi bisa membuat layar patah-patah. */
     var llmBackend: String
-        get() = sp.getString("llm_backend", "gpu") ?: "gpu"
+        get() = sp.getString("llm_backend", "cpu") ?: "cpu"
         set(value) = sp.edit().putString("llm_backend", value).apply()
 
     /** Id unduhan DownloadManager yang sedang berjalan, -1 bila tidak ada. */

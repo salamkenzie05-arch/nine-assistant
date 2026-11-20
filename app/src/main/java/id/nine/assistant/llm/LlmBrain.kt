@@ -106,6 +106,7 @@ class LlmBrain(context: Context, private val prefs: Prefs, private val models: M
 
     private fun setState(s: State, detail: String = backendName) {
         state = s
+        id.nine.assistant.core.Perf.heavy = s == State.LOADING || s == State.BUSY
         main.post { for (l in listeners.toList()) l.onBrainState(s, detail) }
     }
 
@@ -239,13 +240,24 @@ class LlmBrain(context: Context, private val prefs: Prefs, private val models: M
             var failure: Throwable? = null
             busy = true
             setState(State.BUSY)
+            // Potongan teks dikirim ke layar paling sering tiap CHUNK_MS (bukan tiap token) agar layar tidak tersendat.
+            val outBuf = StringBuilder()
+            var lastFlush = 0L
+            fun flush() {
+                if (outBuf.isEmpty()) return
+                val piece = outBuf.toString()
+                outBuf.setLength(0)
+                lastFlush = SystemClock.elapsedRealtime()
+                post { cb.onChunk(piece) }
+            }
             try {
                 val conv = ensureConversation(lang)
                 conv.sendMessageAsync(text).collect { msg ->
                     val chunk = msg.toString()
                     if (chunk.isNotEmpty()) {
                         full.append(chunk)
-                        post { cb.onChunk(chunk) }
+                        outBuf.append(chunk)
+                        if (SystemClock.elapsedRealtime() - lastFlush >= CHUNK_MS) flush()
                     }
                 }
             } catch (t: Throwable) {
@@ -253,6 +265,7 @@ class LlmBrain(context: Context, private val prefs: Prefs, private val models: M
             } finally {
                 busy = false
                 lastUse = SystemClock.elapsedRealtime()
+                flush()
             }
 
             if (failure == null || cancelled) {
@@ -318,6 +331,32 @@ class LlmBrain(context: Context, private val prefs: Prefs, private val models: M
         }
     }
 
+    /** Ganti backend AI ("gpu"/"cpu"): model dimuat ulang dengan backend baru saat dibutuhkan. */
+    fun useBackend(name: String) {
+        if (name != "gpu" && name != "cpu") return
+        prefs.llmBackend = name
+        scope.launch {
+            while (busy) delay(50)
+            if (backendName != name) {
+                backendName = name
+                closeEngine()
+                contextDropped = true
+                setState(if (models.isReady()) State.IDLE else State.NO_MODEL)
+            }
+        }
+    }
+
+    /** Lepaskan model bila sedang tidak menjawab (memori sempit); dimuat lagi otomatis saat dibutuhkan. */
+    fun trim() {
+        scope.launch {
+            if (!busy && engine != null) {
+                closeEngine()
+                contextDropped = true
+                setState(if (models.isReady()) State.IDLE else State.NO_MODEL)
+            }
+        }
+    }
+
     /** Lepaskan model dari memori (mis. setelah model dihapus). */
     fun unload() {
         cancel()
@@ -334,6 +373,7 @@ class LlmBrain(context: Context, private val prefs: Prefs, private val models: M
     }
 
     private companion object {
+        const val CHUNK_MS = 90L
         const val IDLE_CHECK_MS = 10_000L
         const val IDLE_UNLOAD_FG_MS = 2 * 60_000L
         const val IDLE_UNLOAD_BG_MS = 30_000L

@@ -139,6 +139,8 @@ class SettingsActivity : AppCompatActivity() {
         renderWake()
 
         // --- Reaksi musik, layanan aksesibilitas
+        binding.switchGpu.isChecked = prefs.llmBackend == "gpu"
+        binding.switchGpu.setOnCheckedChangeListener { _, checked -> nine.brain.useBackend(if (checked) "gpu" else "cpu") }
         binding.switchMusic.isChecked = prefs.musicReact
         binding.switchMusic.setOnCheckedChangeListener { _, checked -> prefs.musicReact = checked }
         binding.btnA11y.setOnClickListener {

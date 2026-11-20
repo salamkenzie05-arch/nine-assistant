@@ -133,7 +133,7 @@ class EdgeGlowView @JvmOverloads constructor(
             paint.alpha = (255 * LAYER_ALPHA[i] * current).toInt().coerceIn(0, 255)
             canvas.drawRoundRect(rect, corner, corner, paint)
         }
-        postInvalidateOnAnimation()
+        id.nine.assistant.core.Perf.next(this)
     }
 
     private companion object {

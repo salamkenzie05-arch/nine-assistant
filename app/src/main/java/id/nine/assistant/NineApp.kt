@@ -85,5 +85,7 @@ class NineApp : Application() {
         super.onTrimMemory(level)
         // Sistem kehabisan memori dan Nine di latar belakang: lepaskan model (±2,5 GB). Dimuat lagi saat dibutuhkan.
         if (level >= ComponentCallbacks2.TRIM_MEMORY_COMPLETE) brain.unload()
+        // Memori hampir habis (juga saat Nine di layar): lepas model bila tidak sedang menjawab, supaya HP tidak menyendat.
+        else if (level == ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW || level == ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL) brain.trim()
     }
 }

@@ -36,6 +36,18 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
     // ------------------------------------------------------------------ API publik
 
     fun parse(input: String): Command {
+        val first = parseOne(input)
+        if (first !is Command.Unknown) return first
+        // Kalimat berantakan (urutan terbalik, salah ketik, kata pengisi): coba versi yang dirapikan.
+        if (reQuestion.containsMatchIn(clean(input))) return first
+        for (cand in Messy.candidates(input)) {
+            val c = parseOne(cand)
+            if (c !is Command.Unknown) return c
+        }
+        return first
+    }
+
+    private fun parseOne(input: String): Command {
         val raw = ExtraParser.stripNya(clean(input))
         if (raw.isEmpty()) return Command.Unknown(input.trim())
         val norm = NumberWords.normalize(raw)

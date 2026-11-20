@@ -197,4 +197,5 @@
     <string name="profile_later">Nanti saja</string>
     <string name="profile_saved">Profil disimpan</string>
     <string name="profile_button">Ubah profil (nama, panggilan, tanggal lahir, pasangan)</string>
+    <string name="gpu_switch">Percepat AI dengan GPU (lebih cepat menjawab, tetapi layar bisa patah-patah)</string>
 </resources>
