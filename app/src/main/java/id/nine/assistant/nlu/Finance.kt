@@ -256,6 +256,8 @@ object FinanceParser {
     private val reClear = rx("""^(?:hapus|bersihkan|reset|kosongkan|clear|delete)\s+(?:semua\s+|seluruh\s+|all\s+)(?:catatan\s+keuangan|data\s+keuangan|transaksi|riwayat\s+keuangan|pengeluaran\s+dan\s+pemasukan|my\s+transactions|finance(?:\s+data)?)$""")
 
     private val reFinWord = rx("""\b(?:pengeluaran|pemasukan|pendapatan|keuangan|saldo|expenses?|income|spending|balance|uang\s+(?:masuk|keluar)|cashflow|arus\s+kas|sisa\s+uang|transaksi|transactions?|penerimaan)(?:ku|nya)?\b""")
+    /** "finance report this month", "summary of my finances": sempit supaya "what is finance" tidak ikut. */
+    private val reFinReportEn = rx("""\b(?:finances?|financial)\s+(?:report|summary|overview|recap)\b|\b(?:report|summary|overview|recap)\s+(?:of\s+|on\s+)?(?:my\s+)?finances?\b""")
     private val reShowCue = rx("""\b(?:berapa|total|lihat|tampilkan|cek|rekap|laporan|ringkasan|summary|report|how\s+much|show|check|apa|bacakan|baca|jumlah|daftar|riwayat|rincian|detail|list|history|sisa|tinggal|read)\b""")
     private val reListCue = rx("""\b(?:daftar|riwayat|rincian|detail|list|history|transaksi|transactions?)\b""")
 
@@ -280,7 +282,7 @@ object FinanceParser {
         if (reUndo.matches(t)) return Command.FinanceUndo
         if (reClear.matches(t)) return Command.FinanceClear
         parseAdd(t)?.let { return it }
-        if (!reFinWord.containsMatchIn(t)) return null
+        if (!reFinWord.containsMatchIn(t) && !reFinReportEn.containsMatchIn(t)) return null
         if (findAmount(t) != null) return null
         if (!reShowCue.containsMatchIn(t) && t.split(Regex("\\s+")).size > 4) return null
         val period = periodOf(t)
