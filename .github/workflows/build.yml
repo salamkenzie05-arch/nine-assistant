@@ -72,6 +72,25 @@ jobs:
             if [ $i -ge 45 ]; then break; fi
           done < errors.txt
 
+      # Penjaga: Nine.apk tidak boleh memuat layanan aksesibilitas (itu yang diblokir Play Protect),
+      # dan Nine-Full.apk harus memuatnya. Manifes hasil gabungan dicetak supaya bisa diperiksa.
+      - name: Verify editions (manifest)
+        shell: bash
+        run: |
+          set -e
+          lite=$(find app/build/intermediates -path '*liteRelease*' -name AndroidManifest.xml | grep -i merged_manifests | head -1)
+          full=$(find app/build/intermediates -path '*fullRelease*' -name AndroidManifest.xml | grep -i merged_manifests | head -1)
+          echo "lite: $lite"; echo "full: $full"
+          test -n "$lite" && test -n "$full"
+          echo "--- izin lite"; grep -o 'android.permission.[A-Z_]*' "$lite" | sort -u
+          echo "--- izin full"; grep -o 'android.permission.[A-Z_]*' "$full" | sort -u
+          if grep -q 'BIND_ACCESSIBILITY_SERVICE\|AccessibilityService' "$lite"; then
+            echo "::error::Nine.apk (lite) masih memuat layanan aksesibilitas"; exit 1
+          fi
+          if ! grep -q 'BIND_ACCESSIBILITY_SERVICE' "$full"; then
+            echo "::error::Nine-Full.apk tidak memuat layanan aksesibilitas"; exit 1
+          fi
+
       - name: Rename APKs
         shell: bash
         run: |
