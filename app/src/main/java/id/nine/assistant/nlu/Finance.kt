@@ -144,15 +144,15 @@ object FinanceParser {
     data class Amount(val value: Long, val start: Int, val end: Int)
 
     private val reAmount = rx(
-        """(?:\b(?:rp|idr)\.?\s*)?(\d{1,3}(?:[.,]\d{3})+|\d+(?:[.,]\d+)?)\s*(juta|jt|ribu|rb|miliar|milyar|k|perak)?(?![\p{L}\d])"""
+        """(?:\b(?:rp|idr)\.?\s*)?(\d{1,3}(?:[.,]\d{3})+|\d+(?:[.,]\d+)?)\s*(juta|jt|ribu|rb|miliar|milyar|thousand|million|billion|k|perak)?(?![\p{L}\d])"""
     )
 
     private val reBefore = rx("""(?:jam|pukul|tanggal|tgl|tahun|nomor|no|level|senar|ke-|hari\s+ke|lantai|kelas|bab|halaman|hal)\.?\s*$""")
 
     private fun scaleOf(w: String?): Long = when (w?.lowercase()) {
-        "juta", "jt" -> 1_000_000L
-        "ribu", "rb", "k" -> 1_000L
-        "miliar", "milyar" -> 1_000_000_000L
+        "juta", "jt", "million" -> 1_000_000L
+        "ribu", "rb", "k", "thousand" -> 1_000L
+        "miliar", "milyar", "billion" -> 1_000_000_000L
         else -> 1L
     }
 

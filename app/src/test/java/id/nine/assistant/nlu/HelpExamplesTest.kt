@@ -10,15 +10,20 @@ class HelpExamplesTest {
 
     private fun cls(s: String) = parser.parse(s)::class.simpleName.orEmpty()
 
+    private val failures = ArrayList<String>()
+
     private fun expect(want: String, vararg inputs: String) {
-        for (s in inputs) assertTrue("\"$s\" dikenali sebagai ${cls(s)}, bukan $want", cls(s) == want)
+        for (s in inputs) if (cls(s) != want) failures += "\"$s\" dikenali sebagai ${cls(s)}, bukan $want"
     }
+
+    private fun done() = assertTrue(failures.joinToString("; "), failures.isEmpty())
 
     @Test
     fun hitungDanKeuangan() {
         expect("Calculate", "Hitung 15% dari 2,4 juta", "akar 144 + 3 pangkat 4", "Calculate 15% of 2.4 million", "sqrt 144 + 3 to the power 4")
         expect("FinanceAdd", "Catat pengeluaran makan siang 25 ribu", "Gajian 5 juta", "Log expense lunch 25 thousand", "Got paid 5 million")
         expect("FinanceReport", "Laporan keuangan bulan ini", "Finance report this month")
+        done()
     }
 
     @Test
@@ -28,5 +33,6 @@ class HelpExamplesTest {
         expect("Entertain", "Gombalin dong", "Pantun", "Kata bijak", "Flirt with me", "A wise quote")
         expect("SetCallName", "Panggil saya Tuan", "Call me Sir")
         expect("AffinityStatus", "Status affinity", "Affinity status")
+        done()
     }
 }

@@ -931,14 +931,17 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
     private fun parseCalc(raw: String): Command? = if (Calc.isMath(raw)) Command.Calculate(raw) else null
 
     private val reCloseVerb = rx("""\b(?:tutup(?:kan|in)?|matikan|matiin|close|kill|hentikan|bersihkan|clear|stop|bunuh|akhiri|force\s*stop|exit|quit|singkirkan)\b""")
-    private val reCloseAll = rx("""\b(?:semua|seluruh|segala|all|every|setiap|tiap)\b""")
+    private val reCloseAll = rx("""\b(?:semua|semuanya|seluruh|segala|all|every|everything|setiap|tiap)\b""")
+    /** "tutup semua termasuk Nine" / "close everything including Nine": tanpa kata "aplikasi", asal Nine disebut jelas. */
+    private val reCloseSelfNamed = rx("""\b(?:termasuk|including|include|dan|and|plus|sama)\s+(?:nine|kamu|dirimu|diri\s*mu|yourself)\b|\b(?:nine|kamu)\s+juga\b""")
     private val reCloseApps = rx("""\b(?:aplikasi|apk|app|apps|aplikasinya|program|recent|recents|latar\s+belakang|background)\b""")
     private val reCloseSelf = rx("""\b(?:termasuk|including|include|dan\s+(?:kamu|dirimu|nine|diri\s*mu)|kamu\s+juga|nine\s+juga|dirimu|diri\s*mu|diri\s+kamu|yourself|itself|dirinya|dirinya\s+sendiri)\b""")
     private val reCloseNotSelf = rx("""\b(?:kecuali|selain|except|but\s+not|without|jangan\s+(?:tutup\s+)?(?:kamu|nine|dirimu))\b""")
 
     private fun parseCloseApps(raw: String): Command? {
         if (raw.split(" ").size > 16) return null
-        if (!reCloseVerb.containsMatchIn(raw) || !reCloseAll.containsMatchIn(raw) || !reCloseApps.containsMatchIn(raw)) return null
+        if (!reCloseVerb.containsMatchIn(raw) || !reCloseAll.containsMatchIn(raw)) return null
+        if (!reCloseApps.containsMatchIn(raw) && !reCloseSelfNamed.containsMatchIn(raw)) return null
         val self = reCloseSelf.containsMatchIn(raw) && !reCloseNotSelf.containsMatchIn(raw)
         return Command.CloseApps(self)
     }
