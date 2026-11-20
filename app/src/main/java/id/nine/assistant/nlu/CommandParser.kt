@@ -36,7 +36,7 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
     // ------------------------------------------------------------------ API publik
 
     fun parse(input: String): Command {
-        val raw = clean(input)
+        val raw = ExtraParser.stripNya(clean(input))
         if (raw.isEmpty()) return Command.Unknown(input.trim())
         val norm = NumberWords.normalize(raw)
         val now = clock()
@@ -75,6 +75,7 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
             ?: parseFlashlight(raw)
             ?: parseSettings(raw)
             ?: parseVolume(norm)
+            ?: ExtraParser.parse(raw)
             ?: parseDeviceInfo(raw)
             ?: parseMemory(raw)
             ?: parseNotes(raw)
@@ -177,6 +178,24 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
         return AlarmRef(all = all, hour = hour, minute = minute, ambiguous = amb, label = label, last = last && hour == null, next = next && hour == null, index = index)
     }
 
+    /** Bentuk lisan/pasif kata kerja → bentuk baku yang dikenali [reAlarmOp] ("matiin", "dihapus", "hapusin", ...). */
+    private val reVerbFix: List<Pair<Regex, String>> = listOf(
+        rx("""\b(?:matiin|mematikan|dimatikan|matikanlah|matikan\s+(?:aja|saja|dong))\b""") to "matikan",
+        rx("""\b(?:nonaktifin|menonaktifkan|dinonaktifkan)\b""") to "nonaktifkan",
+        rx("""\b(?:hapusin|hapuskan|hapuslah|menghapus|dihapus|ngapus|ngehapus|hilangin|dihilangkan|menghilangkan|buangin|membuang|dibuang)\b""") to "hapus",
+        rx("""\b(?:nyalain|menyalakan|dinyalakan|nyalakanlah|hidupin|menghidupkan|dihidupkan|aktifin|mengaktifkan|diaktifkan)\b""") to "nyalakan",
+        rx("""\b(?:batalin|membatalkan|dibatalkan)\b""") to "batalkan"
+    )
+
+    private fun fixAlarmVerbs(s: String): String {
+        var t = s
+        for ((re, to) in reVerbFix) t = re.replace(t, to)
+        return t
+    }
+
+    /** Kata kerja di mana saja dalam kalimat ("alarm jam 6 matikan", "alarm yang tadi hapus aja"). */
+    private val reVerbAnywhere = rx("""\b(matikan|nonaktifkan|batalkan|hapus|hentikan|nyalakan|hidupkan|aktifkan|delete|remove|cancel|disable|enable)\b""")
+
     private fun parseAlarmOp(norm: String): Command? {
         var verb: String
         var rest: String
@@ -185,9 +204,16 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
             verb = m.groupValues[1]
             rest = m.groupValues[2]
         } else {
-            val t = reAlarmOpTail.find(norm) ?: return null
-            verb = "turn " + t.groupValues[2]
-            rest = t.groupValues[1]
+            val t = reAlarmOpTail.find(norm)
+            if (t != null) {
+                verb = "turn " + t.groupValues[2]
+                rest = t.groupValues[1]
+            } else {
+                // "alarm jam 6 dimatikan", "alarm tadi hapus aja": kata kerja bukan di awal
+                val any = reVerbAnywhere.find(norm) ?: return null
+                verb = any.groupValues[1]
+                rest = (norm.removeRange(any.range)).replace(Regex("\\s+"), " ").trim()
+            }
         }
         if (!Regex("""\balarms?\b""", RegexOption.IGNORE_CASE).containsMatchIn(rest)) return null
         // "hapus alarm" setelah kata kerja lain, mis. "matikan semua alarm besok pagi"
@@ -199,7 +225,8 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
         }
     }
 
-    private fun parseAlarm(norm: String, now: LocalDateTime): Command? {
+    private fun parseAlarm(norm0: String, now: LocalDateTime): Command? {
+        val norm = fixAlarmVerbs(norm0)
         if (!reAlarmWord.containsMatchIn(norm)) return null
         if (reOpenAlarmApp.matches(norm)) return Command.OpenAlarms
         if (reShowAlarm.containsMatchIn(norm)) return Command.ShowAlarms
@@ -307,6 +334,9 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
     // ------------------------------------------------------------------ pengaturan
 
     private val settingTargets: List<Pair<Regex, SettingsTarget>> = listOf(
+        // Hotspot dicek lebih dulu: "hotspot wifi" bukan Wi-Fi biasa.
+        rx("""\b(?:hot\s*spot|tethering|modem\s+wi-?fi|mobile\s+hotspot|wi-?fi\s+(?:portabel|portable)|portable\s+hotspot)\b""") to SettingsTarget.HOTSPOT,
+        rx("""\b(?:motion\s+assist(?:ance)?|bantuan\s+gerak(?:an)?|motion|gerakan|gerak)\b""") to SettingsTarget.MOTION,
         rx("""\b(?:wi-?fi|jaringan\s+wifi|internet)\b""") to SettingsTarget.WIFI,
         rx("""\bbluetooth\b""") to SettingsTarget.BLUETOOTH,
         rx("""\b(?:mode\s+pesawat|airplane\s+mode|flight\s+mode|mode\s+terbang|mode\s+penerbangan)\b""") to SettingsTarget.AIRPLANE,
@@ -328,10 +358,11 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
 
     private val networkTargets = setOf(
         SettingsTarget.WIFI, SettingsTarget.BLUETOOTH, SettingsTarget.AIRPLANE,
-        SettingsTarget.LOCATION, SettingsTarget.MOBILE_DATA, SettingsTarget.DND, SettingsTarget.BATTERY_SAVER
+        SettingsTarget.LOCATION, SettingsTarget.MOBILE_DATA, SettingsTarget.DND, SettingsTarget.BATTERY_SAVER,
+        SettingsTarget.HOTSPOT
     )
 
-    private val reToggle = rx("""^(nyalakan|hidupkan|aktifkan|matikan|nonaktifkan|turn\s+on|turn\s+off|switch\s+on|switch\s+off|enable|disable)\s+(?:the\s+|fitur\s+)?(.+)$""")
+    private val reToggle = rx("""^(nyalakan|nyalain|hidupkan|hidupin|aktifkan|aktifin|matikan|matiin|nonaktifkan|nonaktifin|turn\s+on|turn\s+off|switch\s+on|switch\s+off|enable|disable)\s+(?:the\s+|fitur\s+)?(.+)$""")
     private val reOpenSettings = rx("""^(?:buka|bukakan|open|show|tampilkan|go\s+to|pergi\s+ke)\s+(?:menu\s+)?(?:pengaturan|settings|setelan)(?:\s+(.*))?$""")
     private val reSettingsOnly = rx("""^(?:pengaturan|settings|setelan)(?:\s+(.*))?$""")
 
@@ -341,7 +372,7 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
             val verb = tg.groupValues[1].lowercase()
             val target = targetOf(tg.groupValues[2], networkOnly = false) ?: return null
             if (target == SettingsTarget.SOUND) return null // ditangani parseVolume (unmute)
-            val on = !(verb.startsWith("matikan") || verb.startsWith("nonaktifkan") ||
+            val on = !(verb.startsWith("matikan") || verb.startsWith("matiin") || verb.startsWith("nonaktif") ||
                 verb.endsWith("off") || verb == "disable")
             return Command.OpenSettings(target, on)
         }

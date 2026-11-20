@@ -25,11 +25,13 @@ import androidx.core.view.WindowInsetsCompat
 import id.nine.assistant.core.AppLang
 import id.nine.assistant.core.MemoryStore
 import id.nine.assistant.core.Prefs
+import id.nine.assistant.widget.WidgetUpdater
 import id.nine.assistant.databinding.ActivitySettingsBinding
 import id.nine.assistant.llm.ModelManager
 import id.nine.assistant.skills.CalendarSkill
 import id.nine.assistant.speech.SpeechOutput
 import id.nine.assistant.wake.WakeWordService
+import id.nine.assistant.a11y.NineAccessibilityService
 
 class SettingsActivity : AppCompatActivity() {
 
@@ -136,6 +138,34 @@ class SettingsActivity : AppCompatActivity() {
         }
         renderWake()
 
+        // --- Tombol melayang, reaksi musik, layanan aksesibilitas
+        binding.switchTouch.isChecked = prefs.assistiveTouch
+        binding.switchTouch.setOnCheckedChangeListener { _, checked ->
+            prefs.assistiveTouch = checked
+            NineAccessibilityService.applyTouch(this)
+            if (checked && NineAccessibilityService.instance == null) {
+                Toast.makeText(this, R.string.a11y_help, Toast.LENGTH_LONG).show()
+            }
+            renderA11y()
+        }
+        binding.switchMusic.isChecked = prefs.musicReact
+        binding.switchMusic.setOnCheckedChangeListener { _, checked -> prefs.musicReact = checked }
+        binding.btnA11y.setOnClickListener {
+            try {
+                startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            } catch (e: Exception) {
+                // abaikan
+            }
+        }
+        binding.btnAppInfo.setOnClickListener {
+            try {
+                startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName")))
+            } catch (e: Exception) {
+                // abaikan
+            }
+        }
+        renderA11y()
+
         // --- Lokasi
         binding.switchLocation.isChecked = prefs.useLocation && nine.location.hasPermission()
         binding.switchLocation.setOnCheckedChangeListener { _, checked ->
@@ -180,6 +210,7 @@ class SettingsActivity : AppCompatActivity() {
             if (t != prefs.theme) {
                 prefs.theme = t
                 AppCompatDelegate.setDefaultNightMode(t.nightMode)
+                WidgetUpdater.refresh(this) // warna widget ikut tema Nine
             }
         }
 
@@ -238,8 +269,15 @@ class SettingsActivity : AppCompatActivity() {
         nine.models.addListener(modelListener)
     }
 
+    private fun renderA11y() {
+        val on = NineAccessibilityService.instance != null || NineAccessibilityService.isEnabled(this)
+        binding.txtA11yStatus.setText(if (on) R.string.a11y_status_on else R.string.a11y_status_off)
+    }
+
     override fun onResume() {
         super.onResume()
+        renderA11y()
+        binding.switchTouch.isChecked = prefs.assistiveTouch
         renderInternet()
         renderWake()
         renderAlarms()

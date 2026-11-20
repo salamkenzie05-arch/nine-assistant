@@ -1,12 +1,22 @@
 package id.nine.assistant.nlu
 
 import id.nine.assistant.core.AppLang
+import id.nine.assistant.core.Mood
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
 
 enum class SettingsTarget {
-    GENERAL, WIFI, BLUETOOTH, AIRPLANE, LOCATION, MOBILE_DATA, DISPLAY, SOUND, BATTERY_SAVER, DND
+    GENERAL, WIFI, BLUETOOTH, AIRPLANE, LOCATION, MOBILE_DATA, DISPLAY, SOUND, BATTERY_SAVER, DND, HOTSPOT, MOTION
+}
+
+/** Kontrol pemutar musik yang sedang aktif (YouTube Music dll.). */
+enum class MediaAction { PLAY, PAUSE, NEXT, PREVIOUS }
+
+/** Pengaturan Nine sendiri yang bisa diubah lewat suara. */
+enum class NineSetting {
+    THEME_LIGHT, THEME_DARK, THEME_SYSTEM, WAKE_ON, WAKE_OFF, EXIT_APP,
+    TOUCH_ON, TOUCH_OFF, MUSIC_REACT_ON, MUSIC_REACT_OFF
 }
 
 enum class VolumeAction { UP, DOWN, MUTE, UNMUTE, SET, MAX }
@@ -87,6 +97,18 @@ sealed class Command {
     data class Forget(val query: String) : Command()
     data object ForgetAll : Command()
     data object ReadMemory : Command()
+
+    /** Putar/jeda/lanjut/berikutnya/sebelumnya pada pemutar musik yang sedang aktif. */
+    data class MediaControl(val action: MediaAction) : Command()
+    /** Angkat ([accept] true) atau tolak/tutup telepon yang masuk. */
+    data class CallControl(val accept: Boolean) : Command()
+    /** Nine menyanyi (nada droid). [song] null = pilih sendiri. */
+    data class Sing(val song: String?) : Command()
+    /** Tampilkan ekspresi [mood] atas permintaan pengguna. */
+    data class Emote(val mood: Mood) : Command()
+    /** Tuner gitar: [start] false = selesai; [string] 1 (E tinggi) … 6 (E rendah), null = otomatis; [tone] true = bunyikan nada acuannya. */
+    data class Tuner(val start: Boolean, val string: Int? = null, val tone: Boolean = false) : Command()
+    data class AppSetting(val setting: NineSetting) : Command()
 
     data class Call(val target: String) : Command()
     data class SendSms(val target: String, val body: String?) : Command()

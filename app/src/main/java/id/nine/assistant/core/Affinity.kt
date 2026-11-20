@@ -11,6 +11,7 @@ import java.time.temporal.ChronoUnit
  * - Bonus streak: +1 XP per hari streak (maks. +15) pada interaksi pertama hari itu
  * - Streak bertambah bila Anda bicara dengan Nine setiap hari; terlewat satu hari = streak kembali ke 1
  * - XP tidak pernah berkurang, jadi level tidak turun
+ * - Level dibatasi oleh hari pemakaian ([AffinityRules]): level tertinggi baru terbuka setelah 90 hari pemakaian
  *
  * Setiap level punya [Level.perkKey] sebagai kaitan untuk fitur/easter egg di masa depan.
  */
@@ -28,11 +29,16 @@ class Affinity(context: Context) {
         val bestStreak: Int,
         val todayCount: Int,
         val total: Int,
-        val activeToday: Boolean
+        val activeToday: Boolean,
+        /** Jumlah hari berbeda Anda berbicara dengan Nine. */
+        val days: Int = 0
     ) {
-        /** Progres 0..1 menuju level berikutnya. */
+        /** Progres 0..1 menuju level berikutnya (yang lebih lambat antara XP dan hari pemakaian). */
         val progress: Float
-            get() = if (next == null) 1f else ((xp - level.minXp).toFloat() / (next.minXp - level.minXp)).coerceIn(0f, 1f)
+            get() = if (next == null) 1f else minOf(
+                ((xp - level.minXp).toFloat() / (next.minXp - level.minXp)).coerceIn(0f, 1f),
+                AffinityRules.daysProgress(level.number, days)
+            )
     }
 
     /** Hasil satu interaksi: naik level? streak baru? */
@@ -63,7 +69,8 @@ class Affinity(context: Context) {
         var streak = sp.getInt("streak", 0)
         // Streak putus bila hari kemarin terlewat (ditampilkan 0 sampai Anda bicara lagi).
         if (last != null && ChronoUnit.DAYS.between(last, today) > 1) streak = 0
-        val level = levelFor(xp)
+        val days = daysUsed(xp)
+        val level = LEVELS[AffinityRules.effectiveLevel(levelFor(xp).number, days) - 1]
         return State(
             xp = xp,
             level = level,
@@ -72,9 +79,14 @@ class Affinity(context: Context) {
             bestStreak = sp.getInt("best", 0),
             todayCount = if (last == today) sp.getInt("today", 0) else 0,
             total = sp.getInt("total", 0),
-            activeToday = last == today
+            activeToday = last == today,
+            days = days
         )
     }
+
+    /** Hari pemakaian; untuk data lama (tanpa hitungan) dipakai streak terbaik sebagai perkiraan. */
+    private fun daysUsed(xp: Int): Int =
+        if (sp.contains("days")) sp.getInt("days", 0) else if (xp > 0) maxOf(1, sp.getInt("best", 0)) else 0
 
     /** Catat satu interaksi dengan Nine. */
     fun record(today: LocalDate = LocalDate.now()): Event {
@@ -84,7 +96,9 @@ class Affinity(context: Context) {
         var streak = sp.getInt("streak", 0)
         var todayCount = if (last == today) sp.getInt("today", 0) else 0
         var extended = false
+        var days = daysUsed(xp)
         if (last != today) {
+            days++
             streak = if (last != null && ChronoUnit.DAYS.between(last, today) == 1L) streak + 1 else 1
             extended = true
             xp += 10 + minOf(streak, 15)
@@ -98,6 +112,7 @@ class Affinity(context: Context) {
             .putInt("streak", streak)
             .putInt("best", best)
             .putInt("today", todayCount)
+            .putInt("days", days)
             .putInt("total", sp.getInt("total", 0) + 1)
             .putString("last", today.toString())
             .apply()

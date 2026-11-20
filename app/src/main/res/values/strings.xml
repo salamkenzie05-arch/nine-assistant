@@ -126,7 +126,7 @@
     <string name="location_status_fmt">Terakhir: %1$s</string>
     <string name="location_status_none">Belum ada lokasi.</string>
 
-    <string name="widget_orb_dark_desc">Orb Nine gelap: ketuk untuk bicara</string>
+    <string name="widget_orb_dark_desc">Orb Nine (ikut tema): ketuk untuk bicara</string>
     <string name="widget_orb_large_desc">Orb Nine besar 4×4: ketuk untuk bicara</string>
     <string name="unlock_reason">Buka kunci untuk melanjutkan perintah Nine</string>
 
@@ -162,4 +162,14 @@
     <string name="memory_empty">Belum ada yang diingat.</string>
     <string name="memory_clear_confirm">Hapus semua ingatan Nine tentang Anda?</string>
     <string name="memory_help">Nine mengingat hal tetap yang Anda ceritakan (nama, kesukaan, keluarga, kebiasaan) dan memakainya di percakapan berikutnya. Semuanya disimpan hanya di HP ini. Katakan \"ingat bahwa …\" untuk menyimpan langsung, atau \"lupakan …\" untuk menghapus. Ini ingatan, bukan pelatihan ulang model.</string>
+    <string name="a11y_description">Membantu Nine menyalakan atau mematikan Wi-Fi, Bluetooth, mode pesawat dan hotspot lewat Panel Cepat, memutar lagu pilihan di YouTube Music, dan menampilkan tombol melayang seperti AssistiveTouch. Nine hanya bertindak saat Anda memerintahkan; isi layar tidak dibaca di luar tugas itu, tidak disimpan, dan tidak dikirim ke internet.</string>
+    <string name="sec_a11y">Tombol melayang &amp; kendali ponsel</string>
+    <string name="a11y_help">Layanan aksesibilitas Nine (opsional) membuat Nine bisa menyalakan/mematikan Wi-Fi, Bluetooth, mode pesawat dan hotspot, memilih dan memutar lagu di YouTube Music, serta menampilkan tombol melayang. Android 13+: bila \"Nine\" abu-abu di daftar aksesibilitas, buka Info aplikasi, ketuk menu ⋮ lalu pilih \"Izinkan pengaturan terbatas\".</string>
+    <string name="a11y_button">Buka pengaturan aksesibilitas</string>
+    <string name="a11y_appinfo_button">Buka info aplikasi Nine</string>
+    <string name="a11y_status_on">Layanan aksesibilitas: aktif ✓</string>
+    <string name="a11y_status_off">Layanan aksesibilitas: belum aktif</string>
+    <string name="touch_switch">Tombol melayang (seperti AssistiveTouch)</string>
+    <string name="music_switch">Nine bereaksi pada musik</string>
+    <string name="music_help">Saat layar Nine terbuka, Nine mendengar musik lewat mikrofon dan wajahnya ikut bergoyang mengikuti ketukan, bass, dan nada. Suara tidak direkam atau disimpan.</string>
 </resources>

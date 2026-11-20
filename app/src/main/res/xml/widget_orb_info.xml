@@ -6,7 +6,7 @@
     android:minHeight="110dp"
     android:minResizeWidth="40dp"
     android:minResizeHeight="40dp"
-    android:previewImage="@drawable/face_light_neutral"
+    android:previewImage="@drawable/face_auto_neutral"
     android:previewLayout="@layout/widget_orb"
     android:resizeMode="horizontal|vertical"
     android:targetCellWidth="2"

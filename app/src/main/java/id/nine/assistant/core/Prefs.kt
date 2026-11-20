@@ -8,6 +8,14 @@ import java.util.Locale
 class Prefs(context: Context) {
     private val sp = context.applicationContext.getSharedPreferences("nine_prefs", Context.MODE_PRIVATE)
 
+    init {
+        // Versi 2.7: semua alarm pindah ke mesin alarm Nine sekali, agar bisa dimatikan/dihapus lewat suara.
+        // (Alarm di aplikasi Jam tidak bisa diubah oleh aplikasi lain.) Pengguna tetap bisa memilih ulang di Pengaturan.
+        if (!sp.getBoolean("alarm_engine_v27", false)) {
+            sp.edit().putString("alarm_engine", "nine").putBoolean("alarm_engine_v27", true).apply()
+        }
+    }
+
     enum class Theme(val nightMode: Int) {
         SYSTEM(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM),
         LIGHT(AppCompatDelegate.MODE_NIGHT_NO),
@@ -136,6 +144,26 @@ class Prefs(context: Context) {
     var lastTalk: Long
         get() = sp.getLong("last_talk", 0L)
         set(value) = sp.edit().putLong("last_talk", value).apply()
+
+    // --- Tombol melayang (assistive touch) & reaksi musik
+    /** Tombol melayang seperti AssistiveTouch iPhone; butuh layanan aksesibilitas Nine aktif. */
+    var assistiveTouch: Boolean
+        get() = sp.getBoolean("assistive_touch", false)
+        set(value) = sp.edit().putBoolean("assistive_touch", value).apply()
+
+    /** Wajah Nine bereaksi pada beat/bass/nada musik yang terdengar lewat mikrofon (hanya saat layar Nine terbuka). */
+    var musicReact: Boolean
+        get() = sp.getBoolean("music_react", false)
+        set(value) = sp.edit().putBoolean("music_react", value).apply()
+
+    /** Hari (yyyy-MM-dd) dan jumlah pemakaian muncratan hati pada hari itu (maks. 3 per hari). */
+    var heartDay: String
+        get() = sp.getString("heart_day", "") ?: ""
+        set(value) = sp.edit().putString("heart_day", value).apply()
+
+    var heartCount: Int
+        get() = sp.getInt("heart_count", 0)
+        set(value) = sp.edit().putInt("heart_count", value).apply()
 
     // --- Alarm
     /** "nine" = alarm milik Nine (bisa dinyalakan/dimatikan/dihapus lewat suara); "clock" = aplikasi Jam bawaan. */

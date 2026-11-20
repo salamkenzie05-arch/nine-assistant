@@ -81,13 +81,22 @@ class SpeechOutput(@Suppress("UNUSED_PARAMETER") context: Context, @Suppress("UN
         // Droid cukup "berkicau" untuk beberapa kalimat pertama; sisanya dibaca di layar.
         if (queued >= MAX_SENTENCES) return
         queued++
+        enqueueAudio(DroidVoice.SAMPLE_RATE) { DroidVoice.render(text) }
+    }
+
+    /**
+     * Antrekan satu potong bunyi: [render] dijalankan di thread latar (bisa lama, mis. nyanyian) lalu diputar
+     * pada [rate] Hz. Harus setelah [beginStream]; dihitung sebagai satu "kalimat" aliran.
+     */
+    fun enqueueAudio(rate: Int, render: () -> ShortArray) {
+        if (!streamOpen) return
         val id = "nine-" + (++counter)
         lastQueuedId = id
         val gen = generation
         worker.execute {
             if (gen != generation) return@execute
             val pcm = try {
-                DroidVoice.render(text)
+                render()
             } catch (e: Exception) {
                 ShortArray(0)
             }
@@ -99,7 +108,7 @@ class SpeechOutput(@Suppress("UNUSED_PARAMETER") context: Context, @Suppress("UN
                     f?.invoke()
                 }
             }
-            play(pcm, gen)
+            play(pcm, rate, gen)
             main.post { if (gen == generation) finished(id) }
         }
     }
@@ -129,7 +138,7 @@ class SpeechOutput(@Suppress("UNUSED_PARAMETER") context: Context, @Suppress("UN
     // ------------------------------------------------------------------ pemutaran
 
     /** Putar [pcm] sampai selesai atau sampai [gen] tidak berlaku lagi. Dipanggil di thread latar. */
-    private fun play(pcm: ShortArray, gen: Int) {
+    private fun play(pcm: ShortArray, rate: Int, gen: Int) {
         if (pcm.isEmpty()) return
         var track: AudioTrack? = null
         try {
@@ -138,7 +147,7 @@ class SpeechOutput(@Suppress("UNUSED_PARAMETER") context: Context, @Suppress("UN
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                 .build()
             val format = AudioFormat.Builder()
-                .setSampleRate(DroidVoice.SAMPLE_RATE)
+                .setSampleRate(rate)
                 .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
                 .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
                 .build()

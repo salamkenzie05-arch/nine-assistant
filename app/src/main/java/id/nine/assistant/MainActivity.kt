@@ -12,7 +12,16 @@ import android.os.SystemClock
 import android.widget.TextView
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.button.MaterialButtonToggleGroup
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
+import id.nine.assistant.a11y.NineAccessibilityService
+import id.nine.assistant.audio.GuitarTuner
+import id.nine.assistant.audio.GuitarTuning
+import id.nine.assistant.audio.MusicReactor
 import id.nine.assistant.core.Affinity
+import id.nine.assistant.core.DailyQuota
+import id.nine.assistant.core.UiAction
 import id.nine.assistant.core.Mood
 import id.nine.assistant.recorder.RecorderService
 import android.text.format.Formatter
@@ -40,13 +49,18 @@ import id.nine.assistant.ui.NineFaceView
 import id.nine.assistant.wake.WakeWordService
 import id.nine.assistant.widget.WidgetUpdater
 
-class MainActivity : AppCompatActivity(), AssistantController.Ui {
+open class MainActivity : AppCompatActivity(), AssistantController.Ui {
 
-    private lateinit var binding: ActivityMainBinding
-    private lateinit var controller: AssistantController
-    private lateinit var nine: NineApp
+    protected lateinit var binding: ActivityMainBinding
+    protected lateinit var controller: AssistantController
+    protected lateinit var nine: NineApp
     private lateinit var adapter: MessageAdapter
     private var modelCardDismissed = false
+
+    // --- tuner gitar & reaksi musik (keduanya memakai mikrofon, hanya saat Nine diam dan layarnya terbuka)
+    private var tuner: GuitarTuner? = null
+    private var tunerActive = false
+    private var reactor: MusicReactor? = null
 
     private val permissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
@@ -164,6 +178,10 @@ class MainActivity : AppCompatActivity(), AssistantController.Ui {
             } else false
         }
 
+        binding.orb.onPetBurst = { x, y -> petBurst(x, y) }
+        binding.tunerView.onChoose = { n -> chooseTunerString(n) }
+        binding.tunerView.onClose = { stopTuner() }
+
         binding.btnModelPrimary.setOnClickListener { onModelPrimary() }
         binding.btnModelSecondary.setOnClickListener { onModelSecondary() }
 
@@ -219,12 +237,16 @@ class MainActivity : AppCompatActivity(), AssistantController.Ui {
         NotificationManagerCompat.from(this).cancel(WakeWordService.ALERT_ID)
         if (nine.prefs.wakeEnabled && !RecorderService.recording) WakeWordService.pause(this)
         renderRecording()
+        NineAccessibilityService.applyTouch(this)
+        syncAudio()
     }
 
     override fun onStop() {
         super.onStop()
         visible = false
         controller.onBackground()
+        syncAudio() // melepas mikrofon (tuner & reaksi musik)
+        binding.hearts.clear()
         if (nine.prefs.wakeEnabled && !RecorderService.recording) WakeWordService.resume(this)
     }
 
@@ -233,7 +255,130 @@ class MainActivity : AppCompatActivity(), AssistantController.Ui {
         nine.log.removeListener(logListener)
         nine.models.removeListener(modelListener)
         nine.brain.removeListener(brainListener)
+        tuner?.stop()
+        reactor?.stop()
         controller.destroy()
+    }
+
+    // ------------------------------------------------------------ muncratan hati, tuner, reaksi musik
+
+    private fun hasMic() =
+        ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+
+    /** Mengusap orb 5 detik: hati bermuncratan (maks. 3 kali sehari). */
+    private fun petBurst(x: Float, y: Float) {
+        val p = nine.prefs
+        val today = java.time.LocalDate.now().toString()
+        val used = DailyQuota.tryUse(today, p.heartDay, p.heartCount, HEART_MAX_PER_DAY)
+        val l = controller.lang
+        if (used == null) {
+            binding.orb.react(Mood.HAPPY, 1600)
+            Toast.makeText(
+                this,
+                l.t("Jatah hati hari ini sudah habis ($HEART_MAX_PER_DAY kali sehari). Besok lagi ya.", "No hearts left for today ($HEART_MAX_PER_DAY a day). Come back tomorrow."),
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+        p.heartDay = used.first
+        p.heartCount = used.second
+        binding.hearts.burst(x, y)
+        binding.orb.react(Mood.LOVE, 3600)
+    }
+
+    /** Sesuaikan mikrofon: tuner dan reaksi musik hanya berjalan saat layar terbuka dan Nine sedang diam. */
+    private fun syncAudio() {
+        if (!::controller.isInitialized) return
+        val can = visible && controller.state == AssistantController.State.IDLE && hasMic() && !RecorderService.recording
+        // tuner
+        val t = tuner
+        if (tunerActive && t != null) {
+            if (can) {
+                if (!t.isRunning && !t.start()) {
+                    Toast.makeText(
+                        this,
+                        controller.lang.t("Mikrofon sedang dipakai aplikasi lain; tuner dihentikan.", "The microphone is busy; tuner stopped."),
+                        Toast.LENGTH_LONG
+                    ).show()
+                    stopTuner()
+                }
+            } else {
+                t.stop()
+            }
+        }
+        // musik
+        val wantMusic = nine.prefs.musicReact && !tunerActive && can
+        if (wantMusic) {
+            val r = reactor ?: MusicReactor(this) { f -> binding.orb.setMusic(f) }.also { reactor = it }
+            if (!r.isRunning) r.start()
+        } else {
+            reactor?.stop()
+            binding.orb.clearMusic()
+        }
+    }
+
+    private val tunerListener = object : GuitarTuner.Listener {
+        override fun onReading(reading: GuitarTuner.Reading) {
+            binding.tunerView.setReading(reading)
+        }
+
+        override fun onSettled(reading: GuitarTuner.Reading) {
+            val l = controller.lang
+            binding.tunerView.setHint(GuitarTuning.advice(reading.string, reading.cents, l))
+            binding.orb.react(if (reading.inTune) Mood.HAPPY else Mood.CURIOUS, if (reading.inTune) 2000 else 1200)
+        }
+
+        override fun onSilence() {
+            binding.tunerView.setReading(null)
+        }
+
+        override fun onUnrecognized() {
+            val l = controller.lang
+            binding.tunerView.setHint(l.t("Nadanya belum terbaca; petik satu senar saja.", "Can't read that; pluck a single string."))
+        }
+    }
+
+    private fun startTuner(string: Int?) {
+        val t = tuner ?: GuitarTuner(this, tunerListener).also { tuner = it }
+        t.target = string
+        tunerActive = true
+        binding.tunerView.visibility = View.VISIBLE
+        binding.tunerView.setSelected(string)
+        binding.tunerView.setReading(null)
+        binding.tunerView.setHint(
+            if (string != null) GuitarTuning.byNumber(string)?.let { controller.lang.t("Petik ${GuitarTuning.label(it, controller.lang)}", "Pluck ${GuitarTuning.label(it, controller.lang)}") }.orEmpty()
+            else controller.lang.t("Petik satu senar mana saja", "Pluck any string")
+        )
+        syncAudio()
+    }
+
+    private fun chooseTunerString(n: Int?) {
+        tuner?.target = n
+        binding.tunerView.setSelected(n)
+        binding.tunerView.setReading(null)
+        val l = controller.lang
+        binding.tunerView.setHint(
+            if (n != null) GuitarTuning.byNumber(n)?.let { l.t("Petik ${GuitarTuning.label(it, l)}", "Pluck ${GuitarTuning.label(it, l)}") }.orEmpty()
+            else l.t("Petik satu senar mana saja", "Pluck any string")
+        )
+    }
+
+    private fun stopTuner() {
+        tunerActive = false
+        tuner?.stop()
+        binding.tunerView.visibility = View.GONE
+        binding.tunerView.setReading(null)
+        syncAudio()
+    }
+
+    private fun applyWake(on: Boolean) {
+        if (on) {
+            WakeWordService.start(this)
+            // Layar Nine sedang terbuka: lepaskan mikrofon dari wake word sampai layar ditutup.
+            ticker.postDelayed({ if (visible && nine.prefs.wakeEnabled) WakeWordService.pause(this) }, 1500)
+        } else {
+            WakeWordService.stop(this)
+        }
     }
 
     // ------------------------------------------------------------ tampilan
@@ -433,6 +578,7 @@ class MainActivity : AppCompatActivity(), AssistantController.Ui {
             binding.edgeGlow.setLevel(0f)
             WidgetUpdater.refreshFace(this)
         }
+        syncAudio()
     }
 
     override fun onPartial(text: String) {
@@ -474,6 +620,28 @@ class MainActivity : AppCompatActivity(), AssistantController.Ui {
     override fun onMood(mood: Mood) {
         if (mood == Mood.NEUTRAL) return
         binding.orb.react(mood, if (mood == Mood.LOVE) 3000 else 2400)
+    }
+
+    override fun onMoodHold(mood: Mood, ms: Long) {
+        binding.orb.react(mood, ms)
+    }
+
+    override fun onAction(action: UiAction) {
+        when (action) {
+            is UiAction.SetTheme -> {
+                AppCompatDelegate.setDefaultNightMode(action.theme.nightMode)
+                WidgetUpdater.refresh(this)
+            }
+            UiAction.ExitApp -> {
+                stopTuner()
+                finishAndRemoveTask()
+            }
+            is UiAction.Tuner -> if (action.start) startTuner(action.string) else stopTuner()
+            UiAction.TouchChanged -> NineAccessibilityService.applyTouch(this)
+            UiAction.MusicReactChanged -> syncAudio()
+            is UiAction.WakeChanged -> applyWake(action.on)
+            is UiAction.Sing, is UiAction.Tone -> Unit // ditangani pengontrol
+        }
     }
 
     // ------------------------------------------------------------ affinity
@@ -535,5 +703,8 @@ class MainActivity : AppCompatActivity(), AssistantController.Ui {
         /** True saat layar utama Nine sedang tampil (dipakai layanan wake word). */
         @Volatile
         var visible = false
+
+        /** Jatah muncratan hati per hari. */
+        const val HEART_MAX_PER_DAY = 3
     }
 }

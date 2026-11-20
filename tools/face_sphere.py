@@ -4,12 +4,14 @@
 Dijalankan dari akar repo:  python3 tools/face_sphere.py
 
 Yang dikerjakan (idempoten, aman dijalankan berulang):
-  1. Mengganti piringan datar tiap bingkai (res/drawable*/face_*.xml) dengan bola 3D:
-     bayangan lembut + bayangan alas, badan bergradasi (cahaya dari kiri atas), tepi lebih gelap, dan kilau.
+  1. Mengganti piringan datar tiap bingkai (res/drawable*/face_*.xml) dengan bola 3D yang "melayang":
+     badan bergradasi (cahaya dari kiri atas), tepi dibuat lembut tanpa garis (tidak ada stroke), bayangan sekitar
+     dan bayangan alas berkurva gaussian (tanpa tepi keras), serta kilau.
   2. Menurunkan seluruh isi wajah sedikit (group translateY) agar pas di bola yang baru.
   3. Membuat bingkai perantara dengan easing (smoothstep) untuk melirik kiri/kanan, mendongak, dan kedip,
      lalu menulis ulang widget/FaceFrames.kt.
 """
+import math
 import pathlib
 import re
 
@@ -17,7 +19,8 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent / "app" / "src" / "main"
 RES = ROOT / "res"
 FRAMES_KT = ROOT / "java" / "id" / "nine" / "assistant" / "widget" / "FaceFrames.kt"
 
-MARK = "<!-- sphere3d v1 -->"
+MARK = "<!-- sphere3d v2 -->"
+MARK_PREFIX = "<!-- sphere3d"  # semua versi lama juga dikenali
 HEAD_END = 'android:viewportWidth="108" android:viewportHeight="108">\n'
 GROUP_OPEN = '    <group android:translateY="-4">\n'
 GROUP_CLOSE = '    </group>\n</vector>\n'
@@ -76,17 +79,39 @@ def _circle(cx, cy, r):
     return f"M{fmt(cx - r)},{cy}a{r},{r} 0 1,0 {fmt(2 * r)},0a{r},{r} 0 1,0 -{fmt(2 * r)},0Z"
 
 
+def _alpha_hex(a: float, rgb: str = "000000") -> str:
+    return "#" + f"{max(0, min(255, round(a * 255))):02X}" + rgb
+
+
+def gauss_stops(peak: float, k: float, t_from: float = 0.0, steps=(0.0, 0.25, 0.4, 0.55, 0.68, 0.8, 0.9, 1.0), rgb: str = "000000"):
+    """Tahapan gradien berkurva gaussian: alfa = peak di t=0 dan tepat 0 di t=1 (tanpa tepi keras)."""
+    end = math.exp(-k)
+    out = []
+    for t in steps:
+        a = peak * (math.exp(-k * t * t) - end) / (1 - end)
+        out.append((fmt(t_from + t * (1 - t_from)), _alpha_hex(a, rgb)))
+    return out
+
+
 def sphere(theme: str) -> str:
     light = theme == "light"
     out = [f"    {MARK}\n"]
-    # bayangan jatuh lembut (sedikit ke bawah) dan bayangan alas
-    out.append(f'    <path android:pathData="{_circle(54, 58, 50)}">\n')
-    out.append(_grad(54, 58, 50, [(0.82, "#3A000000" if light else "#66000000"), (1, "#00000000")]))
+    # bayangan sekitar: gumpalan gaussian yang agak ke bawah (orb tampak melayang di atas layar)
+    out.append(f'    <path android:pathData="{_circle(54, 63, 46)}">\n')
+    out.append(_grad(54, 63, 46, gauss_stops(0.30 if light else 0.52, 2.6)))
     out.append("    </path>\n")
-    out.append('    <group android:pivotX="54" android:pivotY="98" android:scaleY="0.14">\n')
-    out.append(f'        <path android:pathData="{_circle(54, 98, 30)}">\n')
-    out.append(_grad(54, 98, 30, [(0, "#55000000" if light else "#80000000"), (0.6, "#22000000"), (1, "#00000000")], ind=12))
+    # bayangan alas (kontak) yang jauh di bawah, melebar dan sangat lembut
+    out.append('    <group android:pivotX="54" android:pivotY="100" android:scaleY="0.15">\n')
+    out.append(f'        <path android:pathData="{_circle(54, 100, 31)}">\n')
+    out.append(_grad(54, 100, 31, gauss_stops(0.34 if light else 0.56, 3.0), ind=12))
     out.append("        </path>\n    </group>\n")
+    # pendar tepi luar: hanya kegelapan tipis yang memudar, supaya siluet bola tidak terlihat bergaris
+    out.append(f'    <path android:pathData="{_circle(54, 50, 48)}">\n')
+    halo = [("0", "#00000000"), ("0.86", "#00000000")]
+    for t, c in gauss_stops(0.11 if light else 0.30, 3.2, t_from=43 / 48):
+        halo.append((t, c))
+    out.append(_grad(54, 50, 48, halo))
+    out.append("    </path>\n")
     # badan bola: cahaya dari kiri atas
     body = (
         [(0, "#FFFFFF"), (0.28, "#F8FAFD"), (0.6, "#E3E8F1"), (0.85, "#C9D1DF"), (1, "#B4BECF")]
@@ -96,16 +121,14 @@ def sphere(theme: str) -> str:
     out.append(f'    <path android:pathData="{_circle(54, 50, 43)}">\n')
     out.append(_grad(40, 32, 70, body))
     out.append("    </path>\n")
-    # tepi lebih gelap (ambient occlusion)
+    # sisi gelap lembut di tepi (ambient occlusion), naik perlahan tanpa garis
+    rim_peak = 0.13 if light else 0.26
+    rim = [("0", "#00000000")]
+    for t in (0.70, 0.78, 0.86, 0.93, 1.0):
+        rim.append((fmt(t), _alpha_hex(rim_peak * ((t - 0.70) / 0.30) ** 2.2, "0B1220" if light else "000000")))
     out.append(f'    <path android:pathData="{_circle(54, 50, 43)}">\n')
-    out.append(_grad(54, 50, 43, [(0.7, "#00000000"), (1, "#240B1220" if light else "#40000000")]))
+    out.append(_grad(54, 50, 43, rim))
     out.append("    </path>\n")
-    # garis tepi tipis
-    stroke = "#1F0B1220" if light else "#73C7861A"
-    out.append(
-        f'    <path android:pathData="{_circle(54, 50, 43)}" android:fillColor="#00000000" android:strokeColor="{stroke}" '
-        'android:strokeWidth="0.9" android:strokeLineCap="round" android:strokeLineJoin="round" />\n'
-    )
     # kilau (specular) kiri atas
     out.append('    <group android:pivotX="37" android:pivotY="26" android:rotation="-30" android:scaleY="0.55">\n')
     out.append(f'        <path android:pathData="{_circle(37, 26, 15)}">\n')
@@ -120,7 +143,7 @@ def split(text: str):
     i = text.index(HEAD_END) + len(HEAD_END)
     head, body = text[:i], text[i:]
     head = re.sub(r"<!--.*?-->", "<!-- Bingkai wajah Nine untuk widget (tools/face_sphere.py). -->", head, count=1, flags=re.S)
-    if MARK in body:
+    if MARK_PREFIX in body:
         a = body.index(GROUP_OPEN) + len(GROUP_OPEN)
         b = body.rindex(GROUP_CLOSE)
         return head, body[a:b]

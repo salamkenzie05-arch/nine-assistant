@@ -51,7 +51,7 @@ object WidgetUpdater {
             val orbIds = mgr.getAppWidgetIds(ComponentName(app, OrbWidgetProvider::class.java))
             for (id in orbIds) mgr.updateAppWidget(id, orbViews(app))
             val darkIds = mgr.getAppWidgetIds(ComponentName(app, OrbDarkWidgetProvider::class.java))
-            for (id in darkIds) mgr.updateAppWidget(id, orbViews(app, dark = true))
+            for (id in darkIds) mgr.updateAppWidget(id, orbViews(app))
             val largeIds = mgr.getAppWidgetIds(ComponentName(app, OrbLargeWidgetProvider::class.java))
             for (id in largeIds) mgr.updateAppWidget(id, orbLargeViews(app))
             val todayIds = mgr.getAppWidgetIds(ComponentName(app, TodayWidgetProvider::class.java))
@@ -130,6 +130,16 @@ object WidgetUpdater {
             hold("lowbatblink", 420) + hold("lowbat1", 700) + hold("lowbat2", 700)
     }
 
+    /**
+     * Warna wajah widget mengikuti warna Nine di aplikasi: tema Terang -> "light", Gelap -> "dark",
+     * Ikuti sistem -> "auto" (terang/gelap mengikuti mode gelap sistem).
+     */
+    private fun faceTheme(ctx: Context): String = when (Prefs(ctx).theme) {
+        Prefs.Theme.LIGHT -> "light"
+        Prefs.Theme.DARK -> "dark"
+        Prefs.Theme.SYSTEM -> "auto"
+    }
+
     /** Isi ViewFlipper [flipperId] dengan bingkai wajah. [theme]: "light", "dark", atau "auto" (ikut mode gelap sistem). */
     private fun fillFace(ctx: Context, views: RemoteViews, flipperId: Int, theme: String, face: Face) {
         val table = when (theme) {
@@ -145,23 +155,23 @@ object WidgetUpdater {
         }
     }
 
-    fun orbViews(ctx: Context, dark: Boolean = false): RemoteViews =
-        RemoteViews(ctx.packageName, if (dark) R.layout.widget_orb_dark else R.layout.widget_orb).apply {
-            fillFace(ctx, this, R.id.widgetFlipper, if (dark) "dark" else "light", face(ctx))
+    fun orbViews(ctx: Context): RemoteViews =
+        RemoteViews(ctx.packageName, R.layout.widget_orb).apply {
+            fillFace(ctx, this, R.id.widgetFlipper, faceTheme(ctx), face(ctx))
             setOnClickPendingIntent(R.id.widgetRoot, listenIntent(ctx))
         }
 
-    /** Widget 4x4: bola Nine besar; warnanya otomatis ikut mode gelap/terang sistem. */
+    /** Widget 4x4: bola Nine besar; warnanya mengikuti tema Nine di aplikasi. */
     fun orbLargeViews(ctx: Context): RemoteViews =
         RemoteViews(ctx.packageName, R.layout.widget_orb_large).apply {
-            fillFace(ctx, this, R.id.widgetFlipper, "auto", face(ctx))
+            fillFace(ctx, this, R.id.widgetFlipper, faceTheme(ctx), face(ctx))
             setOnClickPendingIntent(R.id.widgetRoot, listenIntent(ctx))
         }
 
     fun todayViews(ctx: Context): RemoteViews {
         val lang = Prefs(ctx).lang
         val v = RemoteViews(ctx.packageName, R.layout.widget_today)
-        fillFace(ctx, v, R.id.widgetFaceFlipper, "auto", face(ctx))
+        fillFace(ctx, v, R.id.widgetFaceFlipper, faceTheme(ctx), face(ctx))
         v.setOnClickPendingIntent(R.id.widgetOrb, listenIntent(ctx))
         v.setOnClickPendingIntent(R.id.widgetTasks, todoIntent(ctx))
         val today = LocalDate.now()

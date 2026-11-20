@@ -27,6 +27,15 @@
         <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
 
+    <!-- Layar asisten (tombol power / "hey nine" saat Nine jadi asisten default): transparan, aplikasi di belakang tetap terlihat. -->
+    <style name="Theme.Nine.Assist" parent="Theme.Nine">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowShowWallpaper">false</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowAnimationStyle">@android:style/Animation.Translucent</item>
+    </style>
+
     <style name="Nine.BottomSheetDialog" parent="ThemeOverlay.Material3.BottomSheetDialog">
         <item name="bottomSheetStyle">@style/Nine.BottomSheet</item>
     </style>

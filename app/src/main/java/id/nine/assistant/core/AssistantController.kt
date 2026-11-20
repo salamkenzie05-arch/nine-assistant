@@ -21,6 +21,7 @@ import id.nine.assistant.skills.NoteStore
 import id.nine.assistant.skills.TodoStore
 import id.nine.assistant.skills.SkillExecutor
 import id.nine.assistant.speech.SpeechInput
+import id.nine.assistant.speech.DroidSinger
 import id.nine.assistant.speech.SpeechOutput
 import kotlinx.coroutines.Job
 
@@ -50,6 +51,10 @@ class AssistantController(context: Context, private val ui: Ui) {
         fun isLocked(): Boolean = false
         /** Ekspresi wajah Nine sesuai hasil percakapan. */
         fun onMood(mood: Mood) {}
+        /** Ekspresi yang ditahan selama [ms] (atas permintaan pengguna, hinaan, nyanyian). */
+        fun onMoodHold(mood: Mood, ms: Long) { onMood(mood) }
+        /** Tindakan sisi layar setelah jawaban selesai diucapkan: tema, keluar, tuner, wake word, dll. */
+        fun onAction(action: UiAction) {}
     }
 
     private data class Retry(val command: Command, val confirmed: Boolean)
@@ -276,8 +281,19 @@ class AssistantController(context: Context, private val ui: Ui) {
             }
         }
         val cmd = parser.parse(text)
-        // Ucapan biasa (bukan perintah): ingat hal tetap tentang pengguna ("aku suka …", "nama saya …").
-        if (cmd is Command.Unknown) autoRemember(text)
+        if (cmd is Command.Unknown) {
+            // Dimarahi atau dihina: Nine sedih atau takut, tidak dilempar ke AI.
+            val kind = Insults.detect(text)
+            if (kind != Insults.Kind.NONE) {
+                val sfx = prefs.persona.sfx(lang)
+                val line = Insults.reply(kind, lang, sfx, (System.currentTimeMillis() % 7).toInt())
+                ui.onMoodHold(Insults.mood(kind), 4800)
+                reply(line, listenAfter = false)
+                return
+            }
+            // Ucapan biasa (bukan perintah): ingat hal tetap tentang pengguna ("aku suka …", "nama saya …").
+            autoRemember(text)
+        }
         execute(cmd, confirmed = false)
     }
 
@@ -302,6 +318,7 @@ class AssistantController(context: Context, private val ui: Ui) {
         is Command.NeedInfo, Command.AffinityStatus -> true
         is Command.Camera -> true // kamera aman tersedia di layar kunci
         is Command.AlarmToggle -> true // mematikan alarm yang berbunyi harus bisa dari layar kunci
+        is Command.MediaControl, is Command.CallControl, is Command.Emote, is Command.Sing -> true
         else -> false
     }
 
@@ -317,6 +334,8 @@ class AssistantController(context: Context, private val ui: Ui) {
         is Command.AlarmDelete -> lang.t("menghapus alarm", "delete the alarm")
         is Command.DeleteEvents -> lang.t("menghapus ${c.items.size} acara", "delete ${c.items.size} events")
         is Command.Forget -> lang.t("melupakan ${c.query}", "forget ${c.query}")
+        is Command.CallControl -> if (c.accept) lang.t("menjawab telepon", "answer the call") else lang.t("menolak telepon", "decline the call")
+        is Command.OpenSettings -> if (c.turnOn != null) lang.t("mengubah pengaturan ponsel", "change a phone setting") else null
         else -> null
     }
 
@@ -388,6 +407,25 @@ class AssistantController(context: Context, private val ui: Ui) {
             return
         }
 
+        if (chat != null) {
+            // Tanpa otak AI: obrolan ringan ala SimSimi; pertanyaan umum dicarikan di Google; selain itu balasan santai.
+            val sfx = prefs.persona.sfx(lang)
+            val pick = (System.currentTimeMillis() % 5).toInt()
+            ChitChat.reply(chat, lang, pick)?.let {
+                ui.onMood(Mood.HAPPY)
+                reply(it, listenAfter = false)
+                return
+            }
+            if (ChitChat.worthSearching(chat) && !ui.isLocked()) {
+                ui.onMood(Mood.CURIOUS)
+                searchGoogle(chat, ChitChat.searchNotice(lang, sfx))
+                return
+            }
+            ui.onMood(Mood.CONFUSED)
+            reply(res.reply, listenAfter = false)
+            return
+        }
+
         var text = res.reply
         var nextPending = res.pending
         val intent = res.intent
@@ -399,10 +437,17 @@ class AssistantController(context: Context, private val ui: Ui) {
                     "I'm afraid no app on this device can do that${prefs.persona.sfx(lang)}."
                 )
                 nextPending = null
+            } else {
+                try {
+                    res.afterLaunch?.invoke()
+                } catch (e: Exception) {
+                    // tugas lanjutan (mis. ketuk lagu pertama) tidak boleh mengganggu jawaban
+                }
             }
         }
         pending = nextPending
-        ui.onMood(moodFor(cmd, text, nextPending))
+        val forced = res.mood
+        if (forced != null) ui.onMoodHold(forced, holdFor(forced)) else ui.onMood(moodFor(cmd, text, nextPending))
         if (res.startRecording) {
             reply(text, listenAfter = false) {
                 RecorderService.start(app)
@@ -410,7 +455,58 @@ class AssistantController(context: Context, private val ui: Ui) {
             }
             return
         }
-        reply(text, listenAfter = nextPending != null)
+        val act = res.action
+        when {
+            act is UiAction.Sing -> {
+                val l = lang
+                speakWithAudio(text, DroidSinger.SAMPLE_RATE, { DroidSinger.perform(act.query, l).pcm }) { }
+            }
+            act is UiAction.Tuner && act.toneHz != null -> {
+                val hz = act.toneHz
+                speakWithAudio(text, DroidSinger.SAMPLE_RATE, { DroidSinger.tone(hz) }) { ui.onAction(act) }
+            }
+            act != null -> reply(text, listenAfter = false) { ui.onAction(act) }
+            else -> reply(text, listenAfter = nextPending != null)
+        }
+    }
+
+    /** Berapa lama ekspresi permintaan pengguna ditahan. */
+    private fun holdFor(m: Mood): Long = when (m) {
+        Mood.HAPPY -> 12000L
+        Mood.CURIOUS -> 4000L
+        Mood.LOVE -> 5000L
+        else -> 5200L
+    }
+
+    /** Ucapkan [text] (bila suara jawaban aktif) lalu putar audio [render] (nyanyian, nada acuan); [then] setelah selesai. */
+    private fun speakWithAudio(text: String, rate: Int, render: () -> ShortArray, then: () -> Unit) {
+        log.add(false, text)
+        output.beginStream(lang) { setState(State.SPEAKING) }
+        if (prefs.speakReplies) output.enqueue(text)
+        output.enqueueAudio(rate, render)
+        output.endStream {
+            setState(State.IDLE)
+            then()
+        }
+    }
+
+    /**
+     * Buka Google dengan [query] sudah terketik (hasil pencarian langsung tampil). [notice] diucapkan sebagai
+     * pengantar; null = tanpa pengantar.
+     */
+    private fun searchGoogle(query: String, notice: String?) {
+        val r = executor.execute(Command.WebSearch(query), lang)
+        val intent = r.intent
+        val ok = intent != null && ui.onLaunch(intent, r.fallback)
+        val text = when {
+            !ok -> lang.t(
+                "Maaf${prefs.persona.sfx(lang)}, saya tidak bisa membuka Google di perangkat ini.",
+                "I'm afraid I can't open Google on this device${prefs.persona.sfx(lang)}."
+            )
+            notice != null -> notice
+            else -> r.reply
+        }
+        reply(text, listenAfter = false)
     }
 
     /** Hentikan rekaman suara (dipanggil saat orb diketuk ketika sedang merekam). */
@@ -522,7 +618,7 @@ class AssistantController(context: Context, private val ui: Ui) {
         val low = reply.lowercase()
         return when {
             cmd == Command.Thanks || cmd == Command.AffinityStatus -> Mood.LOVE
-            cmd == Command.Greeting || cmd == Command.HowAreYou || cmd == Command.WhoAreYou -> Mood.HAPPY
+            cmd == Command.Greeting || cmd == Command.HowAreYou || cmd == Command.WhoAreYou || cmd is Command.Sing -> Mood.HAPPY
             low.startsWith("maaf") || low.startsWith("sorry") || low.startsWith("my apologies") || low.startsWith("i'm afraid") ||
                 low.contains("tidak menemukan") || low.contains("couldn't find") || low.contains("gagal") -> Mood.SAD
             cmd is Command.Unknown -> Mood.CONFUSED
@@ -645,16 +741,19 @@ class AssistantController(context: Context, private val ui: Ui) {
                     splitter.flush()?.let { output.enqueue(TextClean.clean(it)) }
                 }
                 fun conclude(finalText: String) {
-                    ui.onMood(moodForText(finalText))
+                    // AI mengaku tidak tahu / butuh pencarian: setelah selesai bicara, buka Google dengan pertanyaannya.
+                    val unsure = ChitChat.looksUnsure(finalText) && ChitChat.worthSearching(question) && !ui.isLocked()
+                    ui.onMood(if (unsure) Mood.CURIOUS else moodForText(finalText))
                     val followUp = finalText.trimEnd().endsWith("?")
-                    if (speak) {
-                        output.endStream {
-                            setState(State.IDLE)
-                            if (followUp) startListening()
-                        }
-                    } else {
+                    val finishUp = {
                         setState(State.IDLE)
+                        if (unsure) {
+                            searchGoogle(question, ChitChat.searchNotice(l, prefs.persona.sfx(l)))
+                        } else if (followUp) {
+                            startListening()
+                        }
                     }
+                    if (speak) output.endStream { finishUp() } else finishUp()
                 }
                 if (viaGemma && LangGuard.needsRewrite(cleaned, l, question)) {
                     ui.onPartial(l.t("Merapikan bahasa…", "Polishing the wording…"))

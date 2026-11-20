@@ -13,6 +13,7 @@
 
         <!-- Bilah atas: hanya NINE di tengah (ketuk untuk menu) -->
         <FrameLayout
+            android:id="@+id/topBar"
             android:layout_width="match_parent"
             android:layout_height="56dp"
             android:layout_marginTop="4dp">
@@ -95,6 +96,7 @@
 
         <!-- Riwayat, dengan gradasi tepi yang memakai warna latar (bukan efek fading bawaan) -->
         <FrameLayout
+            android:id="@+id/listFrame"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1">
@@ -190,6 +192,16 @@
                 app:tint="@color/nine_gold" />
         </LinearLayout>
 
+        <!-- Tuner gitar (muncul saat diminta) -->
+        <id.nine.assistant.ui.TunerView
+            android:id="@+id/tunerView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="6dp"
+            android:visibility="gone" />
+
         <!-- Orb + tombol samping -->
         <FrameLayout
             android:layout_width="match_parent"
@@ -241,6 +253,12 @@
 
     <id.nine.assistant.ui.EdgeGlowView
         android:id="@+id/edgeGlow"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- Muncratan hati (usap orb 5 detik) -->
+    <id.nine.assistant.ui.HeartBurstView
+        android:id="@+id/hearts"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 </FrameLayout>

@@ -19,12 +19,24 @@ import android.provider.AlarmClock
 import android.provider.MediaStore
 import android.provider.CalendarContract
 import android.provider.Settings
+import android.os.SystemClock
+import android.view.KeyEvent
 import android.telephony.SmsManager
 import androidx.core.content.ContextCompat
 import id.nine.assistant.core.AppLang
 import id.nine.assistant.core.Fmt
 import id.nine.assistant.NineApp
 import id.nine.assistant.core.Affinity
+import id.nine.assistant.core.AffinityRules
+import id.nine.assistant.core.Mood
+import id.nine.assistant.core.UiAction
+import id.nine.assistant.a11y.NineAccessibilityService
+import id.nine.assistant.audio.GuitarTuning
+import id.nine.assistant.audio.Songs
+import id.nine.assistant.call.CallControl
+import id.nine.assistant.nlu.MediaAction
+import id.nine.assistant.nlu.NineSetting
+import id.nine.assistant.wake.WakeWordService
 import id.nine.assistant.core.LocationHelper
 import id.nine.assistant.core.Persona
 import id.nine.assistant.recorder.RecorderService
@@ -68,7 +80,13 @@ data class SkillResult(
     /** Mulai perekam suara setelah jawaban selesai diucapkan (agar suara Nine tidak ikut terekam). */
     val startRecording: Boolean = false,
     /** Jawaban yang butuh waktu (mis. lokasi): dipanggil oleh controller, lalu [done] dengan teks jawaban. */
-    val deferred: ((done: (String) -> Unit) -> Unit)? = null
+    val deferred: ((done: (String) -> Unit) -> Unit)? = null,
+    /** Tindakan tambahan di sisi layar/pengontrol (tema, keluar, tuner, nyanyi, ...). */
+    val action: UiAction? = null,
+    /** Ekspresi wajah yang diminta langsung oleh perintah (mis. "buat wajah sedih"); menimpa ekspresi otomatis. */
+    val mood: Mood? = null,
+    /** Dipanggil pengontrol tepat setelah [intent] berhasil dibuka (mis. mengetuk hasil pencarian lewat aksesibilitas). */
+    val afterLaunch: (() -> Unit)? = null
 )
 
 /**
@@ -263,6 +281,12 @@ class SkillExecutor(
         is Command.RecordAudio -> recordAudio(cmd, lang, denied)
         Command.AffinityStatus -> affinityStatus(lang)
         Command.WhereAmI -> whereAmI(lang, denied)
+        is Command.MediaControl -> mediaControl(cmd, lang)
+        is Command.CallControl -> callControl(cmd, lang, denied)
+        is Command.Sing -> sing(cmd, lang)
+        is Command.Emote -> emote(cmd, lang)
+        is Command.Tuner -> tuner(cmd, lang, denied)
+        is Command.AppSetting -> appSetting(cmd, lang, denied)
     }
 
     // ------------------------------------------------------------ alarm, timer, pengingat
@@ -661,48 +685,94 @@ class SkillExecutor(
 
     // ------------------------------------------------------------ pengaturan
 
+    private fun settingsName(t: SettingsTarget, lang: AppLang): String = when (t) {
+        SettingsTarget.WIFI -> "Wi-Fi"
+        SettingsTarget.BLUETOOTH -> "Bluetooth"
+        SettingsTarget.AIRPLANE -> lang.t("mode pesawat", "airplane mode")
+        SettingsTarget.LOCATION -> lang.t("lokasi", "location")
+        SettingsTarget.MOBILE_DATA -> lang.t("data seluler", "mobile data")
+        SettingsTarget.DISPLAY -> lang.t("layar", "display")
+        SettingsTarget.SOUND -> lang.t("suara", "sound")
+        SettingsTarget.BATTERY_SAVER -> lang.t("hemat baterai", "battery saver")
+        SettingsTarget.DND -> lang.t("jangan ganggu", "do not disturb")
+        SettingsTarget.HOTSPOT -> "hotspot"
+        SettingsTarget.MOTION -> "motion assist"
+        SettingsTarget.GENERAL -> lang.t("pengaturan", "settings")
+    }
+
+    /** Pengaturan yang bisa dinyalakan/dimatikan Nine lewat layanan aksesibilitas (ketuk tombol Panel Cepat). */
+    private fun toggleable(t: SettingsTarget): Boolean = when (t) {
+        SettingsTarget.WIFI, SettingsTarget.BLUETOOTH, SettingsTarget.AIRPLANE, SettingsTarget.HOTSPOT, SettingsTarget.MOTION,
+        SettingsTarget.LOCATION, SettingsTarget.MOBILE_DATA, SettingsTarget.DND, SettingsTarget.BATTERY_SAVER -> true
+        SettingsTarget.DISPLAY, SettingsTarget.SOUND, SettingsTarget.GENERAL -> false
+    }
+
     private fun openSettings(cmd: Command.OpenSettings, lang: AppLang): SkillResult {
-        val (intent, fallback, name) = when (cmd.target) {
-            SettingsTarget.WIFI -> Triple(
-                if (Build.VERSION.SDK_INT >= 29) Intent(Settings.Panel.ACTION_INTERNET_CONNECTIVITY) else Intent(Settings.ACTION_WIFI_SETTINGS),
-                Intent(Settings.ACTION_WIFI_SETTINGS),
-                "Wi-Fi"
+        val name = settingsName(cmd.target, lang)
+        val on = cmd.turnOn
+        val svc = NineAccessibilityService.instance
+        if (on != null && toggleable(cmd.target) && svc != null) {
+            val verb = if (on) lang.t("menyalakan", "turning on") else lang.t("mematikan", "turning off")
+            return SkillResult(
+                lang.t("Baik${s(lang)}, saya ${if (on) "nyalakan" else "matikan"} $name.", "Very well${s(lang)}, $verb $name."),
+                deferred = { done ->
+                    svc.toggle(cmd.target, on) { outcome -> done(toggleText(outcome, name, on, lang)) }
+                }
             )
-            SettingsTarget.BLUETOOTH -> Triple(Intent(Settings.ACTION_BLUETOOTH_SETTINGS), null, "Bluetooth")
-            SettingsTarget.AIRPLANE -> Triple(
-                Intent(Settings.ACTION_AIRPLANE_MODE_SETTINGS),
-                Intent(Settings.ACTION_WIRELESS_SETTINGS),
-                lang.t("mode pesawat", "airplane mode")
-            )
-            SettingsTarget.LOCATION -> Triple(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS), null, lang.t("lokasi", "location"))
-            SettingsTarget.MOBILE_DATA -> Triple(
-                if (Build.VERSION.SDK_INT >= 29) Intent(Settings.Panel.ACTION_INTERNET_CONNECTIVITY) else Intent(Settings.ACTION_WIRELESS_SETTINGS),
-                Intent(Settings.ACTION_WIRELESS_SETTINGS),
-                lang.t("data seluler", "mobile data")
-            )
-            SettingsTarget.DISPLAY -> Triple(Intent(Settings.ACTION_DISPLAY_SETTINGS), null, lang.t("layar", "display"))
-            SettingsTarget.SOUND -> Triple(Intent(Settings.ACTION_SOUND_SETTINGS), null, lang.t("suara", "sound"))
-            SettingsTarget.BATTERY_SAVER -> Triple(
-                Intent(Settings.ACTION_BATTERY_SAVER_SETTINGS),
-                Intent(Settings.ACTION_SETTINGS),
-                lang.t("hemat baterai", "battery saver")
-            )
-            SettingsTarget.DND -> Triple(
-                Intent("android.settings.ZEN_MODE_SETTINGS"),
-                Intent(Settings.ACTION_SOUND_SETTINGS),
-                lang.t("jangan ganggu", "do not disturb")
-            )
-            SettingsTarget.GENERAL -> Triple(Intent(Settings.ACTION_SETTINGS), null, lang.t("pengaturan", "settings"))
         }
-        val reply = if (cmd.turnOn == null) {
+        val (intent, fallback) = when (cmd.target) {
+            SettingsTarget.WIFI -> Pair(
+                if (Build.VERSION.SDK_INT >= 29) Intent(Settings.Panel.ACTION_INTERNET_CONNECTIVITY) else Intent(Settings.ACTION_WIFI_SETTINGS),
+                Intent(Settings.ACTION_WIFI_SETTINGS)
+            )
+            SettingsTarget.BLUETOOTH -> Pair(Intent(Settings.ACTION_BLUETOOTH_SETTINGS), null)
+            SettingsTarget.AIRPLANE -> Pair(Intent(Settings.ACTION_AIRPLANE_MODE_SETTINGS), Intent(Settings.ACTION_WIRELESS_SETTINGS))
+            SettingsTarget.LOCATION -> Pair(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS), null)
+            SettingsTarget.MOBILE_DATA -> Pair(
+                if (Build.VERSION.SDK_INT >= 29) Intent(Settings.Panel.ACTION_INTERNET_CONNECTIVITY) else Intent(Settings.ACTION_WIRELESS_SETTINGS),
+                Intent(Settings.ACTION_WIRELESS_SETTINGS)
+            )
+            SettingsTarget.DISPLAY -> Pair(Intent(Settings.ACTION_DISPLAY_SETTINGS), null)
+            SettingsTarget.SOUND -> Pair(Intent(Settings.ACTION_SOUND_SETTINGS), null)
+            SettingsTarget.BATTERY_SAVER -> Pair(Intent(Settings.ACTION_BATTERY_SAVER_SETTINGS), Intent(Settings.ACTION_SETTINGS))
+            SettingsTarget.DND -> Pair(Intent("android.settings.ZEN_MODE_SETTINGS"), Intent(Settings.ACTION_SOUND_SETTINGS))
+            SettingsTarget.HOTSPOT -> Pair(Intent(Settings.ACTION_WIRELESS_SETTINGS), Intent(Settings.ACTION_SETTINGS))
+            SettingsTarget.MOTION -> Pair(Intent(Settings.ACTION_SETTINGS), null)
+            SettingsTarget.GENERAL -> Pair(Intent(Settings.ACTION_SETTINGS), null)
+        }
+        val reply = if (on == null) {
             lang.t("Membuka pengaturan $name${s(lang)}.", "Opening $name settings${s(lang)}.")
         } else {
             lang.t(
-                "Android tidak mengizinkan aplikasi biasa menyalakan atau mematikan $name secara langsung. Saya buka pengaturannya.",
-                "Android doesn't let regular apps switch $name on or off directly. I'm opening its settings."
+                "Untuk ${if (on) "menyalakan" else "mematikan"} $name sendiri saya butuh layanan aksesibilitas Nine (Pengaturan > Aksesibilitas > Nine). Sementara ini saya buka pengaturannya.",
+                "To switch $name ${if (on) "on" else "off"} by myself I need the Nine accessibility service (Settings > Accessibility > Nine). For now I'm opening its settings."
             )
         }
         return SkillResult(reply, intent = intent, fallback = fallback)
+    }
+
+    private fun toggleText(o: NineAccessibilityService.Outcome, name: String, on: Boolean, lang: AppLang): String {
+        val state = if (on) lang.t("menyala", "on") else lang.t("mati", "off")
+        return when (o) {
+            NineAccessibilityService.Outcome.DONE -> lang.t("$name sekarang $state${s(lang)}.", "$name is now $state${s(lang)}.")
+            NineAccessibilityService.Outcome.ALREADY -> lang.t("$name sudah $state${s(lang)}.", "$name was already $state${s(lang)}.")
+            NineAccessibilityService.Outcome.CLICKED -> lang.t(
+                "Tombol $name sudah saya ketuk${s(lang)}. Silakan periksa apakah sudah $state.",
+                "I tapped the $name tile${s(lang)}. Please check that it's $state."
+            )
+            NineAccessibilityService.Outcome.NOT_FOUND -> lang.t(
+                "Maaf${s(lang)}, saya tidak menemukan tombol $name di Panel Cepat. Tambahkan tombolnya ke Panel Cepat lalu coba lagi.",
+                "Sorry${s(lang)}, I couldn't find a $name tile in Quick Settings. Add it to Quick Settings and try again."
+            )
+            NineAccessibilityService.Outcome.BUSY -> lang.t(
+                "Saya sedang mengerjakan pengaturan lain${s(lang)}. Coba lagi sebentar lagi.",
+                "I'm in the middle of another setting${s(lang)}. Try again in a moment."
+            )
+            NineAccessibilityService.Outcome.FAILED -> lang.t(
+                "Maaf${s(lang)}, saya gagal mengubah $name. Layar mungkin terkunci atau panel tidak bisa dibuka.",
+                "Sorry${s(lang)}, I couldn't change $name. The screen may be locked or the panel wouldn't open."
+            )
+        }
     }
 
     private fun flashlight(on: Boolean, lang: AppLang): SkillResult {
@@ -1078,12 +1148,22 @@ class SkillExecutor(
             lang.t("Streak kita sedang kosong; bicara dengan saya hari ini untuk memulainya lagi.", "Our streak is at zero; talk to me today to start it again.")
         }
         val next = st.next?.let { n ->
-            lang.t(" ${n.minXp - st.xp} XP lagi menuju level ${n.number}, ${n.name(lang)}.", " ${n.minXp - st.xp} XP to level ${n.number}, ${n.name(lang)}.")
+            val xpLeft = (n.minXp - st.xp).coerceAtLeast(0)
+            val dLeft = (AffinityRules.MIN_DAYS[n.number - 1] - st.days).coerceAtLeast(0)
+            val parts = ArrayList<String>()
+            if (xpLeft > 0) parts += "$xpLeft XP"
+            if (dLeft > 0) parts += lang.t("$dLeft hari pemakaian", "$dLeft more days of use")
+            val need = parts.joinToString(lang.t(" dan ", " and "))
+            lang.t(" Menuju level ${n.number}, ${n.name(lang)}: $need lagi.", " To level ${n.number}, ${n.name(lang)}: $need to go.")
         } ?: lang.t(" Kita sudah di puncak. Saya terharu.", " We've reached the top. I'm quite touched.")
+        val days = lang.t(
+            " Level tertinggi baru terbuka setelah ${AffinityRules.FULL_DAYS} hari pemakaian; ini hari ke-${st.days}.",
+            " The top level only opens after ${AffinityRules.FULL_DAYS} days of use; this is day ${st.days}."
+        )
         return SkillResult(
             lang.t(
-                "Kedekatan kita level ${st.level.number} dari 9: ${st.level.name(lang)}${s(lang)}. $streak$next",
-                "We're at level ${st.level.number} of 9: ${st.level.name(lang)}${s(lang)}. $streak$next"
+                "Kedekatan kita level ${st.level.number} dari 9: ${st.level.name(lang)}${s(lang)}. $streak$next$days",
+                "We're at level ${st.level.number} of 9: ${st.level.name(lang)}${s(lang)}. $streak$next$days"
             )
         )
     }
@@ -1450,6 +1530,222 @@ class SkillExecutor(
         return SkillResult("$head\n$lines")
     }
 
+    // ------------------------------------------------------------ musik, telepon, nyanyi, ekspresi, tuner, pengaturan Nine
+
+    private fun mediaControl(cmd: Command.MediaControl, lang: AppLang): SkillResult {
+        return try {
+            val am = ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            if (cmd.action == MediaAction.PAUSE && !am.isMusicActive) {
+                return SkillResult(lang.t("Tidak ada musik yang sedang diputar${s(lang)}.", "Nothing is playing right now${s(lang)}."))
+            }
+            val code = when (cmd.action) {
+                MediaAction.PLAY -> KeyEvent.KEYCODE_MEDIA_PLAY
+                MediaAction.PAUSE -> KeyEvent.KEYCODE_MEDIA_PAUSE
+                MediaAction.NEXT -> KeyEvent.KEYCODE_MEDIA_NEXT
+                MediaAction.PREVIOUS -> KeyEvent.KEYCODE_MEDIA_PREVIOUS
+            }
+            val t = SystemClock.uptimeMillis()
+            am.dispatchMediaKeyEvent(KeyEvent(t, t, KeyEvent.ACTION_DOWN, code, 0))
+            am.dispatchMediaKeyEvent(KeyEvent(t, SystemClock.uptimeMillis(), KeyEvent.ACTION_UP, code, 0))
+            SkillResult(
+                when (cmd.action) {
+                    MediaAction.PLAY -> lang.t("Melanjutkan musik${s(lang)}.", "Resuming the music${s(lang)}.")
+                    MediaAction.PAUSE -> lang.t("Musik dijeda${s(lang)}.", "Music paused${s(lang)}.")
+                    MediaAction.NEXT -> lang.t("Lagu berikutnya${s(lang)}.", "Next track${s(lang)}.")
+                    MediaAction.PREVIOUS -> lang.t("Lagu sebelumnya${s(lang)}.", "Previous track${s(lang)}.")
+                }
+            )
+        } catch (e: Exception) {
+            SkillResult(lang.t("Maaf${s(lang)}, pemutar musik tidak bisa saya kendalikan sekarang.", "Sorry${s(lang)}, I can't control the music player right now."))
+        }
+    }
+
+    private fun callControl(cmd: Command.CallControl, lang: AppLang, denied: Set<String>): SkillResult {
+        val need = CallControl.requiredPermissions().filter { !has(it) }
+        if (need.isNotEmpty()) {
+            return if (need.any { it in denied }) {
+                SkillResult(
+                    lang.t(
+                        "Saya butuh izin Telepon untuk menjawab atau menolak panggilan. Berikan di Pengaturan > Aplikasi > Nine > Izin.",
+                        "I need the Phone permission to answer or decline calls. Grant it in Settings > Apps > Nine > Permissions."
+                    )
+                )
+            } else {
+                SkillResult(
+                    lang.t("Saya perlu izin Telepon untuk menjawab atau menolak panggilan${s(lang)}.", "I need the Phone permission to answer or decline calls${s(lang)}."),
+                    needPermissions = need
+                )
+            }
+        }
+        val r = if (cmd.accept) CallControl.accept(ctx) else CallControl.decline(ctx)
+        return SkillResult(
+            when (r) {
+                CallControl.Result.DONE ->
+                    if (cmd.accept) lang.t("Telepon saya angkat${s(lang)}.", "Answering the call${s(lang)}.")
+                    else lang.t("Telepon saya tolak${s(lang)}.", "Call declined${s(lang)}.")
+                CallControl.Result.NO_CALL -> lang.t("Tidak ada telepon yang sedang masuk${s(lang)}.", "There's no incoming call${s(lang)}.")
+                CallControl.Result.UNSUPPORTED -> lang.t(
+                    "Versi Android ini tidak mengizinkan saya menolak telepon. Tolak lewat layar panggilan ya${s(lang)}.",
+                    "This Android version doesn't let me decline calls. Please use the call screen${s(lang)}."
+                )
+                CallControl.Result.FAILED -> lang.t("Maaf${s(lang)}, saya gagal mengurus telepon itu.", "Sorry${s(lang)}, I couldn't handle that call.")
+            }
+        )
+    }
+
+    private fun sing(cmd: Command.Sing, lang: AppLang): SkillResult {
+        val song = Songs.find(cmd.song)
+        val title = song?.let { if (lang == AppLang.ID) it.titleId else it.titleEn }
+        val text = if (title != null) {
+            lang.t(
+                "Baik${s(lang)}, saya nyanyikan \"$title\" dengan suara saya sendiri. Hanya melodinya, tanpa lirik.",
+                "Very well${s(lang)}. Here is \"$title\" in my own voice, melody only, no lyrics."
+            )
+        } else {
+            lang.t(
+                "Saya belum hafal lagu itu${s(lang)}, jadi saya nyanyikan melodi karangan sendiri. Hanya nada, tanpa lirik.",
+                "I don't know that one yet${s(lang)}, so here's a tune of my own. Melody only, no lyrics."
+            )
+        }
+        return SkillResult(text, action = UiAction.Sing(cmd.song), mood = Mood.HAPPY)
+    }
+
+    private fun moodName(m: Mood, lang: AppLang): String = when (m) {
+        Mood.HAPPY -> lang.t("senang", "happy")
+        Mood.LOVE -> lang.t("jatuh cinta", "loving")
+        Mood.SURPRISED -> lang.t("terkejut", "surprised")
+        Mood.CONFUSED -> lang.t("bingung", "confused")
+        Mood.SAD -> lang.t("sedih", "sad")
+        Mood.ANNOYED -> lang.t("kesal", "annoyed")
+        Mood.SLEEPY -> lang.t("mengantuk", "sleepy")
+        Mood.CURIOUS -> lang.t("penasaran", "curious")
+        Mood.SCARED -> lang.t("takut", "scared")
+        Mood.WINK -> lang.t("mengedip", "winking")
+        Mood.LAUGH -> lang.t("tertawa", "laughing")
+        Mood.NEUTRAL -> lang.t("biasa", "neutral")
+    }
+
+    private fun emote(cmd: Command.Emote, lang: AppLang): SkillResult =
+        SkillResult(
+            lang.t("Ini wajah ${moodName(cmd.mood, lang)}${s(lang)}.", "Here's my ${moodName(cmd.mood, lang)} face${s(lang)}."),
+            mood = cmd.mood
+        )
+
+    private fun tuner(cmd: Command.Tuner, lang: AppLang, denied: Set<String>): SkillResult {
+        if (!cmd.start) {
+            return SkillResult(lang.t("Tuner gitar ditutup${s(lang)}.", "Guitar tuner closed${s(lang)}."), action = UiAction.Tuner(false, null))
+        }
+        if (!has(Manifest.permission.RECORD_AUDIO)) {
+            return if (Manifest.permission.RECORD_AUDIO in denied) {
+                SkillResult(lang.t("Tuner butuh izin mikrofon untuk mendengar senar.", "The tuner needs microphone access to hear the strings."))
+            } else {
+                SkillResult(
+                    lang.t("Saya perlu izin mikrofon untuk mendengar senarnya${s(lang)}.", "I need microphone access to hear the strings${s(lang)}."),
+                    needPermissions = listOf(Manifest.permission.RECORD_AUDIO)
+                )
+            }
+        }
+        val gs = cmd.string?.let { GuitarTuning.byNumber(it) }
+        val tone = if (cmd.tone && gs != null) gs.frequency else null
+        val text = when {
+            gs != null && tone != null -> lang.t(
+                "Ini nada ${GuitarTuning.label(gs, lang)}${s(lang)}. Setelah itu petik senarnya, saya akan beri tahu kencang atau kendur.",
+                "That's the note for ${GuitarTuning.label(gs, lang)}${s(lang)}. Then pluck the string and I'll tell you whether to tighten or loosen it."
+            )
+            gs != null -> lang.t(
+                "Tuner ${GuitarTuning.label(gs, lang)} aktif${s(lang)}. Petik senarnya, saya akan beri tahu kencang atau kendur.",
+                "Tuner for ${GuitarTuning.label(gs, lang)} is on${s(lang)}. Pluck it and I'll tell you whether to tighten or loosen it."
+            )
+            else -> lang.t(
+                "Tuner gitar aktif${s(lang)}. Petik satu senar mana saja; saya mengenalinya sendiri dan memberi tahu kencang atau kendur. Ketuk senar di layar untuk memilih manual.",
+                "Guitar tuner on${s(lang)}. Pluck any string; I'll recognise it and tell you whether to tighten or loosen it. Tap a string on screen to choose it manually."
+            )
+        }
+        return SkillResult(text, action = UiAction.Tuner(true, cmd.string, tone), mood = Mood.CURIOUS)
+    }
+
+    private fun appSetting(cmd: Command.AppSetting, lang: AppLang, denied: Set<String> = emptySet()): SkillResult {
+        fun theme(t: Prefs.Theme, id: String, en: String): SkillResult {
+            prefs.theme = t
+            return SkillResult(
+                lang.t("Baik${s(lang)}, tema $id.", "Very well${s(lang)}, $en theme."),
+                action = UiAction.SetTheme(t)
+            )
+        }
+        return when (cmd.setting) {
+            NineSetting.THEME_LIGHT -> theme(Prefs.Theme.LIGHT, "terang", "light")
+            NineSetting.THEME_DARK -> theme(Prefs.Theme.DARK, "gelap", "dark")
+            NineSetting.THEME_SYSTEM -> theme(Prefs.Theme.SYSTEM, "mengikuti sistem", "system")
+            NineSetting.EXIT_APP -> SkillResult(
+                lang.t("Baik${s(lang)}, sampai jumpa.", "Very well${s(lang)}, goodbye."),
+                action = UiAction.ExitApp
+            )
+            NineSetting.WAKE_ON -> {
+                val need = ArrayList<String>()
+                if (!has(Manifest.permission.RECORD_AUDIO)) need += Manifest.permission.RECORD_AUDIO
+                if (Build.VERSION.SDK_INT >= 33 && !has(Manifest.permission.POST_NOTIFICATIONS) && Manifest.permission.POST_NOTIFICATIONS !in denied) {
+                    need += Manifest.permission.POST_NOTIFICATIONS
+                }
+                if (need.isNotEmpty()) {
+                    if (Manifest.permission.RECORD_AUDIO in denied) {
+                        SkillResult(lang.t("Wake phrase butuh izin mikrofon.", "The wake phrase needs microphone access."))
+                    } else {
+                        SkillResult(lang.t("Saya perlu izin mikrofon untuk mendengarkan wake phrase${s(lang)}.", "I need microphone access to listen for the wake phrase${s(lang)}."), needPermissions = need)
+                    }
+                } else {
+                    prefs.wakeEnabled = true
+                    val phrase = WakeWordService.parsePhrases(prefs.wakePhrases).firstOrNull() ?: "hey nine"
+                    SkillResult(
+                        lang.t("Wake phrase \"$phrase\" saya aktifkan${s(lang)}.", "Wake phrase \"$phrase\" is on${s(lang)}."),
+                        action = UiAction.WakeChanged(true)
+                    )
+                }
+            }
+            NineSetting.WAKE_OFF -> {
+                prefs.wakeEnabled = false
+                SkillResult(lang.t("Wake phrase saya matikan${s(lang)}.", "Wake phrase turned off${s(lang)}."), action = UiAction.WakeChanged(false))
+            }
+            NineSetting.TOUCH_ON -> {
+                prefs.assistiveTouch = true
+                if (NineAccessibilityService.instance != null) {
+                    SkillResult(lang.t("Tombol melayang saya nyalakan${s(lang)}.", "Floating button on${s(lang)}."), action = UiAction.TouchChanged)
+                } else {
+                    SkillResult(
+                        lang.t(
+                            "Tombol melayang butuh layanan aksesibilitas Nine${s(lang)}. Aktifkan \"Nine\" di layar yang saya buka; tombolnya muncul otomatis setelah itu.",
+                            "The floating button needs the Nine accessibility service${s(lang)}. Turn on \"Nine\" on the screen I'm opening; the button appears right after."
+                        ),
+                        intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                    )
+                }
+            }
+            NineSetting.TOUCH_OFF -> {
+                prefs.assistiveTouch = false
+                SkillResult(lang.t("Tombol melayang saya matikan${s(lang)}.", "Floating button off${s(lang)}."), action = UiAction.TouchChanged)
+            }
+            NineSetting.MUSIC_REACT_ON -> {
+                if (!has(Manifest.permission.RECORD_AUDIO)) {
+                    if (Manifest.permission.RECORD_AUDIO in denied) {
+                        SkillResult(lang.t("Mendengarkan musik butuh izin mikrofon.", "Listening to music needs microphone access."))
+                    } else {
+                        SkillResult(lang.t("Saya perlu izin mikrofon untuk mendengar musik${s(lang)}.", "I need microphone access to hear music${s(lang)}."), needPermissions = listOf(Manifest.permission.RECORD_AUDIO))
+                    }
+                } else {
+                    prefs.musicReact = true
+                    SkillResult(
+                        lang.t("Saya akan ikut bergoyang saat mendengar musik${s(lang)}. Wajah saya bereaksi pada ketukan dan nadanya selama layar Nine terbuka.", "I'll groove along when I hear music${s(lang)}. My face reacts to the beat and tone while the Nine screen is open."),
+                        action = UiAction.MusicReactChanged,
+                        mood = Mood.HAPPY
+                    )
+                }
+            }
+            NineSetting.MUSIC_REACT_OFF -> {
+                prefs.musicReact = false
+                SkillResult(lang.t("Reaksi musik saya matikan${s(lang)}.", "Music reaction off${s(lang)}."), action = UiAction.MusicReactChanged)
+            }
+        }
+    }
+
     // ------------------------------------------------------------ aplikasi eksternal
 
     private fun installed(pkg: String): Boolean = try {
@@ -1479,14 +1775,33 @@ class SkillExecutor(
                         fallback = Intent(Intent.ACTION_VIEW, Uri.parse("https://music.youtube.com"))
                     )
                 } else {
-                    SkillResult(
-                        lang.t("Memutar \"$q\" di YouTube Music${s(lang)}.", "Playing \"$q\" on YouTube Music${s(lang)}."),
-                        intent = Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH)
+                    val svc = NineAccessibilityService.instance
+                    val search = Uri.parse("https://music.youtube.com/search?q=$enc")
+                    val hasApp = installed(ytm)
+                    val primary = Intent(Intent.ACTION_VIEW, search).apply { if (hasApp) setPackage(ytm) }
+                    val second = if (hasApp) {
+                        Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH)
                             .setPackage(ytm)
                             .putExtra(SearchManager.QUERY, q)
-                            .putExtra(MediaStore.EXTRA_MEDIA_FOCUS, "vnd.android.cursor.item/*"),
-                        fallback = Intent(Intent.ACTION_VIEW, Uri.parse("https://music.youtube.com/search?q=$enc"))
-                    )
+                            .putExtra(MediaStore.EXTRA_MEDIA_FOCUS, "vnd.android.cursor.item/*")
+                    } else null
+                    if (svc != null && hasApp) {
+                        SkillResult(
+                            lang.t("Memutar \"$q\" di YouTube Music${s(lang)}.", "Playing \"$q\" on YouTube Music${s(lang)}."),
+                            intent = primary,
+                            fallback = second,
+                            afterLaunch = { svc.playFirstSong() }
+                        )
+                    } else {
+                        SkillResult(
+                            lang.t(
+                                "Saya buka hasil pencarian \"$q\" di YouTube Music${s(lang)}. Ketuk lagunya, atau aktifkan layanan aksesibilitas Nine agar saya bisa memilih dan memutarnya sendiri.",
+                                "I've opened the search results for \"$q\" in YouTube Music${s(lang)}. Tap the song, or enable the Nine accessibility service so I can pick and play it myself."
+                            ),
+                            intent = primary,
+                            fallback = second
+                        )
+                    }
                 }
             }
             "spotify" -> SkillResult(

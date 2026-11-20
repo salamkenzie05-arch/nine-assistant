@@ -16,4 +16,7 @@
     <!-- Netral (tanpa rona ungu Material 3): dipakai untuk sheet, tombol toggle, outline. -->
     <color name="nine_outline">#B8C0CF</color>
     <color name="nine_outline_variant">#DCE1EA</color>
+    <!-- Overlay asisten (transparan dengan vinyet) -->
+    <color name="nine_scrim_end">#F2F4F6FB</color>
+    <color name="nine_vignette_edge">#59000000</color>
 </resources>

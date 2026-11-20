@@ -14,6 +14,7 @@ import android.graphics.Path
 import android.graphics.RadialGradient
 import android.graphics.RectF
 import android.graphics.Shader
+import id.nine.assistant.audio.BeatAnalyzer
 import android.os.BatteryManager
 import android.os.Build
 import android.os.SystemClock
@@ -69,6 +70,35 @@ class NineFaceView @JvmOverloads constructor(
         targetLevel = value.coerceIn(0f, 1f)
     }
 
+    /**
+     * Umpan analisis musik dari mikrofon. Wajah ikut bergoyang pada ketukan, membesar pada bass, dan cahayanya
+     * berubah warna menurut nada (rendah = hangat, tinggi = sejuk). Berhenti sendiri bila umpan berhenti.
+     */
+    fun setMusic(f: BeatAnalyzer.Frame) {
+        val now = SystemClock.uptimeMillis()
+        if (!f.music) {
+            if (now > musicUntil) musicLevel = 0f
+            return
+        }
+        musicUntil = now + 900L
+        musicLevel += (f.level.coerceIn(0f, 1f) - musicLevel) * 0.35f
+        musicBass += (f.bass.coerceIn(0f, 1f) - musicBass) * 0.5f
+        musicMid += (f.mid.coerceIn(0f, 1f) - musicMid) * 0.5f
+        musicTreble += (f.treble.coerceIn(0f, 1f) - musicTreble) * 0.5f
+        musicBright += (f.brightness.coerceIn(0f, 1f) - musicBright) * 0.15f
+        if (f.beat) beatPulse = 1f
+        invalidate()
+    }
+
+    /** Hentikan reaksi musik segera. */
+    fun clearMusic() {
+        musicUntil = 0L
+        musicLevel = 0f
+        beatPulse = 0f
+    }
+
+    private fun musicOn(now: Long): Boolean = now < musicUntil && musicLevel > 0.02f
+
     // ------------------------------------------------------------------ suasana hati
 
     private var mood: Mood = Mood.NEUTRAL
@@ -81,7 +111,8 @@ class NineFaceView @JvmOverloads constructor(
         moodStarted = SystemClock.uptimeMillis()
         moodUntil = moodStarted + ms
         touchActivity()
-        if (m == Mood.SURPRISED || m == Mood.HAPPY || m == Mood.LOVE) hop = 1f
+        if (m == Mood.SURPRISED || m == Mood.HAPPY || m == Mood.LOVE || m == Mood.WINK) hop = 1f
+        if (m == Mood.SCARED) tremble = 1f
         invalidate()
     }
 
@@ -150,6 +181,35 @@ class NineFaceView @JvmOverloads constructor(
     private var petDistance = 0f
     private val tapTimes = ArrayDeque<Long>()
 
+    /**
+     * Dipanggil sekali per usapan bila jari mengusap wajah terus-menerus selama [PET_BURST_MS] (5 detik).
+     * Argumen: koordinat pusat wajah di layar.
+     */
+    var onPetBurst: ((screenX: Float, screenY: Float) -> Unit)? = null
+
+    private var strokeStart = 0L
+    private var strokeLast = 0L
+    private var strokeFired = false
+
+    private fun trackStroke(now: Long) {
+        // Usapan terputus bila jari diam > 900 ms.
+        if (strokeStart == 0L || now - strokeLast > 900L) {
+            strokeStart = now
+            strokeFired = false
+        }
+        strokeLast = now
+        checkStrokeBurst(now)
+    }
+
+    private fun checkStrokeBurst(now: Long) {
+        if (!strokeFired && strokeStart != 0L && touching && now - strokeStart >= PET_BURST_MS && now - strokeLast <= 900L) {
+            strokeFired = true
+            val loc = IntArray(2)
+            getLocationOnScreen(loc)
+            onPetBurst?.invoke(loc[0] + width / 2f, loc[1] + height / 2f)
+        }
+    }
+
     private fun touchActivity() {
         lastActivity = SystemClock.uptimeMillis()
     }
@@ -179,6 +239,7 @@ class NineFaceView @JvmOverloads constructor(
 
         override fun onScroll(e1: MotionEvent?, e2: MotionEvent, distanceX: Float, distanceY: Float): Boolean {
             if (!interactive) return false
+            trackStroke(SystemClock.uptimeMillis())
             petDistance += hypot(distanceX, distanceY)
             val r = faceRadius()
             if (petDistance > r * 1.1f) {
@@ -195,6 +256,8 @@ class NineFaceView @JvmOverloads constructor(
             MotionEvent.ACTION_DOWN -> {
                 touching = true
                 petDistance = 0f
+                strokeStart = 0L
+                strokeFired = false
                 touchActivity()
                 isPressed = true
             }
@@ -237,6 +300,17 @@ class NineFaceView @JvmOverloads constructor(
     private var tFaceTilt = 0f
     private var hop = 0f
     private var shake = 0f
+    private var tremble = 0f
+
+    // --- reaksi musik (diisi lewat setMusic)
+    private var musicUntil = 0L
+    private var musicLevel = 0f
+    private var musicBass = 0f
+    private var musicMid = 0f
+    private var musicTreble = 0f
+    private var musicBright = 0.5f
+    private var beatPulse = 0f
+    private var musicSway = 0f
 
     private var t = 0f
     private var lastFrame = 0L
@@ -324,6 +398,16 @@ class NineFaceView @JvmOverloads constructor(
                 tl.sy = 1f + talk; tr.sy = 1f + talk
             }
         }
+        if (mode == Mode.IDLE && musicOn(now) && !touching) {
+            val a = (musicLevel * 1.6f).coerceIn(0f, 1f)
+            tl.happy = maxOf(tl.happy, 0.25f + 0.5f * musicTreble * a); tr.happy = tl.happy
+            tl.sy = 1f + 0.16f * musicBass * a; tr.sy = tl.sy
+            tl.sx = 1f + 0.06f * musicMid * a; tr.sx = tl.sx
+            tl.lid = 0f; tr.lid = 0f
+            tGazeX = sin(musicSway) * 0.7f
+            tGazeY = -0.05f - 0.25f * musicBass * a
+            tFaceTilt = sin(musicSway * 0.5f) * 5f * a
+        }
         if (touching && interactive) {
             val r = faceRadius()
             tGazeX = ((touchX - width / 2f) / r).coerceIn(-1f, 1f)
@@ -339,6 +423,18 @@ class NineFaceView @JvmOverloads constructor(
             Mood.ANNOYED -> { tl.chevron = 1f; tr.chevron = 1f }
             Mood.SLEEPY -> { tl.lid = 0.6f; tr.lid = 0.6f; tGazeY = 0.4f }
             Mood.CURIOUS -> { tl.sy = 0.9f; tr.sy = 1.15f; tFaceTilt = 7f; if (!touching) { tGazeX = 0.5f; tGazeY = -0.2f } }
+            Mood.SCARED -> {
+                // mata lebar & sempit, alis cemas, gemetar, melirik ke bawah-samping
+                tl.sx = 0.82f; tr.sx = 0.82f; tl.sy = 1.28f; tr.sy = 1.28f
+                tl.tilt = -14f; tr.tilt = -14f; tl.lid = 0.06f; tr.lid = 0.06f
+                if (!touching) { tGazeX = 0.35f * sin(t * 3f); tGazeY = 0.3f }
+            }
+            Mood.WINK -> {
+                // kiri terbuka riang, kanan melengkung ^ (mengedip)
+                tl.sy = 1f; tr.happy = 1f; tr.sy = 0.95f; tFaceTilt = 6f
+                if (!touching) { tGazeX = 0.1f; tGazeY = -0.1f }
+            }
+            Mood.LAUGH -> { tl.happy = 1f; tr.happy = 1f; tl.sy = 0.95f; tr.sy = 0.95f; if (!touching) tGazeY = -0.15f }
             Mood.NEUTRAL, null -> Unit
         }
     }
@@ -424,6 +520,12 @@ class NineFaceView @JvmOverloads constructor(
         faceTilt += (tFaceTilt - faceTilt) * k
         hop = (hop - dt * 3.2f).coerceAtLeast(0f)
         shake = (shake - dt * 1.8f).coerceAtLeast(0f)
+        beatPulse = (beatPulse - dt * 5.5f).coerceAtLeast(0f)
+        musicSway += dt * (2.4f + 2.2f * musicMid)
+        tremble = (tremble - dt * 0.5f).coerceAtLeast(0f)
+        if (touching) checkStrokeBurst(now)
+        val music = musicOn(now)
+        if (!music && musicLevel > 0f) musicLevel = (musicLevel - dt * 2f).coerceAtLeast(0f)
 
         val dark = night
         val cx = width / 2f
@@ -446,26 +548,39 @@ class NineFaceView @JvmOverloads constructor(
         }
 
         // --- cahaya di belakang wajah (bereaksi pada suara)
-        val glowR = min(r * (1.38f + level * 0.12f), min(width, height) / 2f)
+        val mAmt = if (music && mode == Mode.IDLE) (musicLevel * 1.5f).coerceIn(0f, 1f) else 0f
+        val glowR = min(r * (1.38f + level * 0.12f + mAmt * 0.10f + beatPulse * 0.06f * mAmt), min(width, height) / 2f)
         val ga = when (mode) {
             Mode.LISTENING -> 0.30f + level * 0.35f
             Mode.THINKING -> 0.26f
             Mode.SPEAKING -> 0.22f
-            Mode.IDLE -> if (dark) 0.14f else 0.10f
+            Mode.IDLE -> (if (dark) 0.14f else 0.10f) + mAmt * 0.22f + beatPulse * 0.18f * mAmt
         }
+        // Nada rendah → hangat (emas), nada tinggi → sejuk (biru kehijauan); hanya saat ada musik.
+        val glowColor = if (mAmt > 0.02f) {
+            val hue = 36f + 160f * musicBright.coerceIn(0f, 1f)
+            val cool = Color.HSVToColor(floatArrayOf(hue, 0.72f, 1f))
+            blend(gold, cool, mAmt)
+        } else gold
         glowPaint.shader = RadialGradient(
             cx, cy, glowR,
-            intArrayOf(alpha(gold, ga), alpha(gold, ga * 0.35f), Color.TRANSPARENT),
+            intArrayOf(alpha(glowColor, ga), alpha(glowColor, ga * 0.35f), Color.TRANSPARENT),
             floatArrayOf(0.62f, 0.8f, 1f), Shader.TileMode.CLAMP
         )
         canvas.drawCircle(cx, cy, glowR, glowPaint)
 
         // --- pelat wajah
-        val bob = sin(t * 1.5f) * r * 0.012f - hop * sin(hop * 3.14f) * r * 0.06f
-        val shakeX = if (shake > 0f) sin(t * 60f) * r * 0.05f * shake else 0f
+        val laugh = activeMood(now) == Mood.LAUGH
+        val bob = sin(t * 1.5f) * r * 0.012f - hop * sin(hop * 3.14f) * r * 0.06f -
+            (if (mAmt > 0f) beatPulse * r * 0.045f * mAmt else 0f) +
+            (if (laugh) abs(sin(t * 14f)) * -r * 0.035f else 0f)
+        val shakeX = (if (shake > 0f) sin(t * 60f) * r * 0.05f * shake else 0f) +
+            (if (tremble > 0f && activeMood(now) == Mood.SCARED) sin(t * 48f) * r * 0.014f else 0f)
+        val pulse = 1f + (if (mAmt > 0f) beatPulse * 0.05f * mAmt + musicBass * 0.02f * mAmt else 0f)
         canvas.save()
         canvas.translate(shakeX, bob)
         canvas.rotate(faceTilt, cx, cy)
+        if (pulse != 1f) canvas.scale(pulse, pulse, cx, cy)
         if (!dark) {
             shadowPaint.shader = RadialGradient(
                 cx, cy + r * 0.05f, r * 1.12f,
@@ -501,7 +616,7 @@ class NineFaceView @JvmOverloads constructor(
 
         // --- tambahan: pipi merona, petir cas, baterai lemah, zzz
         val m = activeMood(now)
-        if (m == Mood.LOVE || (m == Mood.HAPPY && petDistance > r)) {
+        if (m == Mood.LOVE || m == Mood.LAUGH || (m == Mood.HAPPY && petDistance > r)) {
             extraPaint.color = alpha(heartColor, 0.28f)
             canvas.drawOval(cx - sep - r * 0.17f + gx, ey + r * 0.30f + gy, cx - sep + r * 0.13f + gx, ey + r * 0.42f + gy, extraPaint)
             canvas.drawOval(cx + sep - r * 0.13f + gx, ey + r * 0.30f + gy, cx + sep + r * 0.17f + gx, ey + r * 0.42f + gy, extraPaint)
@@ -512,6 +627,14 @@ class NineFaceView @JvmOverloads constructor(
         }
         if (!charging && lowBattery()) drawBattery(canvas, cx, cy + r * 0.58f, r * 0.11f, if (dark) Color.rgb(0x9A, 0xA0, 0xAE) else Color.rgb(0x6B, 0x72, 0x80))
         if (m == Mood.SLEEPY || (m == null && sleepyNow(now))) drawZzz(canvas, cx + r * 0.52f, cy - r * 0.42f, r, dark)
+        if (m == Mood.SAD) {
+            val p = (t * 0.7f) % 1f
+            drawDrop(canvas, cx - sep + gx - r * 0.02f, ey + gy + r * 0.20f + p * r * 0.28f, r * 0.055f, 0.85f * (1f - p * 0.6f))
+        }
+        if (m == Mood.SCARED) {
+            val p = (t * 0.9f) % 1f
+            drawDrop(canvas, cx + r * 0.60f, cy - r * 0.34f + p * r * 0.22f, r * 0.07f, 0.9f * (1f - p * 0.5f))
+        }
         canvas.restore()
 
         // --- cincin HUD di luar wajah
@@ -617,6 +740,27 @@ class NineFaceView @JvmOverloads constructor(
         )
     }
 
+    private fun blend(a: Int, b: Int, k: Float): Int {
+        val f = k.coerceIn(0f, 1f)
+        return Color.rgb(
+            (Color.red(a) + (Color.red(b) - Color.red(a)) * f).toInt(),
+            (Color.green(a) + (Color.green(b) - Color.green(a)) * f).toInt(),
+            (Color.blue(a) + (Color.blue(b) - Color.blue(a)) * f).toInt()
+        )
+    }
+
+    /** Setetes air mata / keringat dingin. [s] = lebar tetesan. */
+    private fun drawDrop(canvas: Canvas, cx: Float, cy: Float, s: Float, a: Float) {
+        extraPaint.color = alpha(Color.rgb(0x6F, 0xB7, 0xF5), a)
+        tmpPath.reset()
+        tmpPath.moveTo(cx, cy - s * 1.6f)
+        tmpPath.cubicTo(cx + s * 0.2f, cy - s * 0.9f, cx + s, cy - s * 0.2f, cx + s, cy + s * 0.4f)
+        tmpPath.cubicTo(cx + s, cy + s * 1.1f, cx - s, cy + s * 1.1f, cx - s, cy + s * 0.4f)
+        tmpPath.cubicTo(cx - s, cy - s * 0.2f, cx - s * 0.2f, cy - s * 0.9f, cx, cy - s * 1.6f)
+        tmpPath.close()
+        canvas.drawPath(tmpPath, extraPaint)
+    }
+
     private fun heartPath(p: Path, cx: Float, cy: Float, s: Float) {
         p.reset()
         p.moveTo(cx, cy + s * 0.95f)
@@ -666,5 +810,10 @@ class NineFaceView @JvmOverloads constructor(
             touchActivity()
             invalidate()
         }
+    }
+
+    private companion object {
+        /** Lama mengusap terus-menerus sebelum hati bermuncratan. */
+        const val PET_BURST_MS = 5000L
     }
 }
