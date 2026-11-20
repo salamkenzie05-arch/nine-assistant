@@ -111,6 +111,20 @@ class AudioDspTest {
     }
 
     @Test
+    fun quietSteadyMusicIsStillRecognised() {
+        // Regresi: musik pelan (RMS ±0,014, mis. mikrofon peka-rendah) tidak boleh hilang setelah beberapa detik.
+        val all = frames(seconds = 40, kickEvery = null, bed = 0.02)
+        assertTrue("musik pelan harus terdeteksi di detik ke-5", all[150].music)
+        assertTrue("musik pelan harus tetap terdeteksi di detik ke-40", all.last().music)
+    }
+
+    @Test
+    fun faintNoiseIsNotMusic() {
+        val all = frames(seconds = 20, kickEvery = null, bed = 0.004) // RMS ±0,003
+        assertFalse(all.last().music)
+    }
+
+    @Test
     fun detectsBeatsAndTempo() {
         val all = frames(seconds = 10, kickEvery = 15) // tendangan tiap 480 ms ≈ 125 BPM
         val beats = all.count { it.beat }

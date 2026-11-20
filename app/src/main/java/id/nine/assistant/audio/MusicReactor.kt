@@ -10,7 +10,7 @@ class MusicReactor(context: Context, private val onFrame: (BeatAnalyzer.Frame) -
 
     private val main = Handler(Looper.getMainLooper())
     private val analyzer = BeatAnalyzer(SAMPLE_RATE)
-    private val mic = MicMonitor(context.applicationContext, SAMPLE_RATE, BLOCK, BLOCK) { pcm, n ->
+    private val mic = MicMonitor(context.applicationContext, SAMPLE_RATE, BLOCK, BLOCK, preferUnprocessed = false) { pcm, n ->
         val frame = analyzer.process(pcm, n, SystemClock.uptimeMillis())
         main.post { onFrame(frame) }
     }

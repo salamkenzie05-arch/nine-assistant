@@ -8,6 +8,7 @@
     <string name="cd_mic">Bicara dengan Nine</string>
     <string name="cd_keyboard">Ketik</string>
         <string name="status_idle">Ketuk orb untuk bicara</string>
+        <string name="status_music">♪ Mendengar musik…</string>
     <string name="status_listening">Mendengarkan…</string>
     <string name="status_thinking">Berpikir…</string>
     <string name="status_speaking">Berbicara · ketuk untuk berhenti</string>

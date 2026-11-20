@@ -84,14 +84,19 @@ class BeatAnalyzer(private val sampleRate: Int = 16000) {
 
         // lantai derau mengikuti pelan ke bawah, peak mengikuti cepat ke atas dan pelan ke bawah
         // (batas atas FLOOR_MAX: musik yang stabil tidak boleh dianggap derau latar setelah beberapa detik)
-        floor = if (rAll < floor) rAll else min(floor + (rAll - floor) * 0.002f, FLOOR_MAX)
+        // Saat sedang terdengar musik, lantai dibekukan: musik pelan yang stabil tidak boleh "naik" menjadi derau latar.
+        floor = when {
+            rAll < floor -> rAll
+            loudFrames > 12 -> floor
+            else -> min(floor + (rAll - floor) * 0.002f, FLOOR_MAX)
+        }
         peak = if (rAll > peak) rAll else peak + (rAll - peak) * 0.01f
-        peak = max(peak, 0.02f)
-        val musicNow = rAll > max(0.012f, floor * 2.2f)
+        peak = max(peak, PEAK_MIN)
+        val musicNow = rAll > max(MUSIC_MIN, floor * 2f)
         loudFrames = if (musicNow) min(loudFrames + 1, 200) else max(loudFrames - 2, 0)
         val music = loudFrames > 12
 
-        val norm = max(peak, 0.02f)
+        val norm = max(peak, PEAK_MIN)
         val bass = (rLow * 3.2f / norm).coerceIn(0f, 1f)
         val mid = (rMid * 3.2f / norm).coerceIn(0f, 1f)
         val treble = (rHigh * 4.5f / norm).coerceIn(0f, 1f)
@@ -109,7 +114,7 @@ class BeatAnalyzer(private val sampleRate: Int = 16000) {
         hPos = (hPos + 1) % HISTORY
         hCount++
         var beat = false
-        if (music && have >= 8 && flux > avg * 1.38f + 0.004f && nowMs - lastBeat > 230) {
+        if (music && have >= 8 && flux > avg * 1.38f + 0.0015f && nowMs - lastBeat > 230) {
             beat = true
             if (lastBeat > 0 && nowMs - lastBeat < 1500) {
                 intervals.addLast(nowMs - lastBeat)
@@ -144,7 +149,11 @@ class BeatAnalyzer(private val sampleRate: Int = 16000) {
 
     private companion object {
         /** Lantai derau latar tertinggi yang mungkin (RMS 0..1). */
-        const val FLOOR_MAX = 0.01f
+        const val FLOOR_MAX = 0.006f
+        /** RMS terendah yang dianggap musik (musik pelan atau jauh dari mikrofon tetap terdeteksi). */
+        const val MUSIC_MIN = 0.006f
+        /** Pembagi normalisasi terkecil, supaya bass/mid/treble tetap terbaca pada musik pelan. */
+        const val PEAK_MIN = 0.008f
         /** ±1 detik pada blok ±32 ms. */
         const val HISTORY = 30
     }

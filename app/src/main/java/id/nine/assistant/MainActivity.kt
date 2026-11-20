@@ -327,15 +327,52 @@ open class MainActivity : AppCompatActivity(), AssistantController.Ui {
         val wantMusic = nine.prefs.musicReact && !tunerActive && can
         if (wantMusic) {
             val r = reactor ?: MusicReactor(this) { f ->
+                if (reactor?.isRunning != true) return@MusicReactor // sisa bingkai setelah dihentikan
                 binding.orb.setMusic(f)
                 binding.edgeGlow.setMusic(f)
+                if (f.music != musicHeard) {
+                    musicHeard = f.music
+                    renderMusicStatus()
+                }
             }.also { reactor = it }
-            if (!r.isRunning && !r.start()) ticker.postDelayed(syncRetry, 1500)
+            if (r.isRunning) {
+                musicRetries = 0
+            } else if (!r.start()) {
+                if (musicRetries < 4) {
+                    musicRetries++
+                    ticker.postDelayed(syncRetry, 1500)
+                } else if (!musicWarned) {
+                    musicWarned = true
+                    Toast.makeText(
+                        this,
+                        controller.lang.t("Mikrofon sedang dipakai aplikasi lain; reaksi musik belum bisa.", "The microphone is busy; music reaction can't start yet."),
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            } else {
+                musicRetries = 0
+                musicWarned = false
+            }
         } else {
             reactor?.stop()
+            musicRetries = 0
             binding.orb.clearMusic()
             binding.edgeGlow.clearMusic()
+            if (musicHeard) {
+                musicHeard = false
+                renderMusicStatus()
+            }
         }
+    }
+
+    // Indikator beta: teks status berubah saat Nine benar-benar mendengar musik (membantu memastikan mikrofon bekerja).
+    private var musicHeard = false
+    private var musicRetries = 0
+    private var musicWarned = false
+
+    private fun renderMusicStatus() {
+        if (!::controller.isInitialized || controller.state != AssistantController.State.IDLE) return
+        binding.txtStatus.setText(if (musicHeard) R.string.status_music else R.string.status_idle)
     }
 
     private val tunerListener = object : GuitarTuner.Listener {
@@ -586,7 +623,7 @@ open class MainActivity : AppCompatActivity(), AssistantController.Ui {
             AssistantController.State.THINKING -> Pair(R.string.status_thinking, NineFaceView.Mode.THINKING)
             AssistantController.State.SPEAKING -> Pair(R.string.status_speaking, NineFaceView.Mode.SPEAKING)
         }
-        binding.txtStatus.setText(label)
+        binding.txtStatus.setText(if (state == AssistantController.State.IDLE && musicHeard) R.string.status_music else label)
         binding.orb.mode = mode
         when (state) {
             AssistantController.State.IDLE -> binding.edgeGlow.setIntensity(0f, 40f)

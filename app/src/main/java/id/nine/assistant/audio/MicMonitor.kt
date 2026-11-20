@@ -18,6 +18,8 @@ class MicMonitor(
     private val sampleRate: Int,
     private val window: Int,
     private val hop: Int,
+    /** True (tuner): sumber tanpa pengolahan dulu. False (reaksi musik): mikrofon biasa dulu, karena sumber tanpa pengolahan sering sangat pelan. */
+    private val preferUnprocessed: Boolean = true,
     private val onFrame: (pcm: ShortArray, n: Int) -> Unit
 ) {
     @Volatile
@@ -46,8 +48,11 @@ class MicMonitor(
         val min = AudioRecord.getMinBufferSize(sampleRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
         if (min <= 0) return false
         val bufSize = maxOf(min, hop * 4)
-        // Tanpa pengolahan (AGC/peredam derau) lebih baik untuk mengukur nada dan ketukan; cadangannya mikrofon biasa.
-        val rec = create(MediaRecorder.AudioSource.UNPROCESSED, bufSize) ?: create(MediaRecorder.AudioSource.MIC, bufSize) ?: return false
+        // Tuner: tanpa pengolahan (AGC/peredam derau) lebih akurat untuk nada. Reaksi musik: mikrofon biasa lebih peka
+        // (sumber tanpa pengolahan di beberapa HP, mis. Samsung, sangat pelan). Yang satu menjadi cadangan yang lain.
+        val first = if (preferUnprocessed) MediaRecorder.AudioSource.UNPROCESSED else MediaRecorder.AudioSource.MIC
+        val second = if (preferUnprocessed) MediaRecorder.AudioSource.MIC else MediaRecorder.AudioSource.UNPROCESSED
+        val rec = create(first, bufSize) ?: create(second, bufSize) ?: return false
         try {
             rec.startRecording()
         } catch (e: Exception) {
