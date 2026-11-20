@@ -583,14 +583,16 @@ class AssistantController(context: Context, private val ui: Ui) {
 
     /** Untuk Gemma (yang menyimpan riwayatnya sendiri): sisipkan giliran perintah yang belum ia lihat + konteks. */
     private fun gemmaMessage(question: String, l: AppLang, userIndex: Int): String {
-        val missed = log.entries.subList(aiSeenUpTo.coerceIn(0, userIndex), userIndex.coerceAtMost(log.entries.size))
+        // Bila model sempat dilepas dari memori (tak dipakai), Gemma lupa percakapan: sisipkan giliran terakhir lagi.
+        val from = if (brain.contextDropped) 0 else aiSeenUpTo
+        val missed = log.entries.subList(from.coerceIn(0, userIndex), userIndex.coerceAtMost(log.entries.size))
             .filter { it.text.isNotBlank() && it.text != "…" }
             .takeLast(6)
             .joinToString("\n") { (if (it.fromUser) l.t("Pengguna: ", "User: ") else "Nine: ") + it.text.take(300) }
         val ctx = deviceContext(l, withMemory = false)
         if (missed.isEmpty() && ctx.isEmpty()) return question
         val sb = StringBuilder()
-        if (missed.isNotEmpty()) sb.append(l.t("[Percakapan sebelumnya yang ditangani modul perintah]\n", "[Earlier turns handled by the command module]\n")).append(missed).append("\n")
+        if (missed.isNotEmpty()) sb.append(l.t("[Percakapan sebelumnya]\n", "[Earlier conversation]\n")).append(missed).append("\n")
         if (ctx.isNotEmpty()) sb.append(l.t("[Konteks perangkat]\n", "[Device context]\n")).append(ctx).append("\n")
         sb.append(l.t("[Pesan pengguna sekarang]\n", "[Current user message]\n")).append(question)
         return sb.toString()

@@ -188,8 +188,7 @@ open class MainActivity : AppCompatActivity(), AssistantController.Ui {
         nine.log.addListener(logListener)
         nine.models.addListener(modelListener)
         nine.brain.addListener(brainListener)
-        nine.brain.preload()
-        WidgetUpdater.refresh(this)
+        WidgetUpdater.refreshFace(this)
 
         handleLaunchIntent(intent)
     }
@@ -231,8 +230,6 @@ open class MainActivity : AppCompatActivity(), AssistantController.Ui {
     override fun onResume() {
         super.onResume()
         visible = true
-        // Model mungkin dilepas saat Nine lama di latar belakang: muat ulang selagi pengguna bersiap bicara.
-        nine.brain.preload()
         onLanguageChanged(controller.lang)
         renderBrain()
         // Layar Nine terbuka: hapus notifikasi "ketuk untuk bicara" dan lepaskan mikrofon dari wake word.

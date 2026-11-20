@@ -3,6 +3,7 @@ package id.nine.assistant.llm
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.os.Process
 import android.os.SystemClock
 import com.google.ai.edge.litertlm.Backend
 import com.google.ai.edge.litertlm.Contents
@@ -47,7 +48,18 @@ class LlmBrain(context: Context, private val prefs: Prefs, private val models: M
     private val app = context.applicationContext
     private val memory = MemoryStore(app)
     private val main = Handler(Looper.getMainLooper())
-    private val dispatcher = Executors.newSingleThreadExecutor { r -> Thread(r, "nine-llm") }.asCoroutineDispatcher()
+    // Prioritas sedikit di bawah UI (nice 9, masih grup latar depan): saat model dimuat atau menjawab, gambar dan sentuhan
+    // di layar tetap didahulukan. Thread bawaan engine (native) mewarisi prioritas ini.
+    private val dispatcher = Executors.newSingleThreadExecutor { r ->
+        Thread({
+            try {
+                Process.setThreadPriority(LLM_PRIORITY)
+            } catch (e: Exception) {
+                // abaikan: tetap jalan dengan prioritas biasa
+            }
+            r.run()
+        }, "nine-llm")
+    }.asCoroutineDispatcher()
     private val scope = CoroutineScope(SupervisorJob() + dispatcher)
 
     private var engine: Engine? = null
@@ -59,11 +71,19 @@ class LlmBrain(context: Context, private val prefs: Prefs, private val models: M
     private var busy = false
 
     /**
-     * Dipasang oleh aplikasi: true bila layar Nine sedang terbuka. Selama itu model tidak dilepas.
+     * Dipasang oleh aplikasi: true bila layar Nine sedang terbuka (model dipertahankan lebih lama).
      * Dipanggil dari thread LLM, jadi harus aman dipanggil dari thread mana pun.
      */
     @Volatile
-    var keepWarm: () -> Boolean = { false }
+    var isForeground: () -> Boolean = { false }
+
+    /**
+     * True bila konteks percakapan Gemma hilang karena model dilepas dari memori (bukan karena pengguna
+     * meminta lupa). Pemanggil lalu menyisipkan lagi beberapa giliran terakhir ke pesan berikutnya.
+     */
+    @Volatile
+    var contextDropped = false
+        private set
 
     /** Terakhir kali model dipakai (elapsedRealtime). Hanya diakses di thread LLM. */
     private var lastUse = 0L
@@ -142,7 +162,7 @@ class LlmBrain(context: Context, private val prefs: Prefs, private val models: M
 
     /** Harus dipanggil di thread LLM. */
     private fun ensureConversation(lang: AppLang): Conversation {
-        val stale = System.currentTimeMillis() - conversationStarted > 30 * 60 * 1000L
+        val stale = System.currentTimeMillis() - conversationStarted > STALE_MS
         val c = conversation
         if (c != null && conversationLang == lang && !stale) return c
         closeConversation()
@@ -154,6 +174,7 @@ class LlmBrain(context: Context, private val prefs: Prefs, private val models: M
         conversation = created
         conversationLang = lang
         conversationStarted = System.currentTimeMillis()
+        contextDropped = false
         return created
     }
 
@@ -167,9 +188,9 @@ class LlmBrain(context: Context, private val prefs: Prefs, private val models: M
     }
 
     /**
-     * Lepaskan model (±2,5 GB RAM) bila lama tidak dipakai dan layar Nine tidak terbuka, supaya HP
-     * tetap lega. Dimuat ulang otomatis saat dibutuhkan lagi. Berjalan di thread LLM, jadi tidak
-     * pernah bentrok dengan [ask] yang berjalan di thread yang sama (busy dicek juga).
+     * Lepaskan model (±2,5 GB RAM) bila tidak dipakai: 2 menit bila layar Nine terbuka, 30 detik bila Nine
+     * di latar belakang. Dimuat ulang otomatis saat ada pertanyaan yang butuh AI. Berjalan di thread LLM,
+     * jadi tidak pernah bentrok dengan [ask] di thread yang sama (busy dicek juga).
      */
     private fun watchIdle() {
         idleJob?.cancel()
@@ -178,12 +199,14 @@ class LlmBrain(context: Context, private val prefs: Prefs, private val models: M
                 delay(IDLE_CHECK_MS)
                 if (engine == null) return@launch
                 val now = SystemClock.elapsedRealtime()
-                if (busy || keepWarm()) {
+                if (busy) {
                     lastUse = now
                     continue
                 }
-                if (now - lastUse >= IDLE_UNLOAD_MS) {
+                val limit = if (isForeground()) IDLE_UNLOAD_FG_MS else IDLE_UNLOAD_BG_MS
+                if (now - lastUse >= limit) {
                     closeEngine()
+                    contextDropped = true
                     setState(if (models.isReady()) State.IDLE else State.NO_MODEL)
                     return@launch
                 }
@@ -291,6 +314,7 @@ class LlmBrain(context: Context, private val prefs: Prefs, private val models: M
     fun reset() {
         scope.launch {
             if (!busy) closeConversation()
+            contextDropped = false // pengguna sengaja melupakan: jangan sisipkan riwayat lama
         }
     }
 
@@ -300,6 +324,7 @@ class LlmBrain(context: Context, private val prefs: Prefs, private val models: M
         scope.launch {
             while (busy) delay(50)
             closeEngine()
+            contextDropped = true
             setState(if (models.isReady()) State.IDLE else State.NO_MODEL)
         }
     }
@@ -309,7 +334,11 @@ class LlmBrain(context: Context, private val prefs: Prefs, private val models: M
     }
 
     private companion object {
-        const val IDLE_CHECK_MS = 60_000L
-        const val IDLE_UNLOAD_MS = 10 * 60_000L
+        const val IDLE_CHECK_MS = 10_000L
+        const val IDLE_UNLOAD_FG_MS = 2 * 60_000L
+        const val IDLE_UNLOAD_BG_MS = 30_000L
+        const val STALE_MS = 30 * 60 * 1000L
+        /** Sedikit di bawah UI tetapi tetap di grup latar depan (>= 10 akan dipindah ke grup latar belakang yang lambat). */
+        const val LLM_PRIORITY = 9
     }
 }

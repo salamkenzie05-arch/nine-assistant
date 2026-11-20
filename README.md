@@ -52,8 +52,10 @@ Setiap push ke `main` otomatis mem-build kedua APK (GitHub Actions) dan menerbit
 
 ### Ringan di HP
 
-- Model Gemma (±2,5 GB RAM) dimuat saat layar Nine dibuka, dan **otomatis dilepas setelah ±10 menit** Nine ditinggal di latar belakang dan tidak dipakai. Dimuat lagi otomatis saat Nine dibuka atau dipanggil, jadi jawaban pertama setelah lama diam bisa sedikit lebih lambat.
+- **Model Gemma (±2,5 GB RAM) tidak dimuat saat aplikasi atau prosesnya mulai.** Ia baru dimuat ketika ada pertanyaan yang benar-benar butuh AI (perintah seperti alarm, musik, volume, dll. tidak memerlukannya), lalu **dilepas otomatis**: 2 menit setelah terakhir dipakai saat layar Nine terbuka, 30 detik bila Nine di latar belakang. Akibatnya jawaban AI pertama setelah lama diam butuh beberapa detik untuk memuat model ("Membangunkan otak AI…"); percakapan terakhir disisipkan lagi supaya Nine tetap nyambung.
+- Thread AI berjalan dengan prioritas sedikit di bawah UI, jadi gambar dan sentuhan di layar didahulukan saat model dimuat atau menjawab.
 - Wajah Nine dan cahaya tepi layar menggambar tanpa membuat objek baru di setiap frame (gradien dipakai ulang), sehingga animasi tetap 60 fps dan tampilannya tidak berubah.
+- Widget tidak lagi dibangun ulang setiap aplikasi dibuka (hanya bila ekspresinya berubah atau tema diganti).
 
 ## Supaya benar-benar offline
 

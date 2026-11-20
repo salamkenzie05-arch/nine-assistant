@@ -47,12 +47,12 @@ class NineApp : Application() {
         AppCompatDelegate.setDefaultNightMode(prefs.theme.nightMode)
         models = ModelManager(this, prefs)
         brain = LlmBrain(this, prefs, models)
-        // Selama layar Nine terbuka model tetap di memori; setelah ditinggal lama, otomatis dilepas.
-        brain.keepWarm = { MainActivity.visible }
+        // Model Gemma (±2,5 GB) TIDAK dimuat saat proses mulai; ia dimuat saat ada pertanyaan yang butuh AI
+        // dan otomatis dilepas bila tak dipakai (2 menit di layar, 30 detik di latar belakang).
+        brain.isForeground = { MainActivity.visible }
         gemini = GeminiClient(this, prefs)
         models.addListener { status ->
             when (status) {
-                is ModelManager.Status.Ready -> brain.preload()
                 ModelManager.Status.Missing -> brain.unload()
                 else -> Unit
             }
