@@ -52,6 +52,8 @@ object WidgetUpdater {
             for (id in orbIds) mgr.updateAppWidget(id, orbViews(app))
             val darkIds = mgr.getAppWidgetIds(ComponentName(app, OrbDarkWidgetProvider::class.java))
             for (id in darkIds) mgr.updateAppWidget(id, orbViews(app, dark = true))
+            val largeIds = mgr.getAppWidgetIds(ComponentName(app, OrbLargeWidgetProvider::class.java))
+            for (id in largeIds) mgr.updateAppWidget(id, orbLargeViews(app))
             val todayIds = mgr.getAppWidgetIds(ComponentName(app, TodayWidgetProvider::class.java))
             for (id in todayIds) mgr.updateAppWidget(id, todayViews(app))
         } catch (e: Exception) {
@@ -82,27 +84,50 @@ object WidgetUpdater {
         return Face.NEUTRAL
     }
 
-    private fun rep(name: String, n: Int): List<String> = List(n) { name }
+    /** Lama tiap bingkai (ms). Harus sama dengan android:flipInterval di layout widget. */
+    private const val FRAME_MS = 70
+
+    /** Tahan bingkai [name] selama kira-kira [ms] milidetik. */
+    private fun hold(name: String, ms: Int): List<String> = List(maxOf(1, (ms + FRAME_MS / 2) / FRAME_MS)) { name }
+
+    private fun names(vararg n: String): List<String> = n.toList()
+
+    /** Kedip halus: kelopak turun-naik lewat bingkai perantara (±350 ms). */
+    private fun blink(): List<String> = names("bl1", "blink", "bl2", "bl1")
+
+    /** Lirik ke satu sisi lalu kembali, dengan easing: [side] "l" atau "r"; tiap perpindahan 5 bingkai (±350 ms). */
+    private fun glance(side: String, restMs: Int, rest: String = "neutral"): List<String> {
+        val go = names("g${side}1", "g${side}2", "g${side}3", "g${side}4", if (side == "l") "left2" else "right2")
+        val away = if (side == "l") "left2" else "right2"
+        return go + hold(away, restMs) + go.reversed().drop(1) + listOf(rest)
+    }
+
+    /** Mendongak halus lalu kembali. */
+    private fun lookUp(restMs: Int): List<String> {
+        val go = names("up1", "up2", "up3", "up")
+        return go + hold("up", restMs) + go.reversed().drop(1) + "neutral"
+    }
 
     /**
-     * Urutan bingkai animasi (tiap bingkai 160 ms, diulang terus oleh launcher): berkedip, melirik kiri-kanan,
+     * Urutan bingkai animasi (tiap bingkai [FRAME_MS] ms, diulang terus oleh launcher): berkedip, melirik kiri-kanan,
      * mendongak, tersenyum; versi mengantuk ("zzz"), dicas (petir berdenyut), dan baterai lemah (ikon berkedip).
+     * Gerak mata memakai bingkai perantara berkurva smoothstep supaya tidak melompat.
      */
     private fun sequence(f: Face): List<String> = when (f) {
-        Face.NEUTRAL -> rep("neutral", 14) + "blink" + rep("neutral", 8) +
-            "left1" + rep("left2", 5) + "left1" + rep("neutral", 3) +
-            "right1" + rep("right2", 5) + "right1" + rep("neutral", 9) +
-            "blink" + "neutral" + "blink" + rep("neutral", 8) +
-            rep("up", 4) + rep("neutral", 2) + rep("happy", 5) + rep("neutral", 4)
-        Face.HAPPY -> rep("happy", 10) + rep("neutral", 2) + "blink" + rep("neutral", 2) + rep("happy", 8) +
-            "left1" + rep("left2", 4) + "left1" + rep("happy", 6) +
-            "right1" + rep("right2", 4) + "right1" + rep("happy", 6)
-        Face.SLEEPY -> rep("sleepy1", 5) + rep("sleepy2", 5) + rep("sleepy3", 5) + rep("sleepyclosed", 8) +
-            rep("sleepy1", 5) + rep("sleepy2", 5) + rep("sleepy3", 5) + rep("sleepyclosed", 4)
-        Face.CHARGING -> rep("charge1", 4) + rep("charge2", 4) + rep("charge1", 4) + rep("charge2", 4) +
-            "chargeblink" + rep("charge1", 3) + rep("charge2", 4) + rep("charge1", 4) + rep("charge2", 4)
-        Face.LOWBAT -> rep("lowbat1", 5) + rep("lowbat2", 5) + rep("lowbat1", 5) + rep("lowbat2", 5) +
-            rep("lowbatblink", 3) + rep("lowbat1", 5) + rep("lowbat2", 5)
+        Face.NEUTRAL -> hold("neutral", 1500) + blink() + hold("neutral", 900) +
+            glance("l", 700) + hold("neutral", 700) +
+            glance("r", 700) + hold("neutral", 1300) +
+            blink() + hold("neutral", 160) + blink() + hold("neutral", 800) +
+            lookUp(350) + hold("neutral", 200) + hold("happy", 600) + hold("neutral", 500)
+        Face.HAPPY -> hold("happy", 1100) + hold("neutral", 150) + blink() + hold("neutral", 150) + hold("happy", 900) +
+            glance("l", 500, "happy") + hold("happy", 700) +
+            glance("r", 500, "happy") + hold("happy", 700)
+        Face.SLEEPY -> hold("sleepy1", 700) + hold("sleepy2", 700) + hold("sleepy3", 700) + hold("sleepyclosed", 1100) +
+            hold("sleepy1", 700) + hold("sleepy2", 700) + hold("sleepy3", 700) + hold("sleepyclosed", 600)
+        Face.CHARGING -> hold("charge1", 560) + hold("charge2", 560) + hold("charge1", 560) + hold("charge2", 560) +
+            names("chargeblink") + hold("charge1", 420) + hold("charge2", 560) + hold("charge1", 560) + hold("charge2", 560)
+        Face.LOWBAT -> hold("lowbat1", 700) + hold("lowbat2", 700) + hold("lowbat1", 700) + hold("lowbat2", 700) +
+            hold("lowbatblink", 420) + hold("lowbat1", 700) + hold("lowbat2", 700)
     }
 
     /** Isi ViewFlipper [flipperId] dengan bingkai wajah. [theme]: "light", "dark", atau "auto" (ikut mode gelap sistem). */
@@ -123,6 +148,13 @@ object WidgetUpdater {
     fun orbViews(ctx: Context, dark: Boolean = false): RemoteViews =
         RemoteViews(ctx.packageName, if (dark) R.layout.widget_orb_dark else R.layout.widget_orb).apply {
             fillFace(ctx, this, R.id.widgetFlipper, if (dark) "dark" else "light", face(ctx))
+            setOnClickPendingIntent(R.id.widgetRoot, listenIntent(ctx))
+        }
+
+    /** Widget 4x4: bola Nine besar; warnanya otomatis ikut mode gelap/terang sistem. */
+    fun orbLargeViews(ctx: Context): RemoteViews =
+        RemoteViews(ctx.packageName, R.layout.widget_orb_large).apply {
+            fillFace(ctx, this, R.id.widgetFlipper, "auto", face(ctx))
             setOnClickPendingIntent(R.id.widgetRoot, listenIntent(ctx))
         }
 

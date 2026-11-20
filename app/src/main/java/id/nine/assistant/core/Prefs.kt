@@ -30,6 +30,11 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("speak", true)
         set(value) = sp.edit().putBoolean("speak", value).apply()
 
+    /** Nine mengingat otomatis hal tentang pengguna yang disebut dalam percakapan ("aku suka …", "nama saya …"). */
+    var autoMemory: Boolean
+        get() = sp.getBoolean("auto_memory", true)
+        set(value) = sp.edit().putBoolean("auto_memory", value).apply()
+
     var honorificId: String
         get() = sp.getString("hon_id", "Tuan") ?: "Tuan"
         set(value) = sp.edit().putString("hon_id", value.trim()).apply()
@@ -37,13 +42,6 @@ class Prefs(context: Context) {
     var honorificEn: String
         get() = sp.getString("hon_en", "sir") ?: "sir"
         set(value) = sp.edit().putString("hon_en", value.trim()).apply()
-
-    /** Nama suara TTS pilihan pengguna per bahasa; null = pilih otomatis. */
-    fun voiceName(lang: AppLang): String? = sp.getString("voice_" + lang.name, null)
-
-    fun setVoiceName(lang: AppLang, name: String?) {
-        sp.edit().apply { if (name == null) remove("voice_" + lang.name) else putString("voice_" + lang.name, name) }.apply()
-    }
 
     /** Token Hugging Face (opsional) bila model memerlukan login. Disimpan terenkripsi (Android Keystore). */
     var hfToken: String

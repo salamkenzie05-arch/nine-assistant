@@ -79,8 +79,24 @@ class Persona(private val honorificId: String, private val honorificEn: String) 
         "My apologies${sfx(lang)}, I didn't understand \"$text\". For open questions, enable Nine's AI brain in Settings."
     )
 
+    /**
+     * Aturan bahasa, ditaruh di akhir instruksi sistem (model kecil lebih menurut pada instruksi terakhir).
+     * Satu-satunya pengecualian: baris "CMD:" yang memang berbahasa Indonesia.
+     */
+    private fun languageRule(lang: AppLang): String = lang.t(
+        "ATURAN BAHASA (WAJIB): tulis SELURUH jawaban hanya dalam Bahasa Indonesia. Jangan menyelipkan kata atau kalimat bahasa Inggris atau bahasa lain " +
+            "(kecuali nama orang, merek, judul, dan istilah yang tidak punya padanan umum seperti WiFi atau YouTube). " +
+            "Jangan mencampur bahasa dalam satu jawaban, apa pun bahasa yang dipakai pengguna. Pengecualian satu-satunya: baris perintah \"CMD:\" ditulis seperti contoh.",
+        "LANGUAGE RULE (MANDATORY): write the ENTIRE reply in English only. Do not slip in Indonesian or any other language " +
+            "(except people's names, brands, titles, and terms with no common equivalent). " +
+            "Never mix languages within a reply, whatever language the user writes in. The only exception is the \"CMD:\" command line, which is written as in the examples."
+    )
+
     /** Instruksi sistem untuk Gemini (online, dengan Google Search). */
-    fun onlinePrompt(lang: AppLang, now: LocalDateTime, city: String, search: String = "Google Search"): String {
+    fun onlinePrompt(lang: AppLang, now: LocalDateTime, city: String, search: String = "Google Search"): String =
+        baseOnlinePrompt(lang, now, city, search) + "\n\n" + languageRule(lang)
+
+    private fun baseOnlinePrompt(lang: AppLang, now: LocalDateTime, city: String, search: String): String {
         val date = now.format(DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy, HH:mm", lang.locale))
         return if (lang == AppLang.ID) {
             val call = if (honorificId.isBlank()) "Panggil pengguna dengan sopan." else "Panggil pengguna \"$honorificId\"."
@@ -94,7 +110,7 @@ class Persona(private val honorificId: String, private val honorificEn: String) 
             PENTING: kamu tidak bisa menjalankan tindakan sendiri, jadi JANGAN pernah berkata sudah menambahkan, menyetel, mengirim, menghapus, atau membuka sesuatu.
             Bila pengguna meminta tindakan di HP (alarm, menyalakan/mematikan/menghapus alarm, timer, pengingat, acara kalender, mengubah atau menghapus acara, daftar tugas, catatan, telepon, SMS, WhatsApp, membuka aplikasi, memutar musik, navigasi), termasuk yang merujuk percakapan sebelumnya seperti "ubah jadi jam 11" atau "ingatkan aku soal itu besok", balas HANYA dengan satu baris berformat:
             CMD: <perintah lengkap dan eksplisit dalam Bahasa Indonesia>
-            Contoh: "CMD: tambah acara rapat tim besok jam 11", "CMD: pindahkan acara terakhir ke jam 3 sore", "CMD: hapus acara rapat tim besok", "CMD: ingatkan saya minum obat besok jam 8 pagi", "CMD: pasang alarm setiap hari kerja jam 6 pagi", "CMD: matikan alarm jam 6 pagi", "CMD: hapus alarm gym", "CMD: tambah tugas beli susu", "CMD: tandai tugas beli susu selesai", "CMD: kirim wa ke Budi isinya aku telat", "CMD: buka spotify".
+            Contoh: "CMD: tambah acara rapat tim besok jam 11", "CMD: pindahkan acara terakhir ke jam 3 sore", "CMD: hapus acara rapat tim besok", "CMD: ingatkan saya minum obat besok jam 8 pagi", "CMD: pasang alarm setiap hari kerja jam 6 pagi", "CMD: matikan alarm jam 6 pagi", "CMD: hapus alarm gym", "CMD: tambah tugas beli susu", "CMD: tandai tugas beli susu selesai", "CMD: kirim wa ke Budi isinya aku telat", "CMD: putar lagu hindia".
             Isi perintah dengan detail dari percakapan (judul persis seperti di kalender, tanggal ditulis seperti "2 Desember" dan bukan 2026-12-02, jam, nama). Bila pengguna memilih dari daftar yang Nine berikan (mis. "yang kedua", "keduanya"), jangan buat CMD; jawab saja dengan meminta pengguna menyebut nomornya. Jangan sertakan sapaan seperti "Tuan" atau "sir" di dalam CMD. Untuk hal lain, jawab seperti biasa.
             $loc
             Waktu sekarang: $date.
@@ -111,7 +127,7 @@ class Persona(private val honorificId: String, private val honorificEn: String) 
             IMPORTANT: you cannot perform actions yourself, so NEVER say you have added, set, sent, deleted or opened anything.
             If the user asks for a phone action (alarm, turning alarms on/off or deleting them, timer, reminder, calendar event, moving or deleting an event, to-do list, notes, calls, SMS, WhatsApp, opening apps, playing music, navigation), including ones that refer to earlier conversation such as "make it 11 instead" or "remind me about that tomorrow", reply ONLY with one line in this format:
             CMD: <complete, explicit command written in Indonesian>
-            Examples: "CMD: tambah acara rapat tim besok jam 11", "CMD: pindahkan acara terakhir ke jam 3 sore", "CMD: hapus acara rapat tim besok", "CMD: ingatkan saya minum obat besok jam 8 pagi", "CMD: pasang alarm setiap hari kerja jam 6 pagi", "CMD: matikan alarm jam 6 pagi", "CMD: hapus alarm gym", "CMD: tambah tugas beli susu", "CMD: kirim wa ke Budi isinya aku telat", "CMD: buka spotify".
+            Examples: "CMD: tambah acara rapat tim besok jam 11", "CMD: pindahkan acara terakhir ke jam 3 sore", "CMD: hapus acara rapat tim besok", "CMD: ingatkan saya minum obat besok jam 8 pagi", "CMD: pasang alarm setiap hari kerja jam 6 pagi", "CMD: matikan alarm jam 6 pagi", "CMD: hapus alarm gym", "CMD: tambah tugas beli susu", "CMD: kirim wa ke Budi isinya aku telat", "CMD: putar lagu hindia".
             Fill the command with details from the conversation (the exact event title, dates written like "2 Desember" rather than 2026-12-02, time, names). If the user is picking from a list Nine just showed (e.g. "the second one", "both"), do not write a CMD; ask them to say the number instead. Never put a form of address such as "sir" inside the CMD. For anything else, reply normally.
             $loc
             Current time: $date.
@@ -119,8 +135,18 @@ class Persona(private val honorificId: String, private val honorificEn: String) 
         }
     }
 
-    /** Instruksi sistem untuk Gemma. Jawaban akan diucapkan, jadi harus singkat dan tanpa markdown. */
-    fun systemPrompt(lang: AppLang, now: LocalDateTime): String {
+    /**
+     * Instruksi sistem untuk Gemma. Jawaban akan dibaca di layar dan dibunyikan sebagai suara droid, jadi singkat
+     * dan tanpa markdown. [memory]: blok ingatan tentang pengguna dari [MemoryStore.promptBlock] (boleh kosong).
+     */
+    fun systemPrompt(lang: AppLang, now: LocalDateTime, memory: String = ""): String {
+        val sb = StringBuilder(baseSystemPrompt(lang, now))
+        if (memory.isNotBlank()) sb.append("\n\n").append(memory.trim())
+        sb.append("\n\n").append(languageRule(lang))
+        return sb.toString()
+    }
+
+    private fun baseSystemPrompt(lang: AppLang, now: LocalDateTime): String {
         val date = now.format(DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy, HH:mm", lang.locale))
         return if (lang == AppLang.ID) {
             val call = if (honorificId.isBlank()) "Panggil pengguna dengan sopan." else "Panggil pengguna \"$honorificId\"."
@@ -133,7 +159,7 @@ class Persona(private val honorificId: String, private val honorificEn: String) 
             PENTING: kamu tidak bisa menjalankan tindakan sendiri, jadi JANGAN pernah berkata sudah menambahkan, menyetel, mengirim, menghapus, atau membuka sesuatu.
             Bila pengguna meminta tindakan di HP (alarm, menyalakan/mematikan/menghapus alarm, timer, pengingat, acara kalender, mengubah atau menghapus acara, daftar tugas, catatan, telepon, SMS, WhatsApp, membuka aplikasi, memutar musik, navigasi), termasuk yang merujuk percakapan sebelumnya seperti "ubah jadi jam 11" atau "ingatkan aku soal itu besok", balas HANYA dengan satu baris berformat:
             CMD: <perintah lengkap dan eksplisit dalam Bahasa Indonesia>
-            Contoh: "CMD: tambah acara rapat tim besok jam 11", "CMD: pindahkan acara terakhir ke jam 3 sore", "CMD: hapus acara rapat tim besok", "CMD: ingatkan saya minum obat besok jam 8 pagi", "CMD: pasang alarm setiap hari kerja jam 6 pagi", "CMD: matikan alarm jam 6 pagi", "CMD: hapus alarm gym", "CMD: tambah tugas beli susu", "CMD: tandai tugas beli susu selesai", "CMD: kirim wa ke Budi isinya aku telat", "CMD: buka spotify".
+            Contoh: "CMD: tambah acara rapat tim besok jam 11", "CMD: pindahkan acara terakhir ke jam 3 sore", "CMD: hapus acara rapat tim besok", "CMD: ingatkan saya minum obat besok jam 8 pagi", "CMD: pasang alarm setiap hari kerja jam 6 pagi", "CMD: matikan alarm jam 6 pagi", "CMD: hapus alarm gym", "CMD: tambah tugas beli susu", "CMD: tandai tugas beli susu selesai", "CMD: kirim wa ke Budi isinya aku telat", "CMD: putar lagu hindia".
             Isi perintah dengan detail dari percakapan (judul persis seperti di kalender, tanggal ditulis seperti "2 Desember" dan bukan 2026-12-02, jam, nama). Bila pengguna memilih dari daftar yang Nine berikan (mis. "yang kedua", "keduanya"), jangan buat CMD; jawab saja dengan meminta pengguna menyebut nomornya. Jangan sertakan sapaan seperti "Tuan" atau "sir" di dalam CMD. Untuk hal lain, jawab seperti biasa.
             Perhatikan konteks percakapan sebelumnya: kata seperti "itu", "dia", "yang tadi", "acaranya" merujuk hal yang terakhir dibahas.
             Jangan mengarang fakta. Bila tidak yakin, katakan tidak tahu.
@@ -150,7 +176,7 @@ class Persona(private val honorificId: String, private val honorificEn: String) 
             IMPORTANT: you cannot perform actions yourself, so NEVER say you have added, set, sent, deleted or opened anything.
             If the user asks for a phone action (alarm, turning alarms on/off or deleting them, timer, reminder, calendar event, moving or deleting an event, to-do list, notes, calls, SMS, WhatsApp, opening apps, playing music, navigation), including ones that refer to earlier conversation such as "make it 11 instead" or "remind me about that tomorrow", reply ONLY with one line in this format:
             CMD: <complete, explicit command written in Indonesian>
-            Examples: "CMD: tambah acara rapat tim besok jam 11", "CMD: pindahkan acara terakhir ke jam 3 sore", "CMD: hapus acara rapat tim besok", "CMD: ingatkan saya minum obat besok jam 8 pagi", "CMD: pasang alarm setiap hari kerja jam 6 pagi", "CMD: matikan alarm jam 6 pagi", "CMD: hapus alarm gym", "CMD: tambah tugas beli susu", "CMD: kirim wa ke Budi isinya aku telat", "CMD: buka spotify".
+            Examples: "CMD: tambah acara rapat tim besok jam 11", "CMD: pindahkan acara terakhir ke jam 3 sore", "CMD: hapus acara rapat tim besok", "CMD: ingatkan saya minum obat besok jam 8 pagi", "CMD: pasang alarm setiap hari kerja jam 6 pagi", "CMD: matikan alarm jam 6 pagi", "CMD: hapus alarm gym", "CMD: tambah tugas beli susu", "CMD: kirim wa ke Budi isinya aku telat", "CMD: putar lagu hindia".
             Fill the command with details from the conversation (the exact event title, dates written like "2 Desember" rather than 2026-12-02, time, names). If the user is picking from a list Nine just showed (e.g. "the second one", "both"), do not write a CMD; ask them to say the number instead. Never put a form of address such as "sir" inside the CMD. For anything else, reply normally.
             Keep track of the conversation: words like "it", "that", "the one before" refer to what was just discussed.
             Never make up facts. If unsure, say you don't know.

@@ -2,7 +2,7 @@ package id.nine.assistant.widget
 
 import id.nine.assistant.R
 
-/** Dibuat oleh gen_faces.py: bingkai wajah widget per tema (light, dark, auto = ikut mode gelap sistem). */
+/** Dibuat oleh tools/face_sphere.py: bingkai wajah widget per tema (light, dark, auto = ikut mode gelap sistem). */
 object FaceFrames {
     val LIGHT: Map<String, Int> = mapOf(
         "neutral" to R.drawable.face_light_neutral,
@@ -22,7 +22,20 @@ object FaceFrames {
         "chargeblink" to R.drawable.face_light_chargeblink,
         "lowbat1" to R.drawable.face_light_lowbat1,
         "lowbat2" to R.drawable.face_light_lowbat2,
-        "lowbatblink" to R.drawable.face_light_lowbatblink
+        "lowbatblink" to R.drawable.face_light_lowbatblink,
+        "gl1" to R.drawable.face_light_gl1,
+        "gr1" to R.drawable.face_light_gr1,
+        "gl2" to R.drawable.face_light_gl2,
+        "gr2" to R.drawable.face_light_gr2,
+        "gl3" to R.drawable.face_light_gl3,
+        "gr3" to R.drawable.face_light_gr3,
+        "gl4" to R.drawable.face_light_gl4,
+        "gr4" to R.drawable.face_light_gr4,
+        "up1" to R.drawable.face_light_up1,
+        "up2" to R.drawable.face_light_up2,
+        "up3" to R.drawable.face_light_up3,
+        "bl1" to R.drawable.face_light_bl1,
+        "bl2" to R.drawable.face_light_bl2
     )
 
     val DARK: Map<String, Int> = mapOf(
@@ -43,7 +56,20 @@ object FaceFrames {
         "chargeblink" to R.drawable.face_dark_chargeblink,
         "lowbat1" to R.drawable.face_dark_lowbat1,
         "lowbat2" to R.drawable.face_dark_lowbat2,
-        "lowbatblink" to R.drawable.face_dark_lowbatblink
+        "lowbatblink" to R.drawable.face_dark_lowbatblink,
+        "gl1" to R.drawable.face_dark_gl1,
+        "gr1" to R.drawable.face_dark_gr1,
+        "gl2" to R.drawable.face_dark_gl2,
+        "gr2" to R.drawable.face_dark_gr2,
+        "gl3" to R.drawable.face_dark_gl3,
+        "gr3" to R.drawable.face_dark_gr3,
+        "gl4" to R.drawable.face_dark_gl4,
+        "gr4" to R.drawable.face_dark_gr4,
+        "up1" to R.drawable.face_dark_up1,
+        "up2" to R.drawable.face_dark_up2,
+        "up3" to R.drawable.face_dark_up3,
+        "bl1" to R.drawable.face_dark_bl1,
+        "bl2" to R.drawable.face_dark_bl2
     )
 
     val AUTO: Map<String, Int> = mapOf(
@@ -64,7 +90,20 @@ object FaceFrames {
         "chargeblink" to R.drawable.face_auto_chargeblink,
         "lowbat1" to R.drawable.face_auto_lowbat1,
         "lowbat2" to R.drawable.face_auto_lowbat2,
-        "lowbatblink" to R.drawable.face_auto_lowbatblink
+        "lowbatblink" to R.drawable.face_auto_lowbatblink,
+        "gl1" to R.drawable.face_auto_gl1,
+        "gr1" to R.drawable.face_auto_gr1,
+        "gl2" to R.drawable.face_auto_gl2,
+        "gr2" to R.drawable.face_auto_gr2,
+        "gl3" to R.drawable.face_auto_gl3,
+        "gr3" to R.drawable.face_auto_gr3,
+        "gl4" to R.drawable.face_auto_gl4,
+        "gr4" to R.drawable.face_auto_gr4,
+        "up1" to R.drawable.face_auto_up1,
+        "up2" to R.drawable.face_auto_up2,
+        "up3" to R.drawable.face_auto_up3,
+        "bl1" to R.drawable.face_auto_bl1,
+        "bl2" to R.drawable.face_auto_bl2
     )
 
 }

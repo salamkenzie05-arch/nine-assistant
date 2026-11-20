@@ -28,6 +28,7 @@ import id.nine.assistant.core.Affinity
 import id.nine.assistant.core.LocationHelper
 import id.nine.assistant.core.Persona
 import id.nine.assistant.recorder.RecorderService
+import id.nine.assistant.core.MemoryStore
 import id.nine.assistant.core.Prefs
 import id.nine.assistant.AlarmsActivity
 import id.nine.assistant.alarm.AlarmMatch
@@ -74,7 +75,12 @@ data class SkillResult(
  * Menjalankan [Command] di perangkat. Semua dilakukan lokal lewat API Android;
  * tidak ada akses jaringan (aplikasi ini bahkan tidak meminta izin INTERNET).
  */
-class SkillExecutor(context: Context, private val notes: NoteStore, private val prefs: Prefs) {
+class SkillExecutor(
+    context: Context,
+    private val notes: NoteStore,
+    private val prefs: Prefs,
+    private val memory: MemoryStore = MemoryStore(context)
+) {
     private val personaOf: () -> Persona = { prefs.persona }
     private val ctx = context.applicationContext
     private val contacts = ContactsLookup(ctx)
@@ -139,6 +145,10 @@ class SkillExecutor(context: Context, private val notes: NoteStore, private val 
         }
         Command.ReadNotes -> readNotes(lang)
         Command.ClearNotes -> clearNotes(lang, confirmed)
+        is Command.Remember -> remember(cmd.text, lang)
+        is Command.Forget -> forget(cmd.query, lang)
+        Command.ForgetAll -> forgetAll(lang, confirmed)
+        Command.ReadMemory -> readMemory(lang)
         is Command.Call -> call(cmd.target, lang, denied)
         is Command.SendSms -> prepareSms(cmd, lang, denied)
         is Command.SendSmsResolved -> sendSms(cmd, lang, denied)
@@ -519,7 +529,7 @@ class SkillExecutor(context: Context, private val notes: NoteStore, private val 
         "google maps" to listOf("maps"),
         "galeri" to listOf("gallery", "photos"),
         "foto" to listOf("photos", "gallery"),
-        "musik" to listOf("music", "youtube music", "spotify"),
+        "musik" to listOf("youtube music", "music", "spotify"),
         "unduhan" to listOf("downloads", "my files"),
         "berkas" to listOf("my files", "files"),
         "file" to listOf("my files", "files"),
@@ -795,6 +805,62 @@ class SkillExecutor(context: Context, private val notes: NoteStore, private val 
         }
         notes.clear()
         return SkillResult(lang.t("Semua catatan sudah dihapus${s(lang)}.", "All notes deleted${s(lang)}."))
+    }
+
+    // ------------------------------------------------------------ ingatan jangka panjang
+
+    private fun remember(text: String, lang: AppLang): SkillResult {
+        val clean = MemoryStore.clean(text)
+        if (clean.isEmpty()) return SkillResult(lang.t("Apa yang harus saya ingat?", "What should I remember?"))
+        return if (memory.add(clean)) {
+            SkillResult(lang.t("Baik${s(lang)}, saya ingat: $clean", "Very good${s(lang)}, I'll remember: $clean"))
+        } else {
+            SkillResult(lang.t("Itu sudah saya ingat${s(lang)}.", "I already remember that${s(lang)}."))
+        }
+    }
+
+    private fun forget(query: String, lang: AppLang): SkillResult {
+        val n = memory.forget(query)
+        if (n == 0) {
+            return SkillResult(lang.t("Saya tidak menemukan ingatan tentang \"$query\"${s(lang)}.", "I couldn't find anything about \"$query\" in my memory${s(lang)}."))
+        }
+        return SkillResult(
+            lang.t("Sudah saya lupakan ($n hal)${s(lang)}.", "Forgotten ($n ${if (n == 1) "item" else "items"})${s(lang)}."),
+            resetChat = true // percakapan AI yang berjalan masih memuat ingatan lama
+        )
+    }
+
+    private fun forgetAll(lang: AppLang, confirmed: Boolean): SkillResult {
+        val n = memory.count()
+        if (n == 0) return SkillResult(lang.t("Saya belum mengingat apa pun tentang Anda.", "I don't remember anything about you yet."))
+        if (!confirmed) {
+            return SkillResult(
+                lang.t("Lupakan semua $n hal yang saya ingat tentang Anda? Katakan ya atau tidak.", "Forget all $n things I remember about you? Say yes or no."),
+                pending = Pending.Confirm(Command.ForgetAll)
+            )
+        }
+        memory.clear()
+        return SkillResult(lang.t("Semua ingatan sudah dihapus${s(lang)}.", "All memories deleted${s(lang)}."), resetChat = true)
+    }
+
+    private fun readMemory(lang: AppLang): SkillResult {
+        val all = memory.all()
+        if (all.isEmpty()) {
+            return SkillResult(
+                lang.t(
+                    "Saya belum mengingat apa pun tentang Anda. Katakan \"ingat bahwa …\" atau ceritakan saja tentang diri Anda.",
+                    "I don't remember anything about you yet. Say \"remember that …\" or simply tell me about yourself."
+                )
+            )
+        }
+        val last = all.takeLast(10)
+        val lines = last.mapIndexed { i, f -> "${i + 1}. ${f.text}" }.joinToString("\n")
+        val head = if (all.size > last.size) {
+            lang.t("Saya mengingat ${all.size} hal. ${last.size} terakhir:", "I remember ${all.size} things. The latest ${last.size}:")
+        } else {
+            lang.t("Saya mengingat ${all.size} hal:", "I remember ${all.size} things:")
+        }
+        return SkillResult("$head\n$lines")
     }
 
     // ------------------------------------------------------------ telepon & SMS
@@ -1402,14 +1468,27 @@ class SkillExecutor(context: Context, private val notes: NoteStore, private val 
                 intent = Intent(Intent.ACTION_SEARCH).setPackage("com.google.android.youtube").putExtra("query", q),
                 fallback = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/results?search_query=$enc"))
             )
-            "youtube music" -> SkillResult(
-                lang.t("Memutar \"$q\" di YouTube Music${s(lang)}.", "Playing \"$q\" on YouTube Music${s(lang)}."),
-                intent = Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH)
-                    .setPackage("com.google.android.apps.youtube.music")
-                    .putExtra(SearchManager.QUERY, q)
-                    .putExtra(MediaStore.EXTRA_MEDIA_FOCUS, "vnd.android.cursor.item/*"),
-                fallback = Intent(Intent.ACTION_VIEW, Uri.parse("https://music.youtube.com/search?q=$enc"))
-            )
+            // Tanpa aplikasi disebut: musik selalu lewat YouTube Music (bukan Spotify atau pemutar lain).
+            "youtube music", null -> {
+                val ytm = "com.google.android.apps.youtube.music"
+                if (q.isEmpty()) {
+                    val open = ctx.packageManager.getLaunchIntentForPackage(ytm)
+                    SkillResult(
+                        lang.t("Membuka YouTube Music${s(lang)}.", "Opening YouTube Music${s(lang)}."),
+                        intent = open ?: Intent(Intent.ACTION_VIEW, Uri.parse("https://music.youtube.com")),
+                        fallback = Intent(Intent.ACTION_VIEW, Uri.parse("https://music.youtube.com"))
+                    )
+                } else {
+                    SkillResult(
+                        lang.t("Memutar \"$q\" di YouTube Music${s(lang)}.", "Playing \"$q\" on YouTube Music${s(lang)}."),
+                        intent = Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH)
+                            .setPackage(ytm)
+                            .putExtra(SearchManager.QUERY, q)
+                            .putExtra(MediaStore.EXTRA_MEDIA_FOCUS, "vnd.android.cursor.item/*"),
+                        fallback = Intent(Intent.ACTION_VIEW, Uri.parse("https://music.youtube.com/search?q=$enc"))
+                    )
+                }
+            }
             "spotify" -> SkillResult(
                 lang.t("Memutar \"$q\" di Spotify${s(lang)}.", "Playing \"$q\" on Spotify${s(lang)}."),
                 intent = Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH)
@@ -1418,20 +1497,6 @@ class SkillExecutor(context: Context, private val notes: NoteStore, private val 
                     .putExtra(MediaStore.EXTRA_MEDIA_FOCUS, "vnd.android.cursor.item/*"),
                 fallback = Intent(Intent.ACTION_VIEW, Uri.parse("spotify:search:$enc"))
             )
-            null -> {
-                // Tanpa aplikasi disebut: pakai Spotify bila ada, lalu pemutar musik default, lalu YouTube.
-                val pkg = listOf("com.spotify.music", "com.google.android.apps.youtube.music").firstOrNull { installed(it) }
-                val i = Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH)
-                    .putExtra(SearchManager.QUERY, q)
-                    .putExtra(MediaStore.EXTRA_MEDIA_FOCUS, "vnd.android.cursor.item/*")
-                if (pkg != null) i.setPackage(pkg)
-                SkillResult(
-                    if (q.isEmpty()) lang.t("Memutar musik${s(lang)}.", "Playing some music${s(lang)}.")
-                    else lang.t("Memutar \"$q\"${s(lang)}.", "Playing \"$q\"${s(lang)}."),
-                    intent = i,
-                    fallback = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/results?search_query=$enc"))
-                )
-            }
             else -> openApp(cmd.app ?: "", lang)
         }
     }
@@ -1519,7 +1584,7 @@ class SkillExecutor(context: Context, private val notes: NoteStore, private val 
             "• \"Ingatkan saya minum obat jam 8 malam\"\n" +
             "• \"Tambah acara rapat besok jam 10\" / \"Jadwal saya hari ini\"\n" +
             "• \"Tambah tugas beli susu\" / \"Apa tugas saya hari ini\"\n" +
-            "• \"Putar lagu Tulus di Spotify\" / \"Navigasi ke Monas\"\n" +
+            "• \"Putar lagu Tulus\" (YouTube Music) / \"Navigasi ke Monas\"\n" +
             "• \"Kirim WA ke Budi isinya aku otw\"\n" +
             "• \"Ambil foto\" / \"Selfie\" / \"Rekam video\" / \"Rekam suara\"\n" +
             "• \"Level kita berapa?\" / \"Di mana saya?\"\n" +
@@ -1527,6 +1592,7 @@ class SkillExecutor(context: Context, private val notes: NoteStore, private val 
             "• \"Nyalakan senter\" / \"Volume 50 persen\"\n" +
             "• \"Berapa sisa baterai?\" / \"Jam berapa sekarang?\"\n" +
             "• \"Catat beli susu\" / \"Baca catatan\"\n" +
+            "• \"Ingat bahwa ulang tahun ibu 3 Mei\" / \"Apa yang kamu ingat tentang aku?\" / \"Lupakan ulang tahun ibu\"\n" +
             "• \"Telepon Budi\" / \"Kirim pesan ke Ibu isinya aku pulang telat\"\n" +
             "• \"Ganti bahasa ke Inggris\" / \"Lupakan percakapan\"",
         "Here are some things I can do:\n" +
@@ -1536,7 +1602,7 @@ class SkillExecutor(context: Context, private val notes: NoteStore, private val 
             "• \"Remind me to take my pills at 8 PM\"\n" +
             "• \"Schedule lunch with Sarah tomorrow at noon\" / \"What's on my calendar today\"\n" +
             "• \"Add buy milk to my to-do list\" / \"What's on my to-do list\"\n" +
-            "• \"Play some jazz on Spotify\" / \"Navigate to the airport\"\n" +
+            "• \"Play some jazz\" (YouTube Music) / \"Navigate to the airport\"\n" +
             "• \"Send a WhatsApp to John saying I'm on my way\"\n" +
             "• \"Take a photo\" / \"Take a selfie\" / \"Record a video\" / \"Start recording\"\n" +
             "• \"What's our level?\" / \"Where am I?\"\n" +
@@ -1544,6 +1610,7 @@ class SkillExecutor(context: Context, private val notes: NoteStore, private val 
             "• \"Turn on the flashlight\" / \"Set volume to 50 percent\"\n" +
             "• \"How much battery is left?\" / \"What time is it?\"\n" +
             "• \"Take a note: buy milk\" / \"Read my notes\"\n" +
+            "• \"Remember that my mom's birthday is May 3\" / \"What do you remember about me?\" / \"Forget my mom's birthday\"\n" +
             "• \"Call Bob\" / \"Send a message to Mom saying I'll be late\"\n" +
             "• \"Switch language to Indonesian\" / \"Forget our conversation\""
     )

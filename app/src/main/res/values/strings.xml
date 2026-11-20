@@ -48,13 +48,9 @@
     <string name="sec_language">Bahasa &amp; panggilan</string>
     <string name="honorific_label">Nine memanggil Anda (Indonesia / English):</string>
     <string name="sec_voice">Suara Nine</string>
-    <string name="speak_replies">Ucapkan jawaban</string>
-    <string name="voice_label">Pilih suara (bahasa aktif):</string>
-    <string name="voice_auto">Otomatis (suara pria terbaik)</string>
+    <string name="speak_replies">Suara droid (bip &amp; siul)</string>
     <string name="voice_preview">Dengarkan contoh</string>
-    <string name="voice_help">Untuk karakter suara terbaik, pasang \"Speech Services by Google\" dari Play Store lalu unduh suara Inggris (Inggris Raya) dan Indonesia di pengaturan Teks ke ucapan.</string>
-    <string name="voice_sample_id">Selamat malam, Tuan. Semua sistem berjalan normal. Ada yang bisa saya bantu?</string>
-    <string name="voice_sample_en">Good evening, sir. All systems are running smoothly. How may I assist you?</string>
+    <string name="voice_help">Nine tidak memakai suara manusia. Ia berbicara dengan bunyi bip, kicau, dan siulan ala droid yang dibuat langsung di HP, sedangkan isi jawabannya tetap tampil sebagai teks.</string>
     <string name="sec_assistant">Asisten default</string>
     <string name="assistant_help">Jadikan Nine asisten digital agar bisa dipanggil dengan menekan lama tombol samping (atur di Pengaturan > Fitur lanjutan > Tombol samping > Tekan dan tahan > Aktifkan asisten digital).</string>
     <string name="assistant_button">Pilih Nine sebagai asisten digital</string>
@@ -131,6 +127,7 @@
     <string name="location_status_none">Belum ada lokasi.</string>
 
     <string name="widget_orb_dark_desc">Orb Nine gelap: ketuk untuk bicara</string>
+    <string name="widget_orb_large_desc">Orb Nine besar 4×4: ketuk untuk bicara</string>
     <string name="unlock_reason">Buka kunci untuk melanjutkan perintah Nine</string>
 
     <string name="cd_menu">Menu Nine</string>
@@ -156,4 +153,13 @@
     <string name="alarm_manage">Kelola alarm</string>
     <string name="alarm_fullscreen">Izinkan layar penuh saat alarm berbunyi</string>
     <string name="alarm_fullscreen_ok">Layar penuh alarm: diizinkan ✓</string>
+    <string name="sec_memory_group">Memori Nine</string>
+    <string name="memory_auto">Ingat otomatis hal yang saya ceritakan</string>
+    <string name="memory_count">%1$d hal diingat</string>
+    <string name="memory_manage">Lihat &amp; hapus</string>
+    <string name="memory_clear">Hapus semua</string>
+    <string name="memory_delete_selected">Hapus terpilih</string>
+    <string name="memory_empty">Belum ada yang diingat.</string>
+    <string name="memory_clear_confirm">Hapus semua ingatan Nine tentang Anda?</string>
+    <string name="memory_help">Nine mengingat hal tetap yang Anda ceritakan (nama, kesukaan, keluarga, kebiasaan) dan memakainya di percakapan berikutnya. Semuanya disimpan hanya di HP ini. Katakan \"ingat bahwa …\" untuk menyimpan langsung, atau \"lupakan …\" untuk menghapus. Ini ingatan, bukan pelatihan ulang model.</string>
 </resources>

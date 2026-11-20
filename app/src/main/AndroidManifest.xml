@@ -38,12 +38,8 @@
             <category android:name="android.intent.category.LAUNCHER" />
         </intent>
         <intent>
-            <action android:name="android.intent.action.TTS_SERVICE" />
-        </intent>
-        <intent>
             <action android:name="android.speech.RecognitionService" />
         </intent>
-        <package android:name="com.google.android.tts" />
         <package android:name="com.whatsapp" />
         <package android:name="com.whatsapp.w4b" />
         <package android:name="com.spotify.music" />
@@ -181,6 +177,18 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_orb_dark_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.OrbLargeWidgetProvider"
+            android:exported="false"
+            android:label="@string/widget_orb_large_desc">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_orb_large_info" />
         </receiver>
 
         <receiver

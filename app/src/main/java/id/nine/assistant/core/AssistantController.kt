@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
 import id.nine.assistant.NineApp
+import id.nine.assistant.llm.LangGuard
 import id.nine.assistant.llm.LlmBrain
 import id.nine.assistant.llm.OnlineBrain
 import id.nine.assistant.llm.TextClean
@@ -62,7 +63,8 @@ class AssistantController(context: Context, private val ui: Ui) {
     private val online: OnlineBrain get() = nine.online
     private val parser = CommandParser()
     private val filler = SlotFiller(parser)
-    private val executor = SkillExecutor(app, NoteStore(app), prefs)
+    private val memory = MemoryStore(app)
+    private val executor = SkillExecutor(app, NoteStore(app), prefs, memory)
     private val todos = TodoStore(app)
     private val calendar = CalendarSkill(app)
 
@@ -273,7 +275,23 @@ class AssistantController(context: Context, private val ui: Ui) {
                 }
             }
         }
-        execute(parser.parse(text), confirmed = false)
+        val cmd = parser.parse(text)
+        // Ucapan biasa (bukan perintah): ingat hal tetap tentang pengguna ("aku suka …", "nama saya …").
+        if (cmd is Command.Unknown) autoRemember(text)
+        execute(cmd, confirmed = false)
+    }
+
+    /** Simpan otomatis kalimat berisi fakta tentang pengguna ke ingatan jangka panjang. */
+    private fun autoRemember(text: String) {
+        if (!prefs.autoMemory) return
+        val saved = try {
+            FactExtractor.extract(text).filter { memory.add(it) }
+        } catch (e: Exception) {
+            emptyList()
+        }
+        if (saved.isNotEmpty()) {
+            ui.onNotice(lang.t("Diingat: ", "Remembered: ") + saved.joinToString("; ") { MemoryStore.clean(it) })
+        }
     }
 
     /** Perintah yang aman dijalankan walau HP terkunci (tidak membuka data pribadi). */
@@ -298,6 +316,7 @@ class AssistantController(context: Context, private val ui: Ui) {
         is Command.DeleteLastEvent -> lang.t("menghapus acara terakhir", "delete the last event")
         is Command.AlarmDelete -> lang.t("menghapus alarm", "delete the alarm")
         is Command.DeleteEvents -> lang.t("menghapus ${c.items.size} acara", "delete ${c.items.size} events")
+        is Command.Forget -> lang.t("melupakan ${c.query}", "forget ${c.query}")
         else -> null
     }
 
@@ -405,8 +424,10 @@ class AssistantController(context: Context, private val ui: Ui) {
     // ------------------------------------------------------------------ Gemma
 
     /** Ringkasan keadaan perangkat untuk AI: tugas hari ini, acara hari ini, acara terakhir yang dibuat Nine. */
-    private fun deviceContext(l: AppLang): String {
+    private fun deviceContext(l: AppLang, withMemory: Boolean = true): String {
         val parts = ArrayList<String>()
+        // Ingatan tentang pengguna. Gemma menerimanya lewat instruksi sistem (LlmBrain), jadi tidak diulang di tiap pesan.
+        if (withMemory) memory.promptBlock(l).takeIf { it.isNotBlank() }?.let { parts += it }
         try {
             val open = todos.pending().take(8).map { it.text }
             parts += l.t("Tugas hari ini yang belum selesai: ", "Open tasks today: ") +
@@ -470,7 +491,7 @@ class AssistantController(context: Context, private val ui: Ui) {
             .filter { it.text.isNotBlank() && it.text != "…" }
             .takeLast(6)
             .joinToString("\n") { (if (it.fromUser) l.t("Pengguna: ", "User: ") else "Nine: ") + it.text.take(300) }
-        val ctx = deviceContext(l)
+        val ctx = deviceContext(l, withMemory = false)
         if (missed.isEmpty() && ctx.isEmpty()) return question
         val sb = StringBuilder()
         if (missed.isNotEmpty()) sb.append(l.t("[Percakapan sebelumnya yang ditangani modul perintah]\n", "[Earlier turns handled by the command module]\n")).append(missed).append("\n")
@@ -543,6 +564,36 @@ class AssistantController(context: Context, private val ui: Ui) {
         if (speak) output.beginStream(l) { setState(State.SPEAKING) }
         val gen = ++askGen
         var holding = true // menahan keluaran sampai jelas ini bukan "CMD:"
+        var viaGemma = !online // jawaban dari Gemma offline (bukan Gemini): periksa campuran bahasa
+
+        // Tulis ulang jawaban yang bahasanya bercampur lewat percakapan Gemma yang sama; [done] menerima hasilnya (atau null).
+        fun rewrite(original: String, done: (String?) -> Unit) {
+            val prompt = l.t(
+                "Jawabanmu barusan bercampur bahasa. Tulis ulang jawaban yang sama, dengan makna yang persis sama, SEPENUHNYA dalam Bahasa Indonesia tanpa kata bahasa Inggris. Balas hanya dengan teks hasil tulis ulang, tanpa pembuka.",
+                "Your last reply mixed languages. Rewrite the same reply, with exactly the same meaning, ENTIRELY in English with no Indonesian words. Reply with the rewritten text only, no preamble."
+            )
+            val cb = object : LlmBrain.ReplyCallback {
+                override fun onChunk(text: String) {}
+
+                override fun onDone(fullText: String) {
+                    if (gen != askGen) return
+                    brainJob = null
+                    cancelAi = null
+                    val fixed = TextClean.clean(fullText)
+                    val better = fixed.length >= 10 && LangGuard.foreign(fixed, l) < LangGuard.foreign(original, l)
+                    done(if (better) fixed else null)
+                }
+
+                override fun onError(message: String) {
+                    if (gen != askGen) return
+                    brainJob = null
+                    cancelAi = null
+                    done(null)
+                }
+            }
+            brainJob = brain.ask(prompt, l, cb)
+            cancelAi = { brain.cancel() }
+        }
 
         val sink = object : OnlineBrain.Callback {
             override fun onChunk(text: String) {
@@ -586,20 +637,34 @@ class AssistantController(context: Context, private val ui: Ui) {
                     return
                 }
                 log.update(index, cleaned)
-                ui.onMood(moodForText(cleaned))
-                val followUp = cleaned.trimEnd().endsWith("?")
                 if (speak) {
                     if (holding) {
-                        // seluruh jawaban pendek tertahan: ucapkan sekarang
+                        // seluruh jawaban pendek tertahan: bunyikan sekarang
                         for (sentence in splitter.push(fullText)) output.enqueue(TextClean.clean(sentence))
                     }
                     splitter.flush()?.let { output.enqueue(TextClean.clean(it)) }
-                    output.endStream {
+                }
+                fun conclude(finalText: String) {
+                    ui.onMood(moodForText(finalText))
+                    val followUp = finalText.trimEnd().endsWith("?")
+                    if (speak) {
+                        output.endStream {
+                            setState(State.IDLE)
+                            if (followUp) startListening()
+                        }
+                    } else {
                         setState(State.IDLE)
-                        if (followUp) startListening()
+                    }
+                }
+                if (viaGemma && LangGuard.needsRewrite(cleaned, l, question)) {
+                    ui.onPartial(l.t("Merapikan bahasa…", "Polishing the wording…"))
+                    rewrite(cleaned) { fixed ->
+                        ui.onPartial("")
+                        if (fixed != null) log.update(index, fixed)
+                        conclude(fixed ?: cleaned)
                     }
                 } else {
-                    setState(State.IDLE)
+                    conclude(cleaned)
                 }
             }
 
@@ -635,6 +700,7 @@ class AssistantController(context: Context, private val ui: Ui) {
                     ui.onPartial(l.t("Internet bermasalah, beralih ke mode offline…", "Connection trouble, switching to offline mode…"))
                     raw.setLength(0)
                     holding = true
+                    viaGemma = true
                     brainJob = brain.ask(gemmaMessage(question, l, userIndex), l, this)
                     cancelAi = { brain.cancel() }
                 } else {

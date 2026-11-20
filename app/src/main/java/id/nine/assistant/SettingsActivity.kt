@@ -23,6 +23,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import id.nine.assistant.core.AppLang
+import id.nine.assistant.core.MemoryStore
 import id.nine.assistant.core.Prefs
 import id.nine.assistant.databinding.ActivitySettingsBinding
 import id.nine.assistant.llm.ModelManager
@@ -36,8 +37,6 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var nine: NineApp
     private lateinit var prefs: Prefs
     private var voice: SpeechOutput? = null
-    private var voiceNames: List<String?> = emptyList()
-    private var populatingVoices = false
 
     private val importLauncher =
         registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -191,7 +190,6 @@ class SettingsActivity : AppCompatActivity() {
             if (l != prefs.lang) {
                 prefs.lang = l
                 nine.brain.reset()
-                populateVoices()
             }
         }
         binding.editHonId.setText(prefs.honorificId)
@@ -200,26 +198,19 @@ class SettingsActivity : AppCompatActivity() {
         // --- Suara
         binding.switchSpeak.isChecked = prefs.speakReplies
         binding.switchSpeak.setOnCheckedChangeListener { _, checked -> prefs.speakReplies = checked }
-        voice = SpeechOutput(this, prefs) { Toast.makeText(this, it, Toast.LENGTH_LONG).show() }.also {
-            it.setOnReady { populateVoices() }
-        }
-        binding.spinnerVoice.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                if (populatingVoices) return
-                prefs.setVoiceName(prefs.lang, voiceNames.getOrNull(position))
-            }
-
-            override fun onNothingSelected(parent: AdapterView<*>?) {}
-        }
+        voice = SpeechOutput(this, prefs) { Toast.makeText(this, it, Toast.LENGTH_LONG).show() }
         binding.btnPreview.setOnClickListener {
             val lang = prefs.lang
-            val sample = if (lang == AppLang.ID) {
-                "Selamat malam${prefs.persona.sfx(lang)}. Semua sistem berjalan normal. Ada yang bisa saya bantu?"
-            } else {
-                "Good evening${prefs.persona.sfx(lang)}. All systems are running smoothly. How may I assist you?"
-            }
-            voice?.preview(lang, voiceNames.getOrNull(binding.spinnerVoice.selectedItemPosition), sample)
+            val sample = lang.t("Halo${prefs.persona.sfx(lang)}. Semua sistem berjalan normal?", "Hello${prefs.persona.sfx(lang)}. All systems running normally?")
+            voice?.speak(sample, lang) {}
         }
+
+        // --- Memori
+        binding.switchMemory.isChecked = prefs.autoMemory
+        binding.switchMemory.setOnCheckedChangeListener { _, checked -> prefs.autoMemory = checked }
+        binding.btnMemoryManage.setOnClickListener { showMemoryDialog() }
+        binding.btnMemoryClear.setOnClickListener { confirmClearMemory() }
+        renderMemory()
 
         // --- Asisten default
         binding.btnDefaultAssistant.setOnClickListener {
@@ -353,20 +344,50 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
-    private fun populateVoices() {
-        val out = voice ?: return
-        val lang = prefs.lang
-        val voices = out.voicesFor(lang)
-        voiceNames = listOf<String?>(null) + voices.map { it.name }
-        val labels = listOf(getString(R.string.voice_auto)) + voices.map { v ->
-            val country = v.locale.displayCountry.ifEmpty { v.locale.country }
-            "${v.name}  ·  $country"
+    private val memory by lazy { MemoryStore(this) }
+
+    private fun renderMemory() {
+        binding.txtMemoryCount.text = getString(R.string.memory_count, memory.count())
+    }
+
+    /** Daftar ingatan: centang yang ingin dihapus. */
+    private fun showMemoryDialog() {
+        val facts = memory.all()
+        if (facts.isEmpty()) {
+            Toast.makeText(this, R.string.memory_empty, Toast.LENGTH_SHORT).show()
+            return
         }
-        populatingVoices = true
-        binding.spinnerVoice.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, labels)
-        val idx = voiceNames.indexOf(prefs.voiceName(lang)).coerceAtLeast(0)
-        binding.spinnerVoice.setSelection(idx, false)
-        binding.spinnerVoice.post { populatingVoices = false }
+        val items = facts.map { it.text }.toTypedArray()
+        val checked = BooleanArray(items.size)
+        AlertDialog.Builder(this)
+            .setTitle(R.string.memory_manage)
+            .setMultiChoiceItems(items, checked) { _, which, isChecked -> checked[which] = isChecked }
+            .setPositiveButton(R.string.memory_delete_selected) { _, _ ->
+                val picked = checked.indices.filter { checked[it] }
+                if (picked.isNotEmpty()) {
+                    memory.removeAt(picked)
+                    nine.brain.reset() // percakapan AI yang berjalan masih memuat ingatan lama
+                    renderMemory()
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun confirmClearMemory() {
+        if (memory.count() == 0) {
+            Toast.makeText(this, R.string.memory_empty, Toast.LENGTH_SHORT).show()
+            return
+        }
+        AlertDialog.Builder(this)
+            .setMessage(R.string.memory_clear_confirm)
+            .setPositiveButton(R.string.memory_clear) { _, _ ->
+                memory.clear()
+                nine.brain.reset()
+                renderMemory()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun size(b: Long): String = Formatter.formatShortFileSize(this, b)

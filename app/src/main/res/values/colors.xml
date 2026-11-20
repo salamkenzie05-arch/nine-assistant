@@ -13,4 +13,7 @@
     <color name="widget_text">#0B1220</color>
     <color name="widget_muted">#4B5466</color>
     <color name="nine_bg_clear">#00F4F6FB</color>
+    <!-- Netral (tanpa rona ungu Material 3): dipakai untuk sheet, tombol toggle, outline. -->
+    <color name="nine_outline">#B8C0CF</color>
+    <color name="nine_outline_variant">#DCE1EA</color>
 </resources>

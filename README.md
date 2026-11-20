@@ -1,12 +1,13 @@
 # Nine: asisten pribadi offline untuk Android
 
-Nine adalah asisten suara seperti Siri yang berjalan **sepenuhnya di perangkat**. Kepribadiannya tenang, sangat sopan, dan sedikit jenaka, seperti kepala pelayan yang juga insinyur jenius. Nine berbicara dalam **Bahasa Indonesia** dan **English** (aksen Inggris-UK).
+Nine adalah asisten suara seperti Siri yang berjalan **sepenuhnya di perangkat**. Kepribadiannya tenang, sangat sopan, dan sedikit jenaka, seperti kepala pelayan yang juga insinyur jenius. Nine mengerti dan menjawab dalam **Bahasa Indonesia** dan **English**, dan bersuara seperti droid kecil (bip, kicau, dan siulan elektronik).
 
-- **Perintah perangkat** (cepat, berbasis aturan): alarm, timer, pengingat, **acara kalender** (tambah, pindah, hapus & baca agenda), **daftar tugas harian**, buka aplikasi dan pengaturan, YouTube/Spotify/Maps/WhatsApp/Google, kamera, perekam suara, senter, volume, baterai/jam/tanggal, catatan, telepon, SMS.
+- **Perintah perangkat** (cepat, berbasis aturan): alarm, timer, pengingat, **acara kalender** (tambah, pindah, hapus & baca agenda), **daftar tugas harian**, buka aplikasi dan pengaturan, YouTube Music (bawaan untuk "putar lagu"; Spotify tetap bisa bila disebut, mis. "putar … di Spotify")/YouTube/Maps/WhatsApp/Google, kamera, perekam suara, senter, volume, baterai/jam/tanggal, catatan, telepon, SMS.
+- **Ingatan Nine**: katakan "ingat bahwa ulang tahun ibu tanggal 3 Mei", "apa yang kamu ingat tentang aku", "lupakan ulang tahun ibu", atau "lupakan semua ingatan". Hal tetap yang kamu sebut sendiri ("namaku Budi", "aku alergi kacang") dicatat otomatis (bisa dimatikan). Semuanya disimpan di HP, dilihat dan dihapus di Pengaturan → Memori Nine, lalu disisipkan ke prompt Nine setiap kali menjawab. Ini ingatan, **bukan melatih ulang model**.
 - **Alarm Nine**: berbunyi tepat waktu walau HP tidur, tampil di layar kunci, bisa berulang (setiap hari, hari kerja, akhir pekan, hari tertentu), dan bisa dinyalakan, dimatikan, atau dihapus lewat suara ("matikan alarm jam 6", "hapus alarm gym"). Bisa dialihkan ke aplikasi Jam di Pengaturan.
 - **Mode internet (opsional)**: Gemini + Google Search untuk pertanyaan terkini (cuaca, berita, kurs). Butuh API key gratis dari Google AI Studio; otomatis kembali ke Gemma saat offline.
 - **Wake word** "hey nine" (bisa diubah), dideteksi offline dengan Vosk.
-- **Widget layar utama**: wajah Nine (terang/gelap; ekspresinya ikut keadaan: dicas, baterai lemah, malam, baru diajak bicara) dan "Hari ini" (tugas yang belum selesai).
+- **Widget layar utama**: orb Nine berbentuk bola 3D dengan bayangan lembut (terang/gelap; ekspresinya ikut keadaan: dicas, baterai lemah, malam, baru diajak bicara), tersedia ukuran kecil dan **4x4**, serta "Hari ini" (tugas yang belum selesai). Gerak mata memakai frame 70 ms yang diperhalus, jadi melirik dan berkedipnya mulus.
 - **Otak AI: Gemma 4 E2B** (Google, Apache-2.0) lewat LiteRT-LM, memakai GPU HP dan otomatis pindah ke CPU bila GPU gagal. Untuk obrolan dan pertanyaan bebas, jawabannya mulai diucapkan per kalimat sebelum seluruh jawaban selesai dibuat.
 - **Wajah Nine**: dua mata ekspresif ala robot meja yang berkedip, melirik, mengikuti jari, senang saat dielus, kesal bila diketuk berkali-kali, kaget lalu senang saat dicas, lesu saat baterai lemah, mengantuk saat lama diam, dan bereaksi pada percakapan (mendengar, berpikir, berbicara, senang, bingung, sedih). Bilah atas hanya "NINE"; ketuk untuk menu (alarm, tugas, pengaturan, bahasa, tema).
 
@@ -24,7 +25,7 @@ Setiap push ke `main` otomatis mem-build APK baru (GitHub Actions) dan menerbitk
 | Komponen | Sumber | Persiapan sekali |
 |---|---|---|
 | Pengenalan suara | Recognizer on-device Android (Google) | Aplikasi Google → Pengaturan → Suara → Pengenalan ucapan offline → unduh Indonesia + English (US) |
-| Suara Nine | TTS offline | Pasang *Speech Services by Google*, unduh suara Inggris (UK) & Indonesia; pilih suara di Pengaturan Nine |
+| Suara Nine | Disintesis sendiri di aplikasi | Tidak perlu apa-apa (tanpa TTS, tanpa unduhan) |
 | Otak AI | Gemma 4 E2B `.litertlm` (±2,6 GB) | Unduh di aplikasi, atau impor file |
 
 Internet hanya dipakai untuk mengunduh model. Percakapan, suara, dan catatan tidak pernah dikirim keluar.
@@ -33,7 +34,9 @@ Internet hanya dipakai untuk mengunduh model. Percakapan, suara, dan catatan tid
 
 ## Catatan jujur
 
-- Suara Nine memakai suara TTS pria berbahasa Inggris-UK dengan nada sedikit lebih rendah. Ini **bukan tiruan suara aktor mana pun**.
+- Suara Nine adalah "bahasa droid" yang dibuat dengan sintesis sendiri (FM, luncuran nada, getar): kata yang sama selalu berbunyi sama, "?" naik, "!" riang, "." turun. Terinspirasi gaya droid fiksi, tetapi **bukan sampel atau tiruan suara karakter mana pun**. Isi jawaban tetap tampil sebagai teks di layar.
+- Ingatan Nine disisipkan ke prompt (maksimal beberapa puluh fakta), bukan fine-tuning; model Gemma tidak berubah.
+- Campur bahasa ditekan dengan aturan bahasa yang ketat, suhu sampling lebih rendah, dan pengecekan jawaban: jawaban Gemma yang bercampur diminta ditulis ulang. Pengecekan ini heuristik, jadi sesekali masih bisa lolos.
 - Android tidak mengizinkan aplikasi biasa menyalakan atau mematikan Wi-Fi/Bluetooth/mode pesawat. Nine membuka panel pengaturannya.
 - Pengingat lebih dari 24 jam dibuka di Kalender, karena alarm Android hanya berlaku 24 jam ke depan.
 - Kunci tanda tangan `app/nine-sideload.jks` sengaja ada di repo agar setiap build CI bisa memperbarui aplikasi. Kunci itu bukan rahasia; jangan pakai untuk Play Store.
@@ -48,11 +51,12 @@ Internet hanya dipakai untuk mengunduh model. Percakapan, suara, dan catatan tid
 | Folder | Isi |
 |---|---|
 | `nlu/` | Parser perintah ID+EN (Kotlin murni, diuji di `src/test`) |
-| `llm/` | `ModelManager` (unduh/impor), `LlmBrain` (Gemma via LiteRT-LM), `TextClean` |
-| `core/` | `AssistantController` (alur dengar → pahami → jalankan/tanya Gemma → ucapkan), `Persona`, `Prefs` |
+| `llm/` | `ModelManager` (unduh/impor), `LlmBrain` (Gemma via LiteRT-LM), `TextClean`, `LangGuard` (deteksi bahasa campur) |
+| `core/` | `AssistantController` (alur dengar → pahami → jalankan/tanya Gemma → ucapkan), `Persona`, `Prefs`, `MemoryStore` + `FactExtractor` (ingatan jangka panjang) |
 | `skills/` | Eksekusi perintah perangkat, kontak, catatan |
-| `speech/` | Pengenal suara on-device & TTS bertahap |
+| `speech/` | Pengenal suara on-device & `DroidVoice` (suara droid sintetis) |
 | `ui/` | `NineOrbView`, `EdgeGlowView`, daftar pesan |
+| `widget/` | Widget orb (kecil dan 4x4) dan "Hari ini"; frame wajah dibuat `tools/face_sphere.py` |
 | `service/` | Peran asisten digital default |
 
 Build lokal: Android Studio (AGP 8.13, Kotlin 2.3, JDK 17) → `./gradlew assembleRelease`.

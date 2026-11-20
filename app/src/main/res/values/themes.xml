@@ -6,12 +6,34 @@
         <item name="colorSecondary">@color/nine_gold</item>
         <item name="colorSurface">@color/nine_card</item>
         <item name="colorOnSurface">@color/nine_on_bg</item>
+        <!-- Matikan nuansa lavender bawaan Material 3 (sheet, toggle, outline, tint elevasi). -->
+        <item name="colorSurfaceTint">@color/nine_card</item>
+        <item name="colorSurfaceContainerLowest">@color/nine_card</item>
+        <item name="colorSurfaceContainerLow">@color/nine_card</item>
+        <item name="colorSurfaceContainer">@color/nine_card</item>
+        <item name="colorSurfaceContainerHigh">@color/nine_pill</item>
+        <item name="colorSurfaceContainerHighest">@color/nine_pill</item>
+        <item name="colorSurfaceVariant">@color/nine_pill</item>
+        <item name="colorOnSurfaceVariant">@color/nine_muted</item>
+        <item name="colorSecondaryContainer">@color/nine_pill</item>
+        <item name="colorOnSecondaryContainer">@color/nine_on_bg</item>
+        <item name="colorOutline">@color/nine_outline</item>
+        <item name="colorOutlineVariant">@color/nine_outline_variant</item>
+        <item name="bottomSheetDialogTheme">@style/Nine.BottomSheetDialog</item>
         <item name="android:colorBackground">@color/nine_bg</item>
         <item name="android:windowBackground">@color/nine_bg</item>
         <item name="android:textColorPrimary">@color/nine_on_bg</item>
         <item name="android:textColorSecondary">@color/nine_muted</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+
+    <style name="Nine.BottomSheetDialog" parent="ThemeOverlay.Material3.BottomSheetDialog">
+        <item name="bottomSheetStyle">@style/Nine.BottomSheet</item>
+    </style>
+
+    <style name="Nine.BottomSheet" parent="Widget.Material3.BottomSheet.Modal">
+        <item name="backgroundTint">@color/nine_card</item>
     </style>
 
     <style name="Nine.SectionTitle" parent="">

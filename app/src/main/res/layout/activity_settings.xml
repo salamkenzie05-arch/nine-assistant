@@ -370,21 +370,6 @@
                     android:textColor="@color/nine_on_bg"
                     android:textSize="15sp" />
 
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="@string/voice_label"
-                    android:textColor="@color/nine_gold"
-                    android:textSize="12sp"
-                    android:textStyle="bold" />
-
-                <Spinner
-                    android:id="@+id/spinnerVoice"
-                    android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:layout_marginTop="4dp" />
-
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnPreview"
                     style="@style/Widget.Material3.Button.TonalButton"
@@ -398,6 +383,59 @@
                     android:layout_marginTop="8dp"
                     android:textSize="12sp"
                     android:text="@string/voice_help" />
+            </LinearLayout>
+
+            <TextView style="@style/Nine.SectionTitle" android:text="@string/sec_memory_group" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_card"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switchMemory"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="48dp"
+                    android:text="@string/memory_auto"
+                    android:textColor="@color/nine_on_bg"
+                    android:textSize="15sp" />
+
+                <TextView
+                    android:id="@+id/txtMemoryCount"
+                    style="@style/Nine.Body"
+                    android:layout_marginTop="4dp"
+                    android:textSize="13sp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnMemoryManage"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/memory_manage" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnMemoryClear"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:text="@string/memory_clear" />
+                </LinearLayout>
+
+                <TextView
+                    style="@style/Nine.Body"
+                    android:layout_marginTop="8dp"
+                    android:textSize="12sp"
+                    android:text="@string/memory_help" />
             </LinearLayout>
 
             <TextView style="@style/Nine.SectionTitle" android:text="@string/sec_wake_group" />

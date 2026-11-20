@@ -11,6 +11,7 @@ import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
 import com.google.ai.edge.litertlm.SamplerConfig
 import id.nine.assistant.core.AppLang
+import id.nine.assistant.core.MemoryStore
 import id.nine.assistant.core.Prefs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -43,6 +44,7 @@ class LlmBrain(context: Context, private val prefs: Prefs, private val models: M
     }
 
     private val app = context.applicationContext
+    private val memory = MemoryStore(app)
     private val main = Handler(Looper.getMainLooper())
     private val dispatcher = Executors.newSingleThreadExecutor { r -> Thread(r, "nine-llm") }.asCoroutineDispatcher()
     private val scope = CoroutineScope(SupervisorJob() + dispatcher)
@@ -131,8 +133,8 @@ class LlmBrain(context: Context, private val prefs: Prefs, private val models: M
         if (c != null && conversationLang == lang && !stale) return c
         closeConversation()
         val cfg = ConversationConfig(
-            systemInstruction = Contents.of(prefs.persona.systemPrompt(lang, LocalDateTime.now())),
-            samplerConfig = SamplerConfig(topK = 40, topP = 0.95, temperature = 0.7)
+            systemInstruction = Contents.of(prefs.persona.systemPrompt(lang, LocalDateTime.now(), memory.promptBlock(lang))),
+            samplerConfig = SamplerConfig(topK = 40, topP = 0.95, temperature = 0.6)
         )
         val created = engine!!.createConversation(cfg)
         conversation = created

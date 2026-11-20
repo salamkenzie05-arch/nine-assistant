@@ -53,7 +53,7 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
 
     private fun answersQuestion(c: Command): Boolean = when (c) {
         Command.CurrentTime, Command.CurrentDate, Command.Battery, Command.DeviceInfo, Command.Help,
-        Command.WhoAreYou, Command.HowAreYou, Command.TodoList, Command.ReadNotes, Command.ShowAlarms,
+        Command.WhoAreYou, Command.HowAreYou, Command.TodoList, Command.ReadNotes, Command.ReadMemory, Command.ShowAlarms,
         Command.AffinityStatus, Command.WhereAmI -> true
         is Command.ShowAgenda -> true
         else -> false
@@ -76,6 +76,7 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
             ?: parseSettings(raw)
             ?: parseVolume(norm)
             ?: parseDeviceInfo(raw)
+            ?: parseMemory(raw)
             ?: parseNotes(raw)
             ?: parseWhatsApp(raw)
             ?: parseSms(raw)
@@ -394,14 +395,35 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
         else -> null
     }
 
+    // ------------------------------------------------------------------ ingatan jangka panjang
+
+    private val reMemRead = rx("""^(?:apa\s+(?:saja\s+)?yang\s+(?:kamu|kau|nine|anda)\s+(?:ingat|tahu|ketahui)(?:\s+(?:tentang|soal|mengenai)\s+(?:aku|saya|gue))?|(?:tampilkan|lihat|tunjukkan|baca(?:kan)?)\s+(?:semua\s+)?(?:ingatan|memori)(?:\s*(?:mu|kamu|nine))?|ingatan\s*(?:mu|kamu)|what\s+do\s+you\s+(?:remember|know)(?:\s+about\s+me)?|(?:show|list|read)\s+(?:me\s+)?(?:my\s+|your\s+|all\s+)?(?:memory|memories)|what\s+have\s+i\s+told\s+you)\s*\??$""")
+    private val reMemClear = rx("""^(?:lupakan|hapus|bersihkan|reset|forget|clear|delete|erase)\s+(?:(?:semua(?:nya)?\s+)?(?:ingatan|memori)(?:\s*(?:mu|kamu))?|semuanya(?:\s+tentang\s+(?:aku|saya|gue))?|semua\s+tentang\s+(?:aku|saya|gue)|(?:all\s+|everything\s+)?(?:about\s+me|you\s+(?:know|remember))|(?:your\s+|all\s+)?(?:memory|memories)|everything)$""")
+    private val reMemForget = rx("""^(?:lupakan|hapus\s+ingatan(?:\s+tentang)?|forget)\s+(?:bahwa\s+|tentang\s+|soal\s+|about\s+|that\s+)?(.+)$""")
+    private val reMemRemember = rx("""^(?:tolong\s+|please\s+)?(?:ingat(?!kan)(?:lah)?|remember|keep\s+in\s+mind)(?!\s+(?:to|untuk|nanti)\b)\b\s*(?:bahwa|kalau|kalo|that|[:,])?\s*(.+)$""")
+
+    private fun parseMemory(raw: String): Command? {
+        if (reMemRead.matches(raw)) return Command.ReadMemory
+        if (reMemClear.matches(raw)) return Command.ForgetAll
+        reMemForget.find(raw)?.let { m ->
+            val q = m.groupValues[1].trim()
+            if (q.isNotEmpty()) return Command.Forget(q)
+        }
+        reMemRemember.find(raw)?.let { m ->
+            val t = m.groupValues[1].trim()
+            if (t.isNotEmpty()) return Command.Remember(t)
+        }
+        return null
+    }
+
     // ------------------------------------------------------------------ catatan
 
     private val reClearNotes = rx("""^(?:hapus|bersihkan|delete|clear|remove)\s+(?:semua\s+|all\s+|my\s+)*(?:catatan|notes?)$""")
     private val reReadNotes = rx("""^(?:baca(?:kan)?|tampilkan|lihat|tunjukkan|apa\s+saja|read|show|list|what\s+are)\s+(?:semua\s+|daftar\s+|my\s+|all\s+|the\s+)*(?:catatan|notes?)(?:\s+(?:saya|ku))?$|^(?:catatan\s+(?:saya|ku)|my\s+notes)$""")
     private val reAddNote = rx(
         """^(?:catat(?:kan)?|tulis(?:kan)?|simpan(?:kan)?\s+catatan|buat\s+catatan(?:\s+baru)?|tambah(?:kan)?\s+catatan|catatan\s+baru|""" +
-            """ingat(?!kan)\s+(?:bahwa\s+)?|note(?:\s+that)?|take\s+a\s+note(?:\s+(?:that|saying|of))?|make\s+a\s+note(?:\s+(?:that|of))?|""" +
-            """add\s+(?:a\s+)?note|write\s+(?:this\s+)?down|remember\s+(?:that\s+)?)\b\s*[:,]?\s*(.*)$"""
+            """note(?:\s+that)?|take\s+a\s+note(?:\s+(?:that|saying|of))?|make\s+a\s+note(?:\s+(?:that|of))?|""" +
+            """add\s+(?:a\s+)?note|write\s+(?:this\s+)?down)\b\s*[:,]?\s*(.*)$"""
     )
 
     private fun parseNotes(raw: String): Command? {
@@ -752,13 +774,15 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
 
     private val MEDIA_APP = """(youtube\s+music|yt\s+music|youtube|yt|you\s+tube|spotify|joox|apple\s+music|resso|soundcloud)"""
     private val rePlay = rx("""^(?:putar(?:kan)?|puterin|setel(?:in)?|mainkan|play|listen\s+to|dengarkan|dengerin|tonton|nonton|watch)\b\s*(?:lagu|musik|music|song|video|film|playlist|album|podcast|some)?\s*(.*?)(?:\s+(?:di|on|pakai|lewat|via|in|dari|from)\s+$MEDIA_APP)?$""")
-    private val reSearchIn = rx("""^(?:cari(?:kan)?|carikan|search(?:\s+for)?|find|look\s+up)\s+(.+?)\s+(?:di|on|in|pakai|lewat)\s+(youtube|yt|you\s+tube|spotify|google\s+maps|maps|map|peta|google|internet|web|browser|chrome)$""")
+    private val reSearchIn = rx("""^(?:cari(?:kan)?|carikan|search(?:\s+for)?|find|look\s+up)\s+(.+?)\s+(?:di|on|in|pakai|lewat)\s+(youtube\s+music|yt\s+music|youtube|yt|you\s+tube|spotify|google\s+maps|maps|map|peta|google|internet|web|browser|chrome)$""")
     private val reNav = rx("""^(?:navigasi(?:kan)?|arahkan(?:\s+(?:saya|aku))?|antar(?:kan|in)?\s+(?:saya|aku|gue)|tunjukkan\s+(?:jalan|arah|rute)|petunjuk\s+arah|rute|jalan|directions?|navigate|take\s+me|get\s+directions|how\s+do\s+i\s+get|drive)\s+(?:ke|menuju|to|for)\s+(.+)$""")
     private val reWeb = listOf(
         rx("""^(?:google(?:ing)?|googlein|telusuri)\s+(.+)$"""),
         rx("""^search\s+(?:the\s+)?(?:web|internet|google)\s+for\s+(.+)$""")
     )
     private val reUrl = rx("""^(?:buka|bukain|open|kunjungi|visit|go\s+to)\s+(?:situs|website|web|laman|halaman|site|the\s+website)?\s*((?:https?://)?[a-z0-9-]+(?:\s*(?:\.|\bdot\b|\btitik\b)\s*[a-z0-9-]+)+(?:/\S*)?)$""")
+
+    private val reVideoIntent = rx("""^(?:tonton|nonton|watch)\b|^(?:putar(?:kan)?|puterin|play|setel(?:in)?|mainkan)\s+(?:video|film|vidio)\b""")
 
     private fun mediaApp(w: String?): String? {
         val a = w?.lowercase()?.replace(Regex("\\s+"), " ") ?: return null
@@ -779,6 +803,7 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
             val q = m.groupValues[1].trim()
             val where = m.groupValues[2].lowercase()
             return when {
+                where.startsWith("y") && where.contains("music") -> Command.PlayMedia(q, "youtube music")
                 where.startsWith("y") || where.startsWith("you") -> Command.PlayMedia(q, "youtube")
                 where == "spotify" -> Command.PlayMedia(q, "spotify")
                 where.contains("map") || where == "peta" -> Command.Navigate(q, drive = false)
@@ -789,7 +814,9 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
         for (r in reWeb) r.find(raw)?.let { m -> return Command.WebSearch(m.groupValues[1].trim()) }
         rePlay.find(raw)?.let { m ->
             val q = m.groupValues[1].trim()
-            val app = mediaApp(m.groupValues[2].ifEmpty { null })
+            var app = mediaApp(m.groupValues[2].ifEmpty { null })
+            // Tanpa aplikasi disebut: lagu/musik ke YouTube Music, tetapi "tonton/putar video/film" ke YouTube.
+            if (app == null && reVideoIntent.containsMatchIn(raw)) app = "youtube"
             // "putar youtube" tanpa kata kunci = buka aplikasinya
             if (q.isEmpty() && app != null) return Command.OpenApp(app)
             if (app == null && Regex("^$MEDIA_APP$", RegexOption.IGNORE_CASE).matches(q)) return Command.OpenApp(q)

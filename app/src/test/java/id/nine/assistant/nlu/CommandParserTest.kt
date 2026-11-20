@@ -126,7 +126,7 @@ class CommandParserTest {
         check("baca catatan", "ReadNotes")
         check("hapus semua catatan", "ClearNotes")
         check("catat", "NeedInfo(pending=NoteText)")
-        check("ingat bahwa kunci ada di meja", "AddNote(text=kunci ada di meja)")
+        check("ingat bahwa kunci ada di meja", "Remember(text=kunci ada di meja)")
         check("show my notes", "ReadNotes")
         check("buka catatan", "ReadNotes")
         check("catatan baru ide proyek", "AddNote(text=ide proyek)")
@@ -226,6 +226,22 @@ class CommandParserTest {
     }
 
     @Test
+    fun memory() {
+        check("ingat bahwa ulang tahun ibu tanggal 3 Mei", "Remember(text=ulang tahun ibu tanggal 3 Mei)")
+        check("tolong ingat aku alergi kacang", "Remember(text=aku alergi kacang)")
+        check("remember that my sister lives in Bandung", "Remember(text=my sister lives in Bandung)")
+        check("apa yang kamu ingat tentang aku", "ReadMemory")
+        check("what do you remember about me", "ReadMemory")
+        check("lupakan ulang tahun ibu", "Forget(query=ulang tahun ibu)")
+        check("forget my sister", "Forget(query=my sister)")
+        check("lupakan semua ingatan", "ForgetAll")
+        check("forget everything about me", "ForgetAll")
+        // pengingat dan catatan tetap seperti semula
+        check("ingatkan saya beli susu", "NeedInfo(pending=ReminderTime(text=beli susu))")
+        check("catat beli susu dan telur", "AddNote(text=beli susu dan telur)")
+    }
+
+    @Test
     fun externalApps() {
         check("bukain whatsapp", "OpenApp(query=whatsapp)")
         check("buka wa dong", "OpenApp(query=wa)")
@@ -234,6 +250,9 @@ class CommandParserTest {
         check("putar lagu bohemian rhapsody di spotify", "PlayMedia(query=bohemian rhapsody, app=spotify)")
         check("cari resep rendang di youtube", "PlayMedia(query=resep rendang, app=youtube)")
         check("mainkan lagu tulus", "PlayMedia(query=tulus, app=null)")
+        check("putar lagu hindia di youtube music", "PlayMedia(query=hindia, app=youtube music)")
+        check("cari lagu tulus di yt music", "PlayMedia(query=lagu tulus, app=youtube music)")
+        check("tonton video kucing lucu", "PlayMedia(query=kucing lucu, app=youtube)")
         check("navigasi ke monas", "Navigate(destination=monas, drive=true)")
         check("cari bengkel terdekat di maps", "Navigate(destination=bengkel terdekat, drive=false)")
         check("google harga emas hari ini", "WebSearch(query=harga emas hari ini)")

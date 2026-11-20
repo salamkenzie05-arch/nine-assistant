@@ -48,13 +48,9 @@
     <string name="sec_language">Language &amp; form of address</string>
     <string name="honorific_label">Nine addresses you as (Indonesian / English):</string>
     <string name="sec_voice">Nine\'s voice</string>
-    <string name="speak_replies">Speak replies</string>
-    <string name="voice_label">Voice (active language):</string>
-    <string name="voice_auto">Automatic (best male voice)</string>
-    <string name="voice_preview">Play sample</string>
-    <string name="voice_help">For the best voice, install \"Speech Services by Google\" from the Play Store, then download the English (United Kingdom) and Indonesian voices in Text-to-speech settings.</string>
-    <string name="voice_sample_id">Selamat malam, Tuan. Semua sistem berjalan normal. Ada yang bisa saya bantu?</string>
-    <string name="voice_sample_en">Good evening, sir. All systems are running smoothly. How may I assist you?</string>
+    <string name="speak_replies">Droid voice (beeps &amp; whistles)</string>
+    <string name="voice_preview">Play a sample</string>
+    <string name="voice_help">Nine does not use a human voice. It talks in droid-style beeps, chirps and whistles generated on the phone, while the content of each answer still appears as text.</string>
     <string name="sec_assistant">Default assistant</string>
     <string name="assistant_help">Make Nine your digital assistant so you can summon it by holding the side key (set in Settings > Advanced features > Side key > Press and hold > Wake digital assistant).</string>
     <string name="assistant_button">Choose Nine as digital assistant</string>
@@ -131,6 +127,7 @@
     <string name="location_status_none">No location yet.</string>
 
     <string name="widget_orb_dark_desc">Dark Nine orb: tap to talk</string>
+    <string name="widget_orb_large_desc">Large Nine orb 4×4: tap to talk</string>
     <string name="unlock_reason">Unlock to continue your Nine command</string>
 
     <string name="cd_menu">Nine menu</string>
@@ -156,4 +153,13 @@
     <string name="alarm_manage">Manage alarms</string>
     <string name="alarm_fullscreen">Allow full screen when an alarm rings</string>
     <string name="alarm_fullscreen_ok">Full-screen alarms: allowed ✓</string>
+    <string name="sec_memory_group">Nine\'s memory</string>
+    <string name="memory_auto">Automatically remember what I tell you</string>
+    <string name="memory_count">%1$d things remembered</string>
+    <string name="memory_manage">View &amp; delete</string>
+    <string name="memory_clear">Delete all</string>
+    <string name="memory_delete_selected">Delete selected</string>
+    <string name="memory_empty">Nothing remembered yet.</string>
+    <string name="memory_clear_confirm">Delete everything Nine remembers about you?</string>
+    <string name="memory_help">Nine remembers lasting things you tell it (name, likes, family, habits) and uses them in later conversations. Everything stays on this phone only. Say \"remember that …\" to save something right away, or \"forget …\" to remove it. This is memory, not retraining of the model.</string>
 </resources>

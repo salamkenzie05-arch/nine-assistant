@@ -11,4 +11,6 @@
     <color name="widget_text">#F2F5FA</color>
     <color name="widget_muted">#8A93A6</color>
     <color name="nine_bg_clear">#00000000</color>
+    <color name="nine_outline">#3A4254</color>
+    <color name="nine_outline_variant">#252B38</color>
 </resources>

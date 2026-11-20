@@ -82,6 +82,12 @@ sealed class Command {
     data object ReadNotes : Command()
     data object ClearNotes : Command()
 
+    // --- Ingatan jangka panjang (hal tentang pengguna yang diingat Nine antar percakapan)
+    data class Remember(val text: String) : Command()
+    data class Forget(val query: String) : Command()
+    data object ForgetAll : Command()
+    data object ReadMemory : Command()
+
     data class Call(val target: String) : Command()
     data class SendSms(val target: String, val body: String?) : Command()
 
@@ -135,7 +141,7 @@ sealed class Command {
     data object TodoClearAll : Command()
 
     // --- Aplikasi eksternal
-    /** [app] "youtube", "spotify", atau null (pemutar musik default). */
+    /** [app] "youtube", "youtube music", "spotify", atau null (= YouTube Music). */
     data class PlayMedia(val query: String, val app: String?) : Command()
     /** [drive] true = langsung mulai navigasi; false = tampilkan lokasinya di peta. */
     data class Navigate(val destination: String, val drive: Boolean = true) : Command()
