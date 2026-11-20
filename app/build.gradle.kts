@@ -25,6 +25,19 @@ android {
         }
     }
 
+    // Dua edisi dengan package yang sama (bisa saling menimpa):
+    //  - lite = Nine.apk: tanpa layanan aksesibilitas, lolos Google Play Protect saat sideload.
+    //  - full = Nine-Full.apk: ditambah layanan aksesibilitas (tombol melayang, on/off Wi-Fi/Bluetooth, putar lagu otomatis);
+    //    Play Protect memblokir APK sideload semacam ini kecuali pemindaian Play Protect dimatikan sementara.
+    flavorDimensions += "edition"
+    productFlavors {
+        create("lite") { dimension = "edition" }
+        create("full") {
+            dimension = "edition"
+            versionNameSuffix = "-full"
+        }
+    }
+
     signingConfigs {
         // Kunci khusus sideload, sengaja disimpan di repo agar setiap build CI punya tanda tangan
         // yang sama (update bisa dipasang menimpa versi lama). Bukan rahasia; jangan dipakai untuk Play Store.

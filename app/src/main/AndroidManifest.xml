@@ -236,20 +236,6 @@
             android:exported="true"
             android:permission="android.permission.BIND_VOICE_INTERACTION" />
 
-        <!-- Layanan aksesibilitas (opsional, dinyalakan pengguna): Panel Cepat, YouTube Music, tombol melayang. -->
-        <service
-            android:name=".a11y.NineAccessibilityService"
-            android:exported="false"
-            android:label="@string/app_name"
-            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
-            <intent-filter>
-                <action android:name="android.accessibilityservice.AccessibilityService" />
-            </intent-filter>
-            <meta-data
-                android:name="android.accessibilityservice"
-                android:resource="@xml/accessibility_service_config" />
-        </service>
-
         <service
             android:name=".service.StubRecognitionService"
             android:exported="true"

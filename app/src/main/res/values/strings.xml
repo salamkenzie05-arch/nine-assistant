@@ -168,6 +168,7 @@
     <string name="a11y_button">Buka pengaturan aksesibilitas</string>
     <string name="a11y_appinfo_button">Buka info aplikasi Nine</string>
     <string name="a11y_status_on">Layanan aksesibilitas: aktif ✓</string>
+    <string name="a11y_lite_status">Edisi ringan: tombol melayang, pemutaran lagu otomatis, dan on/off Wi-Fi/Bluetooth langsung hanya ada di edisi Full (Nine-Full.apk, perlu mematikan pemindaian Play Protect sebentar saat memasang).</string>
     <string name="a11y_status_off">Layanan aksesibilitas: belum aktif</string>
     <string name="touch_switch">Tombol melayang (seperti AssistiveTouch)</string>
     <string name="music_switch">Nine bereaksi pada musik</string>

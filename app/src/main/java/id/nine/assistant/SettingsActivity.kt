@@ -270,6 +270,14 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun renderA11y() {
+        if (!NineAccessibilityService.AVAILABLE) {
+            // Edisi ringan (Nine.apk): tanpa aksesibilitas supaya lolos Play Protect.
+            binding.txtA11yStatus.setText(R.string.a11y_lite_status)
+            binding.btnA11y.visibility = android.view.View.GONE
+            binding.btnAppInfo.visibility = android.view.View.GONE
+            binding.switchTouch.isEnabled = false
+            return
+        }
         val on = NineAccessibilityService.instance != null || NineAccessibilityService.isEnabled(this)
         binding.txtA11yStatus.setText(if (on) R.string.a11y_status_on else R.string.a11y_status_off)
     }
@@ -277,7 +285,7 @@ class SettingsActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         renderA11y()
-        binding.switchTouch.isChecked = prefs.assistiveTouch
+        binding.switchTouch.isChecked = prefs.assistiveTouch && NineAccessibilityService.AVAILABLE
         renderInternet()
         renderWake()
         renderAlarms()

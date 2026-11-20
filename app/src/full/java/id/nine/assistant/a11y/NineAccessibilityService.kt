@@ -523,6 +523,9 @@ class NineAccessibilityService : AccessibilityService() {
     fun lockScreen(): Boolean = if (Build.VERSION.SDK_INT >= 28) performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN) else false
 
     companion object {
+        /** True di edisi Full (Nine-Full.apk): layanan aksesibilitas tersedia. */
+        const val AVAILABLE = true
+
         private const val MAX_FIND = 26
         private const val MAX_VERIFY = 9
 

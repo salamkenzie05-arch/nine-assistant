@@ -47,13 +47,13 @@ jobs:
           mv vosk-tmp/vosk-model-small-en-us-0.15 app/src/main/assets/vosk-en
           du -sh app/src/main/assets/vosk-en
 
-      - name: Unit tests + release APK
+      - name: Unit tests + release APK (lite & full)
         shell: bash
         run: |
           chmod +x gradlew
           set -o pipefail
           ./gradlew --no-daemon --stacktrace -PversionCode=${{ github.run_number }} \
-            testReleaseUnitTest assembleRelease 2>&1 | tee build.log
+            testLiteReleaseUnitTest assembleLiteRelease assembleFullRelease 2>&1 | tee build.log
 
       # Bila gagal: tampilkan ringkasan error sebagai anotasi (bisa dibaca tanpa login di repo publik).
       - name: Report build errors
@@ -72,14 +72,19 @@ jobs:
             if [ $i -ge 45 ]; then break; fi
           done < errors.txt
 
-      - name: Rename APK
+      - name: Rename APKs
         shell: bash
-        run: cp app/build/outputs/apk/release/app-release.apk Nine.apk
+        run: |
+          set -e
+          cp app/build/outputs/apk/lite/release/app-lite-release.apk Nine.apk
+          cp app/build/outputs/apk/full/release/app-full-release.apk Nine-Full.apk
 
       - uses: actions/upload-artifact@v4
         with:
           name: Nine-apk
-          path: Nine.apk
+          path: |
+            Nine.apk
+            Nine-Full.apk
 
       - name: Publish release (latest)
         if: github.ref == 'refs/heads/main'
@@ -88,8 +93,14 @@ jobs:
           tag_name: build-${{ github.run_number }}
           name: Nine build ${{ github.run_number }}
           body: |
-            APK Nine untuk Android (arm64, Android 8.0+).
-            Unduh **Nine.apk** di bawah langsung dari HP, lalu pasang.
-            Link tetap ke versi terbaru: https://github.com/${{ github.repository }}/releases/latest/download/Nine.apk
-          files: Nine.apk
+            APK Nine untuk Android (arm64, Android 8.0+). Dua edisi dengan package yang sama (bisa saling menimpa):
+
+            - **Nine.apk** (ringan): langsung bisa dipasang, lolos Google Play Protect.
+              https://github.com/${{ github.repository }}/releases/latest/download/Nine.apk
+            - **Nine-Full.apk**: ditambah layanan aksesibilitas (tombol melayang, on/off Wi-Fi/Bluetooth/hotspot langsung, putar lagu otomatis di YouTube Music).
+              Google Play Protect memblokir APK sideload semacam ini; matikan sementara "Pindai aplikasi dengan Play Protect" saat memasang.
+              https://github.com/${{ github.repository }}/releases/latest/download/Nine-Full.apk
+          files: |
+            Nine.apk
+            Nine-Full.apk
           make_latest: true

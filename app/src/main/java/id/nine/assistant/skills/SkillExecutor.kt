@@ -742,6 +742,11 @@ class SkillExecutor(
         }
         val reply = if (on == null) {
             lang.t("Membuka pengaturan $name${s(lang)}.", "Opening $name settings${s(lang)}.")
+        } else if (!NineAccessibilityService.AVAILABLE) {
+            lang.t(
+                "Android tidak mengizinkan aplikasi biasa ${if (on) "menyalakan" else "mematikan"} $name sendiri${s(lang)}, jadi saya buka pengaturannya. Nine edisi Full (Nine-Full.apk) bisa melakukannya otomatis.",
+                "Android doesn't let ordinary apps switch $name ${if (on) "on" else "off"} by themselves${s(lang)}, so I'm opening its settings. The Full edition (Nine-Full.apk) can do it automatically."
+            )
         } else {
             lang.t(
                 "Untuk ${if (on) "menyalakan" else "mematikan"} $name sendiri saya butuh layanan aksesibilitas Nine (Pengaturan > Aksesibilitas > Nine). Sementara ini saya buka pengaturannya.",
@@ -1706,6 +1711,14 @@ class SkillExecutor(
                 SkillResult(lang.t("Wake phrase saya matikan${s(lang)}.", "Wake phrase turned off${s(lang)}."), action = UiAction.WakeChanged(false))
             }
             NineSetting.TOUCH_ON -> {
+                if (!NineAccessibilityService.AVAILABLE) {
+                    return SkillResult(
+                        lang.t(
+                            "Tombol melayang hanya ada di Nine edisi Full (Nine-Full.apk), karena butuh layanan aksesibilitas${s(lang)}.",
+                            "The floating button is only in the Full edition (Nine-Full.apk), because it needs the accessibility service${s(lang)}."
+                        )
+                    )
+                }
                 prefs.assistiveTouch = true
                 if (NineAccessibilityService.instance != null) {
                     SkillResult(lang.t("Tombol melayang saya nyalakan${s(lang)}.", "Floating button on${s(lang)}."), action = UiAction.TouchChanged)
@@ -1795,8 +1808,10 @@ class SkillExecutor(
                     } else {
                         SkillResult(
                             lang.t(
-                                "Saya buka hasil pencarian \"$q\" di YouTube Music${s(lang)}. Ketuk lagunya, atau aktifkan layanan aksesibilitas Nine agar saya bisa memilih dan memutarnya sendiri.",
-                                "I've opened the search results for \"$q\" in YouTube Music${s(lang)}. Tap the song, or enable the Nine accessibility service so I can pick and play it myself."
+                                if (NineAccessibilityService.AVAILABLE) "Saya buka hasil pencarian \"$q\" di YouTube Music${s(lang)}. Ketuk lagunya, atau aktifkan layanan aksesibilitas Nine agar saya bisa memilih dan memutarnya sendiri."
+                                else "Saya buka hasil pencarian \"$q\" di YouTube Music${s(lang)}. Ketuk lagunya; Nine edisi Full (Nine-Full.apk) bisa memilih dan memutarnya otomatis.",
+                                if (NineAccessibilityService.AVAILABLE) "I've opened the search results for \"$q\" in YouTube Music${s(lang)}. Tap the song, or enable the Nine accessibility service so I can pick and play it myself."
+                                else "I've opened the search results for \"$q\" in YouTube Music${s(lang)}. Tap the song; the Full edition (Nine-Full.apk) can pick and play it automatically."
                             ),
                             intent = primary,
                             fallback = second
