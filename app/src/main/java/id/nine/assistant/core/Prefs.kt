@@ -93,6 +93,17 @@ class Prefs(context: Context) {
         get() = (sp.getString("wake_phrase", null) ?: "").ifBlank { "hey nine" }
         set(value) = sp.edit().putString("wake_phrase", value.trim()).apply()
 
+    // --- Kalender
+    /** Kalender tujuan acara baru; -1 = otomatis. */
+    var calendarId: Long
+        get() = sp.getLong("cal_id", -1L)
+        set(value) = sp.edit().putLong("cal_id", value).apply()
+
+    /** Acara terakhir yang dibuat Nine (untuk "ubah jadi jam 11", "hapus acara tadi"). */
+    var lastEventId: Long
+        get() = sp.getLong("last_event", -1L)
+        set(value) = sp.edit().putLong("last_event", value).apply()
+
     val persona: Persona get() = Persona(honorificId, honorificEn)
 
     companion object {

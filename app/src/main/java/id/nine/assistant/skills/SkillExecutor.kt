@@ -24,6 +24,9 @@ import androidx.core.content.ContextCompat
 import id.nine.assistant.core.AppLang
 import id.nine.assistant.core.Fmt
 import id.nine.assistant.core.Persona
+import id.nine.assistant.core.Prefs
+import id.nine.assistant.nlu.NumberWords
+import id.nine.assistant.nlu.TimeParser
 import id.nine.assistant.nlu.Command
 import id.nine.assistant.nlu.NumberWords
 import id.nine.assistant.nlu.Pending
@@ -54,7 +57,8 @@ data class SkillResult(
  * Menjalankan [Command] di perangkat. Semua dilakukan lokal lewat API Android;
  * tidak ada akses jaringan (aplikasi ini bahkan tidak meminta izin INTERNET).
  */
-class SkillExecutor(context: Context, private val notes: NoteStore, private val personaOf: () -> Persona) {
+class SkillExecutor(context: Context, private val notes: NoteStore, private val prefs: Prefs) {
+    private val personaOf: () -> Persona = { prefs.persona }
     private val ctx = context.applicationContext
     private val contacts = ContactsLookup(ctx)
     private val calendar = CalendarSkill(ctx)
@@ -136,6 +140,9 @@ class SkillExecutor(context: Context, private val notes: NoteStore, private val 
 
         is Command.AddEvent -> addEvent(cmd, lang, now, denied)
         is Command.ShowAgenda -> agenda(cmd, lang, now, denied)
+        is Command.MoveLastEvent -> moveLastEvent(cmd, lang, now, denied)
+        is Command.ShiftLastEvent -> shiftLastEvent(cmd, lang, now, denied)
+        Command.DeleteLastEvent -> deleteLastEvent(lang, confirmed, denied)
 
         is Command.TodoAdd -> {
             val item = todos.add(cmd.text)
@@ -241,25 +248,10 @@ class SkillExecutor(context: Context, private val notes: NoteStore, private val 
 
     private fun setReminder(cmd: Command.SetReminder, lang: AppLang, now: LocalDateTime, denied: Set<String>): SkillResult {
         val text = cmd.text.ifBlank { lang.t("Pengingat", "Reminder") }
-        val until = Duration.between(now, cmd.at)
-        if (until.isNegative) {
-            return SkillResult(lang.t("Waktu itu sudah lewat.", "That time has already passed."))
+        if (Duration.between(now, cmd.at).isNegative) {
+            return SkillResult(lang.t("Waktu itu sudah lewat${s(lang)}.", "That time has already passed${s(lang)}."))
         }
-        val whenText = Fmt.at(cmd.at, lang, now)
-        if (until.toHours() < 24) {
-            // Dalam 24 jam: alarm berlabel di aplikasi Jam.
-            val i = Intent(AlarmClock.ACTION_SET_ALARM).apply {
-                putExtra(AlarmClock.EXTRA_HOUR, cmd.at.hour)
-                putExtra(AlarmClock.EXTRA_MINUTES, cmd.at.minute)
-                putExtra(AlarmClock.EXTRA_MESSAGE, text)
-                putExtra(AlarmClock.EXTRA_SKIP_UI, true)
-            }
-            return SkillResult(
-                lang.t("Baik${s(lang)}, saya ingatkan $whenText: $text.", "Very good${s(lang)}, I'll remind you $whenText: $text."),
-                intent = i
-            )
-        }
-        // Lebih dari 24 jam: alarm Android tidak bisa, jadi simpan sebagai acara kalender dengan notifikasi tepat waktu.
+        // Pengingat disimpan sebagai acara kalender dengan notifikasi tepat waktu, jadi terlihat di Kalender.
         return addEvent(Command.AddEvent(text, cmd.at, null, false), lang, now, denied, reminderMinutes = 0, asReminder = true)
     }
 
@@ -772,32 +764,112 @@ class SkillExecutor(context: Context, private val notes: NoteStore, private val 
         reminderMinutes: Int = 15,
         asReminder: Boolean = false
     ): SkillResult {
-        calendarPermissionResult(lang, denied)?.let { return it }
+        val title = cmd.title.ifBlank { lang.t(if (asReminder) "Pengingat" else "Acara", if (asReminder) "Reminder" else "Event") }
+            .replaceFirstChar { it.uppercase() }
+        val fallback = calendar.insertIntent(title, cmd.start, cmd.end, cmd.allDay)
+        calendarPermissionResult(lang, denied)?.let { res ->
+            // Izin ditolak permanen: buka layar acara baru di Kalender sebagai gantinya.
+            return if (res.needPermissions.isEmpty()) {
+                SkillResult(
+                    lang.t("Tanpa izin kalender, saya buka layar acara baru. Ketuk Simpan${s(lang)}.", "Without calendar access I'm opening a new event screen. Tap Save${s(lang)}."),
+                    intent = fallback
+                )
+            } else res
+        }
         if (!cmd.allDay && cmd.start.isBefore(now.minusMinutes(1))) {
             return SkillResult(lang.t("Waktu itu sudah lewat${s(lang)}.", "That time has already passed${s(lang)}."))
         }
-        val title = cmd.title.ifBlank { lang.t("Acara", "Event") }.replaceFirstChar { it.uppercase() }
-        return when (val r = calendar.add(title, cmd.start, cmd.end, cmd.allDay, reminderMinutes)) {
+        val whenText = if (cmd.allDay) dayPhrase(cmd.start.toLocalDate(), lang, now) + lang.t(" (seharian)", " (all day)")
+        else Fmt.at(cmd.start, lang, now) + (cmd.end?.let { lang.t(" sampai ", " until ") + Fmt.clock(it.hour, it.minute, lang) } ?: "")
+        return when (val r = calendar.add(title, cmd.start, cmd.end, cmd.allDay, prefs.calendarId, reminderMinutes)) {
             is CalendarSkill.AddResult.Added -> {
-                val whenText = if (cmd.allDay) dayPhrase(cmd.start.toLocalDate(), lang, now) + lang.t(" (seharian)", " (all day)")
-                else Fmt.at(cmd.start, lang, now) + (cmd.end?.let { lang.t(" sampai ", " until ") + Fmt.clock(it.hour, it.minute, lang) } ?: "")
+                prefs.lastEventId = r.eventId
+                val where = r.calendar.label
                 val reply = if (asReminder) {
-                    lang.t("Baik${s(lang)}, saya ingatkan $whenText: $title. Tersimpan di kalender.", "Very good${s(lang)}, I'll remind you $whenText: $title. It's in your calendar.")
+                    lang.t(
+                        "Baik${s(lang)}, saya ingatkan $whenText: $title. Tersimpan di kalender $where.",
+                        "Very good${s(lang)}, I'll remind you $whenText: $title. Saved to your $where calendar."
+                    )
                 } else {
-                    lang.t("\"$title\" sudah masuk kalender, $whenText${s(lang)}.", "\"$title\" is on your calendar, $whenText${s(lang)}.")
+                    lang.t("\"$title\" sudah masuk kalender $where, $whenText${s(lang)}.", "\"$title\" is on your $where calendar, $whenText${s(lang)}.")
                 }
                 SkillResult(reply)
             }
             CalendarSkill.AddResult.NoCalendar -> SkillResult(
                 lang.t(
-                    "Tidak ada kalender yang bisa ditulisi di HP ini. Buka aplikasi Kalender sekali untuk menyiapkan akun.",
-                    "There's no writable calendar on this phone. Open the Calendar app once to set up an account."
-                )
+                    "Saya tidak menemukan kalender yang bisa ditulisi, jadi saya buka layar acara baru. Ketuk Simpan${s(lang)}.",
+                    "I couldn't find a writable calendar, so I'm opening a new event screen. Tap Save${s(lang)}."
+                ),
+                intent = fallback
             )
             is CalendarSkill.AddResult.Failed -> SkillResult(
-                lang.t("Maaf${s(lang)}, acara gagal disimpan (${r.reason}).", "Sorry${s(lang)}, I couldn't save the event (${r.reason}).")
+                lang.t(
+                    "Acara gagal disimpan otomatis (${r.reason}), jadi saya buka layar acara baru. Ketuk Simpan${s(lang)}.",
+                    "I couldn't save it automatically (${r.reason}), so I'm opening a new event screen. Tap Save${s(lang)}."
+                ),
+                intent = fallback
             )
         }
+    }
+
+    private fun lastEvent(lang: AppLang, denied: Set<String>): Pair<SkillResult?, CalendarSkill.Event?> {
+        calendarPermissionResult(lang, denied)?.let { return Pair(it, null) }
+        val id = prefs.lastEventId
+        val ev = if (id > 0) calendar.get(id) else null
+        if (ev == null) {
+            return Pair(
+                SkillResult(lang.t("Belum ada acara yang saya buat barusan${s(lang)}.", "I haven't created an event recently${s(lang)}.")),
+                null
+            )
+        }
+        return Pair(null, ev)
+    }
+
+    private fun moveLastEvent(cmd: Command.MoveLastEvent, lang: AppLang, now: LocalDateTime, denied: Set<String>): SkillResult {
+        val (err, ev) = lastEvent(lang, denied)
+        if (err != null || ev == null) return err!!
+        val tp = TimeParser.parse(NumberWords.normalize(cmd.timeText))
+            ?: return SkillResult(lang.t("Jam berapa${s(lang)}?", "What time${s(lang)}?"))
+        val spec = tp.spec
+        val start: LocalDateTime = when {
+            spec.relativeSeconds != null -> now.plusSeconds(spec.relativeSeconds.toLong())
+            spec.hasDay && spec.hour != null -> spec.resolve(now) ?: return SkillResult(lang.t("Waktunya kurang jelas${s(lang)}.", "That time isn't clear${s(lang)}."))
+            spec.hasDay -> spec.resolveDate(now)?.atTime(ev.start.hour, ev.start.minute) ?: return SkillResult(lang.t("Tanggalnya kurang jelas.", "That date isn't clear."))
+            spec.hour != null -> {
+                var h = spec.hour
+                if (spec.ambiguous && h in 1..6) h += 12
+                ev.start.toLocalDate().atTime(h % 24, spec.minute)
+            }
+            else -> return SkillResult(lang.t("Jam berapa${s(lang)}?", "What time${s(lang)}?"))
+        }
+        if (!calendar.move(ev.id, start, null)) {
+            return SkillResult(lang.t("Maaf${s(lang)}, acara gagal dipindahkan.", "Sorry${s(lang)}, I couldn't move it."))
+        }
+        return SkillResult(lang.t("\"${ev.title}\" dipindah ke ${Fmt.at(start, lang, now)}${s(lang)}.", "\"${ev.title}\" moved to ${Fmt.at(start, lang, now)}${s(lang)}."))
+    }
+
+    private fun shiftLastEvent(cmd: Command.ShiftLastEvent, lang: AppLang, now: LocalDateTime, denied: Set<String>): SkillResult {
+        val (err, ev) = lastEvent(lang, denied)
+        if (err != null || ev == null) return err!!
+        val start = ev.start.plusSeconds(cmd.seconds.toLong())
+        if (!calendar.move(ev.id, start, null)) {
+            return SkillResult(lang.t("Maaf${s(lang)}, acara gagal digeser.", "Sorry${s(lang)}, I couldn't reschedule it."))
+        }
+        return SkillResult(lang.t("\"${ev.title}\" sekarang ${Fmt.at(start, lang, now)}${s(lang)}.", "\"${ev.title}\" is now ${Fmt.at(start, lang, now)}${s(lang)}."))
+    }
+
+    private fun deleteLastEvent(lang: AppLang, confirmed: Boolean, denied: Set<String>): SkillResult {
+        val (err, ev) = lastEvent(lang, denied)
+        if (err != null || ev == null) return err!!
+        if (!confirmed) {
+            return SkillResult(
+                lang.t("Hapus acara \"${ev.title}\"? Katakan ya atau tidak.", "Delete \"${ev.title}\"? Say yes or no."),
+                pending = Pending.Confirm(Command.DeleteLastEvent)
+            )
+        }
+        if (!calendar.delete(ev.id)) return SkillResult(lang.t("Maaf${s(lang)}, acara gagal dihapus.", "Sorry${s(lang)}, I couldn't delete it."))
+        prefs.lastEventId = -1
+        return SkillResult(lang.t("Acara \"${ev.title}\" sudah dihapus${s(lang)}.", "\"${ev.title}\" deleted${s(lang)}."))
     }
 
     private fun agenda(cmd: Command.ShowAgenda, lang: AppLang, now: LocalDateTime, denied: Set<String>): SkillResult {

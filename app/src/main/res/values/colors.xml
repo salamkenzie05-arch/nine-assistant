@@ -8,8 +8,9 @@
     <color name="nine_card">#FFFFFF</color>
     <color name="nine_accent">#2E6BFF</color>
     <color name="nine_gold">#8C5A0A</color>
-    <color name="ic_launcher_background">#05070D</color>
+    <color name="ic_launcher_background">#FFFFFF</color>
     <color name="widget_bg">#E6FFFFFF</color>
     <color name="widget_text">#0B1220</color>
     <color name="widget_muted">#4B5466</color>
+    <color name="nine_bg_clear">#00F4F6FB</color>
 </resources>

@@ -130,8 +130,9 @@ class MainActivity : AppCompatActivity(), AssistantController.Ui {
         binding.btnKeyboard.setOnClickListener { toggleKeyboard() }
         binding.btnTodo.setOnClickListener { startActivity(Intent(this, TodoActivity::class.java)) }
         binding.btnSend.setOnClickListener { sendTyped() }
-        binding.inputText.setOnEditorActionListener { _, actionId, _ ->
-            if (actionId == EditorInfo.IME_ACTION_SEND) {
+        binding.inputText.setOnEditorActionListener { _, actionId, event ->
+            val enter = event != null && event.keyCode == android.view.KeyEvent.KEYCODE_ENTER && event.action == android.view.KeyEvent.ACTION_DOWN
+            if (enter || actionId == EditorInfo.IME_ACTION_SEND || actionId == EditorInfo.IME_ACTION_DONE || actionId == EditorInfo.IME_ACTION_GO) {
                 sendTyped()
                 true
             } else false
@@ -255,6 +256,9 @@ class MainActivity : AppCompatActivity(), AssistantController.Ui {
         val t = binding.inputText.text?.toString().orEmpty().trim()
         if (t.isEmpty()) return
         binding.inputText.setText("")
+        // Setelah Enter/kirim: tutup keyboard agar jawaban Nine terlihat.
+        hideKeyboard()
+        binding.inputText.clearFocus()
         controller.submitText(t)
     }
 

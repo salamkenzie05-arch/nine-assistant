@@ -10,4 +10,5 @@
     <color name="widget_bg">#E60B0F18</color>
     <color name="widget_text">#F2F5FA</color>
     <color name="widget_muted">#8A93A6</color>
+    <color name="nine_bg_clear">#00000000</color>
 </resources>

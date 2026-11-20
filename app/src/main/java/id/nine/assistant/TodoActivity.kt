@@ -80,8 +80,9 @@ class TodoActivity : AppCompatActivity() {
             reload()
         }
         binding.btnAddTodo.setOnClickListener { addTyped() }
-        binding.inputTodo.setOnEditorActionListener { _, actionId, _ ->
-            if (actionId == EditorInfo.IME_ACTION_DONE) {
+        binding.inputTodo.setOnEditorActionListener { _, actionId, event ->
+            val enter = event != null && event.keyCode == android.view.KeyEvent.KEYCODE_ENTER && event.action == android.view.KeyEvent.ACTION_DOWN
+            if (enter || actionId == EditorInfo.IME_ACTION_SEND || actionId == EditorInfo.IME_ACTION_DONE || actionId == EditorInfo.IME_ACTION_GO) {
                 addTyped()
                 true
             } else false
@@ -98,6 +99,9 @@ class TodoActivity : AppCompatActivity() {
         if (t.isEmpty()) return
         store.add(t)
         binding.inputTodo.setText("")
+        (getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager)
+            .hideSoftInputFromWindow(binding.inputTodo.windowToken, 0)
+        binding.inputTodo.clearFocus()
         reload()
         binding.todoList.scrollToPosition(items.size - 1)
     }

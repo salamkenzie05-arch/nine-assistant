@@ -67,6 +67,11 @@ sealed class Command {
     /** [end] null = durasi default 1 jam. [allDay] true bila hanya tanggal yang disebut. */
     data class AddEvent(val title: String, val start: LocalDateTime, val end: LocalDateTime?, val allDay: Boolean) : Command()
     data class ShowAgenda(val date: LocalDate) : Command()
+    /** Ubah waktu acara yang terakhir dibuat Nine ("ubah jadi jam 11"). [timeText] belum diparse. */
+    data class MoveLastEvent(val timeText: String) : Command()
+    /** Geser acara terakhir sekian detik (positif = diundur, negatif = dimajukan). */
+    data class ShiftLastEvent(val seconds: Int) : Command()
+    data object DeleteLastEvent : Command()
 
     // --- Daftar tugas harian
     data class TodoAdd(val text: String) : Command()

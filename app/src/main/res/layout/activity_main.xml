@@ -40,7 +40,7 @@
                     android:id="@+id/txtBrain"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textColor="@color/nine_muted"
+                    android:textColor="@color/nine_gold"
                     android:textSize="12sp" />
             </LinearLayout>
 
@@ -54,14 +54,6 @@
                 android:text="ID"
                 android:textColor="@color/nine_on_bg" />
 
-            <ImageButton
-                android:id="@+id/btnTodo"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="@string/todo_title"
-                android:src="@drawable/ic_checklist"
-                app:tint="@color/nine_on_bg" />
 
             <ImageButton
                 android:id="@+id/btnTheme"
@@ -141,17 +133,33 @@
             </LinearLayout>
         </LinearLayout>
 
-        <!-- Riwayat -->
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/list"
+        <!-- Riwayat, dengan gradasi tepi yang memakai warna latar (bukan efek fading bawaan) -->
+        <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1"
-            android:clipToPadding="false"
-            android:fadingEdgeLength="48dp"
-            android:paddingTop="12dp"
-            android:paddingBottom="12dp"
-            android:requiresFadingEdge="vertical" />
+            android:layout_weight="1">
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/list"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clipToPadding="false"
+                android:overScrollMode="never"
+                android:paddingTop="16dp"
+                android:paddingBottom="16dp" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="20dp"
+                android:layout_gravity="top"
+                android:background="@drawable/fade_top" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="20dp"
+                android:layout_gravity="bottom"
+                android:background="@drawable/fade_bottom" />
+        </FrameLayout>
 
         <!-- Transkrip langsung -->
         <TextView
@@ -203,7 +211,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/cd_send"
                 android:src="@drawable/ic_send"
-                app:tint="@color/nine_accent" />
+                app:tint="@color/nine_gold" />
         </LinearLayout>
 
         <!-- Orb + tombol samping -->
@@ -229,7 +237,18 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/cd_keyboard"
                 android:src="@drawable/ic_keyboard"
-                app:tint="@color/nine_muted" />
+                app:tint="@color/nine_gold" />
+
+            <ImageButton
+                android:id="@+id/btnTodo"
+                android:layout_width="52dp"
+                android:layout_height="52dp"
+                android:layout_gravity="end|center_vertical"
+                android:layout_marginEnd="24dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/todo_title"
+                android:src="@drawable/ic_checklist"
+                app:tint="@color/nine_gold" />
 
         </FrameLayout>
 

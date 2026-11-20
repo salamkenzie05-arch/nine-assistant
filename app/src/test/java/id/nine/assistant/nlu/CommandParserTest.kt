@@ -244,6 +244,35 @@ class CommandParserTest {
     }
 
     @Test
+    fun contextFollowUps() {
+        check("ubah jadi jam 11", "MoveLastEvent(timeText=jam 11)")
+        check("pindahkan acara tadi ke besok jam 3 sore", "MoveLastEvent(timeText=besok jam 3 sore)")
+        check("pindahkan acara terakhir ke jam 3 sore", "MoveLastEvent(timeText=jam 3 sore)")
+        check("move the last event to 3 pm", "MoveLastEvent(timeText=3 pm)")
+        check("change it to tomorrow at 9 am", "MoveLastEvent(timeText=tomorrow at 9 am)")
+        check("undur 1 jam", "ShiftLastEvent(seconds=3600)")
+        check("majukan acaranya 30 menit", "ShiftLastEvent(seconds=-1800)")
+        check("push back the meeting by 30 minutes", "ShiftLastEvent(seconds=1800)")
+        check("hapus acara tadi", "DeleteLastEvent")
+        check("hapus acara terakhir", "DeleteLastEvent")
+        check("cancel that meeting", "DeleteLastEvent")
+        check("tandai yang tadi selesai", "TodoDone(ref=-1)")
+        check("tandai tugas beli susu selesai", "TodoDone(ref=beli susu)")
+        check("ubah volume ke 50", "Volume(action=SET, percent=50)")
+        check("ganti bahasa ke inggris", "SwitchLanguage(lang=EN)")
+    }
+
+    @Test
+    fun questionsGoToAi() {
+        check("kenapa alarm saya tidak bunyi", "Unknown(text=kenapa alarm saya tidak bunyi)")
+        check("how do I set an alarm", "Unknown(text=how do I set an alarm)")
+        check("apa itu timer pomodoro", "Unknown(text=apa itu timer pomodoro)")
+        check("berapa sisa baterai", "Battery")
+        check("apa jadwal saya hari senin", "ShowAgenda(date=2026-11-23)")
+        check("bisakah kamu pasang alarm jam 7 pagi", "SetAlarm(time=2026-11-21T07:00, label=null)")
+    }
+
+    @Test
     fun slotFilling() {
         slot(Pending.AlarmTime(null), "jam 7 pagi", "SetAlarm(time=2026-11-21T07:00, label=null)")
         slot(Pending.AlarmTime(null), "tidak jadi", "Cancelled")

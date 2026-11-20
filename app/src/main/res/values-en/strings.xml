@@ -105,4 +105,17 @@
     <string name="wake_no_model">The wake-phrase model is missing from this APK.</string>
     <string name="wake_error">Wake phrase error: %1$s</string>
     <string name="wake_tap_to_talk">Yes, sir? Tap to talk.</string>
+
+    <string name="sec_brain_group">AI brain</string>
+    <string name="sec_voice_group">Language &amp; voice</string>
+    <string name="sec_wake_group">Summoning Nine</string>
+    <string name="sec_calendar">Calendar</string>
+    <string name="calendar_target">Save new events to</string>
+    <string name="calendar_help">\"Automatic\" picks the calendar of the account you use most. Choose one manually if events don\'t show up in your calendar app.</string>
+    <string name="calendar_auto">Automatic (most active calendar)</string>
+    <string name="calendar_access">Allow calendar access</string>
+    <string name="gemini_model_hint">Gemini model (empty = gemini-flash-latest)</string>
+    <string name="wake_phrase_hint">Wake phrase, e.g. hey nine</string>
+    <string name="model_import_short">Import file</string>
+    <string name="advanced">Advanced</string>
 </resources>

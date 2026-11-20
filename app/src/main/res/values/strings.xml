@@ -105,4 +105,17 @@
     <string name="wake_no_model">Model kata pemanggil tidak ada di APK ini.</string>
     <string name="wake_error">Kata pemanggil error: %1$s</string>
     <string name="wake_tap_to_talk">Ya, Tuan? Ketuk untuk bicara.</string>
+
+    <string name="sec_brain_group">Otak AI</string>
+    <string name="sec_voice_group">Bahasa &amp; suara</string>
+    <string name="sec_wake_group">Memanggil Nine</string>
+    <string name="sec_calendar">Kalender</string>
+    <string name="calendar_target">Simpan acara baru ke</string>
+    <string name="calendar_help">\"Otomatis\" memilih kalender akun yang paling sering Anda pakai. Pilih manual bila acara tidak muncul di aplikasi kalender Anda.</string>
+    <string name="calendar_auto">Otomatis (kalender paling aktif)</string>
+    <string name="calendar_access">Izinkan akses kalender</string>
+    <string name="gemini_model_hint">Model Gemini (kosong = gemini-flash-latest)</string>
+    <string name="wake_phrase_hint">Frasa pemanggil, mis. hey nine</string>
+    <string name="model_import_short">Impor file</string>
+    <string name="advanced">Lanjutan</string>
 </resources>

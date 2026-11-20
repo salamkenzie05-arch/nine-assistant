@@ -40,6 +40,25 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
         if (raw.isEmpty()) return Command.Unknown(input.trim())
         val norm = NumberWords.normalize(raw)
         val now = clock()
+        val cmd = parseCommand(raw, norm, now)
+        // Pertanyaan umum ("kenapa alarm saya tidak bunyi?", "how do I set an alarm?") lebih cocok untuk otak AI,
+        // kecuali pertanyaan informasi yang memang dijawab perangkat (jam, baterai, jadwal, tugas, ...).
+        if (reQuestion.containsMatchIn(raw) && cmd !is Command.Unknown && !answersQuestion(cmd)) {
+            return Command.Unknown(raw)
+        }
+        return cmd
+    }
+
+    private val reQuestion = rx("""^(?:apa(?:kah)?|kenapa|mengapa|bagaimana|gimana|siapa|kapan|dimana|di\s+mana|kemana|ke\s+mana|berapa|bolehkah|haruskah|apa\s+bedanya|why|how|what|who|when|where|which|is|are|does|do|did|should|would|explain|jelaskan|ceritakan|tell\s+me\s+about)\b""")
+
+    private fun answersQuestion(c: Command): Boolean = when (c) {
+        Command.CurrentTime, Command.CurrentDate, Command.Battery, Command.DeviceInfo, Command.Help,
+        Command.WhoAreYou, Command.HowAreYou, Command.TodoList, Command.ReadNotes, Command.ShowAlarms -> true
+        is Command.ShowAgenda -> true
+        else -> false
+    }
+
+    private fun parseCommand(raw: String, norm: String, now: LocalDateTime): Command {
         return parseLanguage(raw)
             ?: parseReset(raw)
             ?: parseControl(raw)
@@ -378,7 +397,9 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
             "keenam" to "6", "ketujuh" to "7", "kedelapan" to "8", "kesembilan" to "9", "kesepuluh" to "10",
             "first" to "1", "second" to "2", "third" to "3", "fourth" to "4", "fifth" to "5",
             "sixth" to "6", "seventh" to "7", "eighth" to "8", "ninth" to "9", "tenth" to "10",
-            "terakhir" to "-1", "last" to "-1", "one" to "1"
+            "terakhir" to "-1", "last" to "-1", "one" to "1",
+            "tadi" to "-1", "itu" to "-1", "barusan" to "-1", "that" to "-1", "it" to "-1", "that one" to "-1",
+            "the last one" to "-1", "last one" to "-1"
         )
         ord[t]?.let { return it }
         Regex("""^(\d{1,2})(?:st|nd|rd|th)?$""").find(t)?.let { return it.groupValues[1] }
@@ -484,7 +505,28 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
         return Command.AddEvent(name, start, end, false)
     }
 
+    private val LASTREF = """(?:(?:yang\s+)?(?:tadi|terakhir|itu|barusan|sebelumnya)|that|it|the\s+last\s+one|last\s+one|the\s+last|last)"""
+    private val reEventMove = rx("""^(?:ubah|ganti|pindah(?:kan)?|geser|jadwalkan\s+ulang|reschedule|move|change)\s+(?:waktu(?:nya)?\s+)?(?:$LASTREF\s+)?(?:(?:acara|jadwal|rapat|event|meeting|agenda|janji)\s*)?(?:$LASTREF\s*)?(?:ke|jadi|menjadi|to|for)\s+(.+)$""")
+    private val reEventShift = rx("""^(undur(?:kan)?|mundurkan|tunda|majukan|percepat|push\s+back|delay|postpone|move\s+up|bring\s+forward)\s+(?:(?:acara|jadwal|rapat|event|meeting|agenda)\s*)?(?:$LASTREF\s*)?(?:by\s+|selama\s+)?(.+)$""")
+    private val reEventDelete = rx("""^(?:hapus|batalkan|cancel|delete|remove)\s+(?:(?:acara|jadwal|rapat|event|meeting|agenda|janji)(?:\s+$LASTREF)?|$LASTREF\s+(?:event|meeting|acara|jadwal))$""")
+
+    private fun parseEventFollowUp(raw: String): Command? {
+        if (reEventDelete.matches(raw)) return Command.DeleteLastEvent
+        reEventShift.find(raw)?.let { m ->
+            val secs = Durations.parseSeconds(NumberWords.normalize(m.groupValues[2])) ?: return@let
+            val verb = m.groupValues[1].lowercase()
+            val earlier = verb.startsWith("maju") || verb.startsWith("percepat") || verb.startsWith("move") || verb.startsWith("bring")
+            return Command.ShiftLastEvent(if (earlier) -secs else secs)
+        }
+        reEventMove.find(raw)?.let { m ->
+            val t = m.groupValues[1].trim()
+            if (TimeParser.parse(NumberWords.normalize(t)) != null) return Command.MoveLastEvent(t)
+        }
+        return null
+    }
+
     private fun parseCalendar(raw: String, now: LocalDateTime): Command? {
+        parseEventFollowUp(raw)?.let { return it }
         // 1) "tambahkan rapat ke kalender besok jam 9"
         for (r in reEventToCalendar) {
             val m = r.find(raw) ?: continue

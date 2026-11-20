@@ -25,6 +25,7 @@ import id.nine.assistant.core.AppLang
 import id.nine.assistant.core.Prefs
 import id.nine.assistant.databinding.ActivitySettingsBinding
 import id.nine.assistant.llm.ModelManager
+import id.nine.assistant.skills.CalendarSkill
 import id.nine.assistant.speech.SpeechOutput
 import id.nine.assistant.wake.WakeWordService
 
@@ -117,6 +118,20 @@ class SettingsActivity : AppCompatActivity() {
         }
         renderWake()
 
+        // --- Kalender tujuan
+        binding.spinnerCalendar.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                if (populatingCalendars) return
+                prefs.calendarId = calendarIds.getOrElse(position) { -1L }
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+        binding.btnCalendarAccess.setOnClickListener {
+            calPermission.launch(arrayOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR))
+        }
+        populateCalendars()
+
         // --- Tema
         binding.groupTheme.check(
             when (prefs.theme) {
@@ -204,6 +219,33 @@ class SettingsActivity : AppCompatActivity() {
         super.onResume()
         renderInternet()
         renderWake()
+        populateCalendars()
+    }
+
+    private var calendarIds: List<Long> = listOf(-1L)
+    private var populatingCalendars = false
+
+    private val calPermission =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { populateCalendars() }
+
+    private fun populateCalendars() {
+        val granted = listOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR).all {
+            ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
+        }
+        binding.btnCalendarAccess.visibility = if (granted) View.GONE else View.VISIBLE
+        val cals = if (granted) {
+            try {
+                CalendarSkill(this).writableCalendars()
+            } catch (e: Exception) {
+                emptyList()
+            }
+        } else emptyList()
+        calendarIds = listOf(-1L) + cals.map { it.id }
+        val labels = listOf(getString(R.string.calendar_auto)) + cals.map { it.label }
+        populatingCalendars = true
+        binding.spinnerCalendar.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, labels)
+        binding.spinnerCalendar.setSelection(calendarIds.indexOf(prefs.calendarId).coerceAtLeast(0), false)
+        binding.spinnerCalendar.post { populatingCalendars = false }
     }
 
     override fun onPause() {

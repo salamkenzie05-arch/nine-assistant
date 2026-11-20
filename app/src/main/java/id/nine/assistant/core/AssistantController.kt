@@ -14,7 +14,9 @@ import id.nine.assistant.nlu.CommandParser
 import id.nine.assistant.nlu.Pending
 import id.nine.assistant.nlu.SlotFiller
 import id.nine.assistant.nlu.SlotOutcome
+import id.nine.assistant.skills.CalendarSkill
 import id.nine.assistant.skills.NoteStore
+import id.nine.assistant.skills.TodoStore
 import id.nine.assistant.skills.SkillExecutor
 import id.nine.assistant.speech.SpeechInput
 import id.nine.assistant.speech.SpeechOutput
@@ -49,7 +51,12 @@ class AssistantController(context: Context, private val ui: Ui) {
     private val gemini = nine.gemini
     private val parser = CommandParser()
     private val filler = SlotFiller(parser)
-    private val executor = SkillExecutor(app, NoteStore(app)) { prefs.persona }
+    private val executor = SkillExecutor(app, NoteStore(app), prefs)
+    private val todos = TodoStore(app)
+    private val calendar = CalendarSkill(app)
+
+    /** Ukuran log saat jawaban AI terakhir selesai; giliran sesudahnya = perintah yang belum diketahui Gemma. */
+    private var aiSeenUpTo = 0
     private val output = SpeechOutput(app, prefs) { ui.onNotice(it) }
 
     private val input = SpeechInput(app, object : SpeechInput.Callback {
@@ -237,7 +244,7 @@ class AssistantController(context: Context, private val ui: Ui) {
         execute(parser.parse(text), confirmed = false)
     }
 
-    private fun execute(cmd: Command, confirmed: Boolean) {
+    private fun execute(cmd: Command, confirmed: Boolean, fromAi: Boolean = false) {
         val res = executor.execute(cmd, lang, confirmed, denied)
 
         if (res.needPermissions.isNotEmpty()) {
@@ -261,6 +268,17 @@ class AssistantController(context: Context, private val ui: Ui) {
         }
 
         val chat = res.chat
+        if (chat != null && fromAi) {
+            // Perintah dari AI ternyata tidak dikenali: jangan bertanya ke AI lagi (hindari putaran).
+            reply(
+                lang.t(
+                    "Maaf${prefs.persona.sfx(lang)}, tindakan itu belum bisa saya lakukan.",
+                    "I'm afraid I can't do that one yet${prefs.persona.sfx(lang)}."
+                ),
+                listenAfter = false
+            )
+            return
+        }
         if (chat != null && (gemini.isUsable() || brain.isUsable)) {
             askAi(chat)
             return
@@ -285,6 +303,80 @@ class AssistantController(context: Context, private val ui: Ui) {
 
     // ------------------------------------------------------------------ Gemma
 
+    /** Ringkasan keadaan perangkat untuk AI: tugas hari ini, acara hari ini, acara terakhir yang dibuat Nine. */
+    private fun deviceContext(l: AppLang): String {
+        val parts = ArrayList<String>()
+        try {
+            val open = todos.pending().take(8).map { it.text }
+            parts += l.t("Tugas hari ini yang belum selesai: ", "Open tasks today: ") +
+                (if (open.isEmpty()) "-" else open.joinToString("; "))
+        } catch (e: Exception) {
+            // abaikan
+        }
+        val calOk = ContextCompat.checkSelfPermission(app, Manifest.permission.READ_CALENDAR) == PackageManager.PERMISSION_GRANTED
+        if (calOk) {
+            try {
+                val evs = calendar.eventsOn(java.time.LocalDate.now()).take(6).map {
+                    (if (it.allDay) l.t("seharian", "all day") else String.format("%02d:%02d", it.start.hour, it.start.minute)) + " " + it.title
+                }
+                parts += l.t("Acara kalender hari ini: ", "Today's calendar: ") + (if (evs.isEmpty()) "-" else evs.joinToString("; "))
+                val last = prefs.lastEventId.takeIf { it > 0 }?.let { calendar.get(it) }
+                if (last != null) {
+                    parts += l.t("Acara terakhir yang dibuat Nine: ", "Last event Nine created: ") +
+                        "${last.title}, ${last.start.toLocalDate()} " + String.format("%02d:%02d", last.start.hour, last.start.minute)
+                }
+            } catch (e: Exception) {
+                // abaikan
+            }
+        }
+        return parts.joinToString("\n")
+    }
+
+    /** Riwayat layar untuk Gemini: giliran sebelumnya, role bergantian, dimulai dari pengguna. */
+    private fun historyForAi(excludeFrom: Int): List<Pair<String, String>> {
+        val entries = log.entries.subList(0, excludeFrom.coerceIn(0, log.entries.size))
+            .filter { it.text.isNotBlank() && it.text != "…" }
+            .takeLast(14)
+        val out = ArrayList<Pair<String, String>>()
+        for (e in entries) {
+            val role = if (e.fromUser) "user" else "model"
+            if (out.isNotEmpty() && out.last().first == role) {
+                out[out.size - 1] = role to (out.last().second + "\n" + e.text)
+            } else {
+                out.add(role to e.text)
+            }
+        }
+        while (out.isNotEmpty() && out.first().first != "user") out.removeAt(0)
+        return out
+    }
+
+    /** Untuk Gemma (yang menyimpan riwayatnya sendiri): sisipkan giliran perintah yang belum ia lihat + konteks. */
+    private fun gemmaMessage(question: String, l: AppLang, userIndex: Int): String {
+        val missed = log.entries.subList(aiSeenUpTo.coerceIn(0, userIndex), userIndex.coerceAtMost(log.entries.size))
+            .filter { it.text.isNotBlank() && it.text != "…" }
+            .takeLast(6)
+            .joinToString("\n") { (if (it.fromUser) l.t("Pengguna: ", "User: ") else "Nine: ") + it.text.take(300) }
+        val ctx = deviceContext(l)
+        if (missed.isEmpty() && ctx.isEmpty()) return question
+        val sb = StringBuilder()
+        if (missed.isNotEmpty()) sb.append(l.t("[Percakapan sebelumnya yang ditangani modul perintah]\n", "[Earlier turns handled by the command module]\n")).append(missed).append("\n")
+        if (ctx.isNotEmpty()) sb.append(l.t("[Konteks perangkat]\n", "[Device context]\n")).append(ctx).append("\n")
+        sb.append(l.t("[Pesan pengguna sekarang]\n", "[Current user message]\n")).append(question)
+        return sb.toString()
+    }
+
+    private fun cmdOf(t: String): String? {
+        val x = t.trimStart().trimStart('`', '"', '*', ' ')
+        if (!x.uppercase().startsWith("CMD:")) return null
+        return x.substring(4).lineSequence().first().trim().trim('"', '`', '*', '.', ' ').ifEmpty { null }
+    }
+
+    /** Masih mungkin awal dari "CMD:"? (tahan dulu sebelum ditampilkan/diucapkan) */
+    private fun maybeCmd(t: String): Boolean {
+        val x = t.trimStart().trimStart('`', '"', '*', ' ').uppercase()
+        return x.length < 4 && "CMD:".startsWith(x)
+    }
+
     private fun askAi(question: String) {
         val l = lang
         val online = gemini.isUsable()
@@ -294,18 +386,31 @@ class AssistantController(context: Context, private val ui: Ui) {
             brain.state == LlmBrain.State.IDLE || brain.state == LlmBrain.State.LOADING ->
                 ui.onPartial(l.t("Membangunkan otak AI…", "Waking up the AI brain…"))
         }
+        // Pesan pengguna sudah ada di log (entri terakhir).
+        val userIndex = (log.entries.size - 1).coerceAtLeast(0)
+        val history = historyForAi(userIndex)
+        val context = deviceContext(l)
         val index = log.add(false, "")
         val raw = StringBuilder()
         val splitter = TextClean.SentenceSplitter()
         val speak = prefs.speakReplies
         if (speak) output.beginStream(l) { setState(State.SPEAKING) }
         val gen = ++askGen
+        var holding = true // menahan keluaran sampai jelas ini bukan "CMD:"
 
         val sink = object : GeminiClient.Callback {
             override fun onChunk(text: String) {
                 if (gen != askGen) return
-                ui.onPartial("")
                 raw.append(text)
+                if (holding) {
+                    val r = raw.toString()
+                    if (cmdOf(r) != null || maybeCmd(r)) return
+                    holding = false
+                    ui.onPartial("")
+                    log.update(index, TextClean.clean(r))
+                    if (speak) for (sentence in splitter.push(r)) output.enqueue(TextClean.clean(sentence))
+                    return
+                }
                 log.update(index, TextClean.clean(raw.toString()))
                 if (speak) {
                     for (sentence in splitter.push(text)) output.enqueue(TextClean.clean(sentence))
@@ -316,6 +421,17 @@ class AssistantController(context: Context, private val ui: Ui) {
                 if (gen != askGen) return
                 brainJob = null
                 cancelAi = null
+                aiSeenUpTo = log.entries.size
+                ui.onPartial("")
+                val action = cmdOf(fullText)
+                if (action != null) {
+                    // AI memahami permintaan sebagai tindakan: jalankan lewat modul perintah yang sebenarnya.
+                    output.stop()
+                    log.update(index, "→ $action")
+                    val parsed = parser.parse(action)
+                    execute(parsed, confirmed = false, fromAi = true)
+                    return
+                }
                 val cleaned = TextClean.clean(fullText)
                 if (cleaned.isEmpty()) {
                     log.update(index, "…")
@@ -326,6 +442,10 @@ class AssistantController(context: Context, private val ui: Ui) {
                 log.update(index, cleaned)
                 val followUp = cleaned.trimEnd().endsWith("?")
                 if (speak) {
+                    if (holding) {
+                        // seluruh jawaban pendek tertahan: ucapkan sekarang
+                        for (sentence in splitter.push(fullText)) output.enqueue(TextClean.clean(sentence))
+                    }
                     splitter.flush()?.let { output.enqueue(TextClean.clean(it)) }
                     output.endStream {
                         setState(State.IDLE)
@@ -344,7 +464,7 @@ class AssistantController(context: Context, private val ui: Ui) {
                 output.stop()
                 val text = if (message == "no_model") {
                     prefs.persona.didNotUnderstand(l, question)
-                } else if (message.startsWith("API key") || message.startsWith("Gemini") || message.contains("Gemini")) {
+                } else if (message.contains("Gemini")) {
                     message
                 } else {
                     l.t(
@@ -365,7 +485,9 @@ class AssistantController(context: Context, private val ui: Ui) {
                 // Internet gagal sebelum ada jawaban: lanjutkan dengan Gemma offline.
                 if (brain.isUsable) {
                     ui.onPartial(l.t("Internet bermasalah, beralih ke mode offline…", "Connection trouble, switching to offline mode…"))
-                    brainJob = brain.ask(question, l, this)
+                    raw.setLength(0)
+                    holding = true
+                    brainJob = brain.ask(gemmaMessage(question, l, userIndex), l, this)
                     cancelAi = { brain.cancel() }
                 } else {
                     onError(
@@ -379,10 +501,10 @@ class AssistantController(context: Context, private val ui: Ui) {
         }
 
         if (online) {
-            gemini.ask(question, l, sink)
+            gemini.ask(question, l, history, context, sink)
             cancelAi = { gemini.cancel() }
         } else {
-            brainJob = brain.ask(question, l, sink)
+            brainJob = brain.ask(gemmaMessage(question, l, userIndex), l, sink)
             cancelAi = { brain.cancel() }
         }
     }

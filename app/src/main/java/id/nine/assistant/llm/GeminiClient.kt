@@ -24,9 +24,6 @@ class GeminiClient(context: Context, private val prefs: Prefs) {
     private val app = context.applicationContext
     private val main = Handler(Looper.getMainLooper())
     private val exec = Executors.newSingleThreadExecutor { r -> Thread(r, "nine-gemini") }
-    private val history = ArrayList<Pair<String, String>>() // (role, teks)
-    private var historyLang: AppLang? = null
-    private var lastUse = 0L
 
     @Volatile
     private var generation = 0
@@ -53,9 +50,8 @@ class GeminiClient(context: Context, private val prefs: Prefs) {
     /** Siap dipakai sekarang: mode internet aktif, ada API key, dan ada koneksi. */
     fun isUsable(): Boolean = isConfigured() && isOnline()
 
-    fun reset() {
-        exec.execute { history.clear() }
-    }
+    /** Riwayat diambil dari percakapan di layar, jadi tidak ada yang perlu direset di sini. */
+    fun reset() {}
 
     fun cancel() {
         generation++
@@ -68,24 +64,21 @@ class GeminiClient(context: Context, private val prefs: Prefs) {
 
     private class ApiException(val code: Int, msg: String) : IOException(msg)
 
-    fun ask(text: String, lang: AppLang, cb: Callback) {
+    /**
+     * [history]: giliran sebelumnya (role "user"/"model"), sudah urut. [context]: info perangkat terkini
+     * (tugas, acara) yang ditambahkan ke instruksi sistem.
+     */
+    fun ask(text: String, lang: AppLang, history: List<Pair<String, String>>, context: String, cb: Callback) {
         val gen = ++generation
         exec.execute {
-            val now = System.currentTimeMillis()
-            if (historyLang != lang || now - lastUse > 30 * 60 * 1000L) history.clear()
-            historyLang = lang
-            lastUse = now
             val full = StringBuilder()
             try {
-                stream(text, lang) { chunk ->
+                stream(text, lang, history, context) { chunk ->
                     if (gen != generation) throw InterruptedException()
                     full.append(chunk)
                     main.post { if (gen == generation) cb.onChunk(chunk) }
                 }
                 if (gen != generation) return@execute
-                history.add("user" to text)
-                history.add("model" to full.toString())
-                while (history.size > 16) history.removeAt(0)
                 val result = full.toString()
                 main.post { if (gen == generation) cb.onDone(result) }
             } catch (e: InterruptedException) {
@@ -118,12 +111,12 @@ class GeminiClient(context: Context, private val prefs: Prefs) {
         else -> "Gemini ${e.code}: ${e.message}"
     }
 
-    private fun requestBody(text: String, lang: AppLang): String {
+    private fun requestBody(text: String, lang: AppLang, history: List<Pair<String, String>>, context: String): String {
         val persona = prefs.persona
         val body = JSONObject()
         body.put(
             "system_instruction",
-            JSONObject().put("parts", JSONArray().put(JSONObject().put("text", persona.onlinePrompt(lang, LocalDateTime.now(), prefs.city))))
+            JSONObject().put("parts", JSONArray().put(JSONObject().put("text", persona.onlinePrompt(lang, LocalDateTime.now(), prefs.city) + "\n\n" + context)))
         )
         val contents = JSONArray()
         for ((role, t) in history + ("user" to text)) {
@@ -135,7 +128,7 @@ class GeminiClient(context: Context, private val prefs: Prefs) {
         return body.toString()
     }
 
-    private fun stream(text: String, lang: AppLang, onChunk: (String) -> Unit) {
+    private fun stream(text: String, lang: AppLang, history: List<Pair<String, String>>, context: String, onChunk: (String) -> Unit) {
         val model = prefs.geminiModel
         val url = URL("https://generativelanguage.googleapis.com/v1beta/models/$model:streamGenerateContent?alt=sse")
         val c = url.openConnection() as HttpURLConnection
@@ -147,7 +140,7 @@ class GeminiClient(context: Context, private val prefs: Prefs) {
             c.doOutput = true
             c.setRequestProperty("Content-Type", "application/json; charset=utf-8")
             c.setRequestProperty("x-goog-api-key", prefs.geminiKey)
-            c.outputStream.use { it.write(requestBody(text, lang).toByteArray(Charsets.UTF_8)) }
+            c.outputStream.use { it.write(requestBody(text, lang, history, context).toByteArray(Charsets.UTF_8)) }
             val code = c.responseCode
             if (code != 200) {
                 val err = try {
