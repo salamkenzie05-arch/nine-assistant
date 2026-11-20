@@ -26,14 +26,34 @@ Nine adalah asisten suara seperti Siri yang berjalan **sepenuhnya di perangkat**
 - **Kedekatan** baru mencapai level tertinggi setelah **90 hari pemakaian** (hari berbeda saat kamu bicara dengan Nine), seberapa banyak pun XP-nya.
 - **Tombol power**: layar Nine kini transparan dengan vinyet lembut (seperti Google), dan tidak lagi membuat layar "nyangkut" setelah Nine membuka aplikasi lain.
 
+## Dua edisi: pilih yang mana?
+
+| | **Nine.apk** (disarankan) | **Nine-Full.apk** |
+|---|---|---|
+| Pemasangan | Langsung, tanpa trik | Bisa diblokir Google Play Protect (lihat bawah) |
+| Layanan aksesibilitas | Tidak ada | Ada |
+| Tombol melayang (AssistiveTouch) | Tidak ada | Ada |
+| Pilih & putar lagu otomatis di YouTube Music | Hanya membuka hasil pencarian | Ada |
+| Wi-Fi/Bluetooth/hotspot/mode pesawat lewat suara | Membuka panel pengaturannya saja | Ada (mengetuk ubin Panel Cepat) |
+| Semua fitur lain (suara, alarm, ingatan, tuner, telepon, widget, dll.) | Ada | Ada |
+
+Kedua edisi memakai tanda tangan yang sama, jadi **Full bisa menimpa Nine** (dan sebaliknya) tanpa kehilangan data.
+
+**Kenapa ada dua?** Google Play Protect (fitur "perlindungan penipuan tingkat lanjut") memblokir aplikasi yang dipasang dari luar Play Store bila meminta layanan aksesibilitas, karena izin itu sering disalahgunakan malware. Nine.apk tidak memintanya, sehingga pemasangannya normal. Nine-Full.apk tetap meminta, jadi bisa muncul dialog "Aplikasi diblokir untuk melindungi perangkat". Satu-satunya jalan yang saya tahu: matikan sementara **Play Store → profil → Play Protect → ⚙ → Pindai aplikasi dengan Play Protect**, pasang, lalu nyalakan lagi (belum saya uji di HP; caranya bisa berbeda di versi One UI lain). Jangan mematikannya kalau kamu tidak butuh fitur Full.
+
 ## Pasang di HP (Galaxy S23)
 
-1. Buka `https://github.com/<akun>/<repo>/releases/latest/download/Nine.apk` di HP, lalu unduh.
+1. Buka `https://github.com/<akun>/<repo>/releases/latest/download/Nine.apk` di HP, lalu unduh. (Ingin fitur Full? Pakai `.../Nine-Full.apk`.)
 2. Buka file-nya. Bila diminta, izinkan "Pasang aplikasi tak dikenal" untuk browser/My Files.
 3. Buka **Nine**, lalu ketuk **Unduh Gemma 4 (2,6 GB)** di kartu atas (sekali saja, sebaiknya lewat Wi-Fi).
 4. Ketuk orb dan bicara. Untuk memanggil Nine dengan tombol samping, buka Pengaturan Nine → **Pilih Nine sebagai asisten digital**. Setelah itu atur di **Pengaturan → Fitur lanjutan → Tombol samping → Tekan dan tahan → Aktifkan asisten digital**.
 
-Setiap push ke `main` otomatis mem-build APK baru (GitHub Actions) dan menerbitkannya sebagai rilis terbaru. Versi baru bisa langsung dipasang menimpa versi lama.
+Setiap push ke `main` otomatis mem-build kedua APK (GitHub Actions) dan menerbitkannya sebagai rilis terbaru. Versi baru bisa langsung dipasang menimpa versi lama.
+
+### Ringan di HP
+
+- Model Gemma (±2,5 GB RAM) dimuat saat layar Nine dibuka, dan **otomatis dilepas setelah ±10 menit** Nine ditinggal di latar belakang dan tidak dipakai. Dimuat lagi otomatis saat Nine dibuka atau dipanggil, jadi jawaban pertama setelah lama diam bisa sedikit lebih lambat.
+- Wajah Nine dan cahaya tepi layar menggambar tanpa membuat objek baru di setiap frame (gradien dipakai ulang), sehingga animasi tetap 60 fps dan tampilannya tidak berubah.
 
 ## Supaya benar-benar offline
 
@@ -52,8 +72,8 @@ Internet hanya dipakai untuk mengunduh model. Percakapan, suara, dan catatan tid
 - Suara Nine adalah "bahasa droid" yang dibuat dengan sintesis sendiri (FM, luncuran nada, getar): kata yang sama selalu berbunyi sama, "?" naik, "!" riang, "." turun. Terinspirasi gaya droid fiksi, tetapi **bukan sampel atau tiruan suara karakter mana pun**. Isi jawaban tetap tampil sebagai teks di layar.
 - Ingatan Nine disisipkan ke prompt (maksimal beberapa puluh fakta), bukan fine-tuning; model Gemma tidak berubah.
 - Campur bahasa ditekan dengan aturan bahasa yang ketat, suhu sampling lebih rendah, dan pengecekan jawaban: jawaban Gemma yang bercampur diminta ditulis ulang. Pengecekan ini heuristik, jadi sesekali masih bisa lolos.
-- Android tidak mengizinkan aplikasi biasa menyalakan atau mematikan Wi-Fi/Bluetooth/hotspot/mode pesawat. Nine melakukannya lewat **layanan aksesibilitas** (Pengaturan Nine → "Izinkan kontrol Nine"): ia membuka Panel Cepat lalu mengetuk ubinnya, jadi hasilnya bergantung pada susunan One UI di HP-mu dan belum diuji di semua perangkat. Tanpa layanan itu, Nine hanya membuka panel pengaturannya. Pada Android 13+ untuk aplikasi di luar Play Store, aktifkan dulu **Info aplikasi → ⋮ → Izinkan setelan terbatas**.
-- Memutar lagu pilihan di YouTube Music juga memakai layanan aksesibilitas (mengetuk hasil lagu pertama); tanpa itu Nine hanya membuka hasil pencarian. Jeda/lanjut/berikutnya/sebelumnya/volume memakai tombol media sistem dan bekerja di pemutar apa pun.
+- Android tidak mengizinkan aplikasi biasa menyalakan atau mematikan Wi-Fi/Bluetooth/hotspot/mode pesawat. Nine melakukannya lewat **layanan aksesibilitas** (Pengaturan Nine → "Izinkan kontrol Nine"): ia membuka Panel Cepat lalu mengetuk ubinnya, jadi hasilnya bergantung pada susunan One UI di HP-mu dan belum diuji di semua perangkat. Tanpa layanan itu (dan di **Nine.apk** yang tidak memilikinya), Nine hanya membuka panel pengaturannya. Pada Android 13+ untuk aplikasi di luar Play Store, aktifkan dulu **Info aplikasi → ⋮ → Izinkan setelan terbatas**.
+- Memutar lagu pilihan di YouTube Music juga memakai layanan aksesibilitas (mengetuk hasil lagu pertama), jadi hanya di **Nine-Full.apk**; tanpa itu Nine hanya membuka hasil pencarian. Jeda/lanjut/berikutnya/sebelumnya/volume memakai tombol media sistem dan bekerja di pemutar apa pun.
 - Terima/tolak telepon butuh izin **Telepon** dan hanya lewat perintah suara: Nine tidak otomatis menyebut siapa yang menelepon.
 - Nyanyian adalah melodi bersuara droid, tanpa lirik. Reaksi musik memakai mikrofon hanya saat layar Nine terbuka dan Nine sedang diam; layar kunci dan aplikasi lain tidak diawasi.
 - Pengingat lebih dari 24 jam dibuka di Kalender, karena alarm Android hanya berlaku 24 jam ke depan.
@@ -74,7 +94,7 @@ Internet hanya dipakai untuk mengunduh model. Percakapan, suara, dan catatan tid
 | `skills/` | Eksekusi perintah perangkat, kontak, catatan |
 | `speech/` | Pengenal suara on-device, `DroidVoice` (suara droid sintetis), `DroidSinger` (nyanyian) |
 | `audio/` | Deteksi nada (YIN) + tuner gitar, analisis ketukan musik, daftar lagu |
-| `a11y/` | Layanan aksesibilitas: ubin pengaturan cepat, YouTube Music, tombol melayang |
+| `a11y/` | Layanan aksesibilitas: ubin pengaturan cepat, YouTube Music, tombol melayang. Kode aslinya ada di `src/full/`; `src/lite/` berisi stub kosong dengan API sama (`AVAILABLE = false`) |
 | `call/` | Terima/tolak telepon masuk |
 | `ui/` | `NineOrbView`, `EdgeGlowView`, daftar pesan |
 | `widget/` | Widget orb (kecil dan 4x4) dan "Hari ini"; frame wajah dibuat `tools/face_sphere.py` |

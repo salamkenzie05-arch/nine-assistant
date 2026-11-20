@@ -47,6 +47,8 @@ class NineApp : Application() {
         AppCompatDelegate.setDefaultNightMode(prefs.theme.nightMode)
         models = ModelManager(this, prefs)
         brain = LlmBrain(this, prefs, models)
+        // Selama layar Nine terbuka model tetap di memori; setelah ditinggal lama, otomatis dilepas.
+        brain.keepWarm = { MainActivity.visible }
         gemini = GeminiClient(this, prefs)
         models.addListener { status ->
             when (status) {

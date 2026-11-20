@@ -82,12 +82,17 @@ class EdgeGlowView @JvmOverloads constructor(
         rect.set(0f, 0f, width.toFloat(), height.toFloat())
         val corner = 44f * density
         val boost = 1f + level * 0.8f
-        val layers = arrayOf(floatArrayOf(5f, 1f), floatArrayOf(14f, 0.45f), floatArrayOf(28f, 0.2f), floatArrayOf(46f, 0.08f))
-        for (l in layers) {
-            paint.strokeWidth = l[0] * density * boost
-            paint.alpha = (255 * l[1] * current).toInt().coerceIn(0, 255)
+        for (i in LAYER_WIDTH.indices) {
+            paint.strokeWidth = LAYER_WIDTH[i] * density * boost
+            paint.alpha = (255 * LAYER_ALPHA[i] * current).toInt().coerceIn(0, 255)
             canvas.drawRoundRect(rect, corner, corner, paint)
         }
         postInvalidateOnAnimation()
+    }
+
+    private companion object {
+        // Tebal garis (dp) dan opasitas tiap lapis cahaya; dibuat sekali, bukan per frame.
+        val LAYER_WIDTH = floatArrayOf(5f, 14f, 28f, 46f)
+        val LAYER_ALPHA = floatArrayOf(1f, 0.45f, 0.2f, 0.08f)
     }
 }

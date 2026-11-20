@@ -496,6 +496,17 @@ class NineFaceView @JvmOverloads constructor(
     private val tmpPath = Path()
     private val rect = RectF()
 
+    // Shader dipakai ulang: dibuat hanya saat ukuran, tema, atau warna berubah (bukan tiap frame),
+    // jadi tidak ada objek baru per frame dan tampilannya tetap sama persis.
+    private val hsv = FloatArray(3)
+    private var glowShader: RadialGradient? = null
+    private var glowShaderColor = 0
+    private var faceCx = -1f
+    private var faceCy = -1f
+    private var faceR = -1f
+    private var faceDark: Boolean? = null
+    private var eyeGlowRadius = 0f
+
     private fun faceRadius(): Float = min(width, height) / 2f * 0.70f
 
     private fun alpha(color: Int, a: Float): Int =
@@ -557,17 +568,22 @@ class NineFaceView @JvmOverloads constructor(
             Mode.IDLE -> (if (dark) 0.14f else 0.10f) + mAmt * 0.22f + beatPulse * 0.18f * mAmt
         }
         // Nada rendah → hangat (emas), nada tinggi → sejuk (biru kehijauan); hanya saat ada musik.
+        // Warna dibulatkan ke kelipatan 4 (selisih tak terlihat) agar shadernya jarang dibuat ulang.
         val glowColor = if (mAmt > 0.02f) {
-            val hue = 36f + 160f * musicBright.coerceIn(0f, 1f)
-            val cool = Color.HSVToColor(floatArrayOf(hue, 0.72f, 1f))
-            blend(gold, cool, mAmt)
+            hsv[0] = 36f + 160f * musicBright.coerceIn(0f, 1f)
+            hsv[1] = 0.72f
+            hsv[2] = 1f
+            blend(gold, Color.HSVToColor(hsv), mAmt) and 0xFFFCFCFC.toInt()
         } else gold
-        glowPaint.shader = RadialGradient(
-            cx, cy, glowR,
-            intArrayOf(alpha(glowColor, ga), alpha(glowColor, ga * 0.35f), Color.TRANSPARENT),
-            floatArrayOf(0.62f, 0.8f, 1f), Shader.TileMode.CLAMP
-        )
-        canvas.drawCircle(cx, cy, glowR, glowPaint)
+        // Gradien berukuran 1 di titik (0,0), lalu kanvas yang menskalakannya: radius boleh berubah
+        // tiap frame tanpa membuat shader baru. Opasitas diatur lewat alpha paint.
+        glowPaint.shader = glowShaderFor(glowColor)
+        glowPaint.alpha = (ga.coerceIn(0f, 1f) * 255f + 0.5f).toInt()
+        canvas.save()
+        canvas.translate(cx, cy)
+        canvas.scale(glowR, glowR)
+        canvas.drawCircle(0f, 0f, 1f, glowPaint)
+        canvas.restore()
 
         // --- pelat wajah
         val laugh = activeMood(now) == Mood.LAUGH
@@ -581,18 +597,8 @@ class NineFaceView @JvmOverloads constructor(
         canvas.translate(shakeX, bob)
         canvas.rotate(faceTilt, cx, cy)
         if (pulse != 1f) canvas.scale(pulse, pulse, cx, cy)
-        if (!dark) {
-            shadowPaint.shader = RadialGradient(
-                cx, cy + r * 0.05f, r * 1.12f,
-                intArrayOf(Color.argb(46, 11, 18, 32), Color.TRANSPARENT), floatArrayOf(0.86f, 1f), Shader.TileMode.CLAMP
-            )
-            canvas.drawCircle(cx, cy + r * 0.05f, r * 1.12f, shadowPaint)
-        }
-        platePaint.shader = if (dark) {
-            RadialGradient(cx, cy - r * 0.35f, r * 1.35f, intArrayOf(Color.rgb(0x1C, 0x1E, 0x24), Color.rgb(0x08, 0x09, 0x0C)), null, Shader.TileMode.CLAMP)
-        } else {
-            RadialGradient(cx, cy - r * 0.35f, r * 1.4f, intArrayOf(Color.WHITE, Color.rgb(0xEC, 0xEE, 0xF3)), floatArrayOf(0.55f, 1f), Shader.TileMode.CLAMP)
-        }
+        ensureFaceShaders(cx, cy, r, dark)
+        if (!dark) canvas.drawCircle(cx, cy + r * 0.05f, r * 1.12f, shadowPaint)
         canvas.drawCircle(cx, cy, r, platePaint)
         rimPaint.strokeWidth = r * 0.025f
         rimPaint.color = if (dark) alpha(gold, 0.45f) else Color.argb(40, 11, 18, 32)
@@ -601,8 +607,12 @@ class NineFaceView @JvmOverloads constructor(
         // --- mata
         val eyeColor = if (dark) goldBright else Color.rgb(0x13, 0x15, 0x1A)
         eyePaint.color = eyeColor
-        if (dark && Build.VERSION.SDK_INT >= 28) eyePaint.setShadowLayer(r * 0.13f, 0f, 0f, alpha(goldBright, 0.75f))
-        else eyePaint.clearShadowLayer()
+        val eyeGlow = if (dark && Build.VERSION.SDK_INT >= 28) r * 0.13f else 0f
+        if (eyeGlow != eyeGlowRadius) {
+            if (eyeGlow > 0f) eyePaint.setShadowLayer(eyeGlow, 0f, 0f, alpha(goldBright, 0.75f))
+            else eyePaint.clearShadowLayer()
+            eyeGlowRadius = eyeGlow
+        }
         ensureScan(r, dark)
         scanMatrix.setTranslate(0f, (t * scanGap * 0.6f) % scanGap)
         scanPaint.shader?.setLocalMatrix(scanMatrix)
@@ -723,6 +733,33 @@ class NineFaceView @JvmOverloads constructor(
         canvas.drawPath(eyePath, eyePaint)
         // Mata yang hampir tertutup (berkedip) tidak perlu garis.
         if (h > baseH * 0.2f) canvas.drawPath(eyePath, scanPaint)
+    }
+
+    private fun glowShaderFor(color: Int): RadialGradient {
+        glowShader?.let { if (color == glowShaderColor) return it }
+        val s = RadialGradient(
+            0f, 0f, 1f,
+            intArrayOf(alpha(color, 1f), alpha(color, 0.35f), Color.TRANSPARENT),
+            floatArrayOf(0.62f, 0.8f, 1f), Shader.TileMode.CLAMP
+        )
+        glowShader = s
+        glowShaderColor = color
+        return s
+    }
+
+    /** Siapkan shader bayangan & pelat wajah (sekali per ukuran/tema). */
+    private fun ensureFaceShaders(cx: Float, cy: Float, r: Float, dark: Boolean) {
+        if (cx == faceCx && cy == faceCy && r == faceR && dark == faceDark) return
+        faceCx = cx; faceCy = cy; faceR = r; faceDark = dark
+        shadowPaint.shader = if (dark) null else RadialGradient(
+            cx, cy + r * 0.05f, r * 1.12f,
+            intArrayOf(Color.argb(46, 11, 18, 32), Color.TRANSPARENT), floatArrayOf(0.86f, 1f), Shader.TileMode.CLAMP
+        )
+        platePaint.shader = if (dark) {
+            RadialGradient(cx, cy - r * 0.35f, r * 1.35f, intArrayOf(Color.rgb(0x1C, 0x1E, 0x24), Color.rgb(0x08, 0x09, 0x0C)), null, Shader.TileMode.CLAMP)
+        } else {
+            RadialGradient(cx, cy - r * 0.35f, r * 1.4f, intArrayOf(Color.WHITE, Color.rgb(0xEC, 0xEE, 0xF3)), floatArrayOf(0.55f, 1f), Shader.TileMode.CLAMP)
+        }
     }
 
     /** Siapkan shader garis berulang (sekali per ukuran/tema). */

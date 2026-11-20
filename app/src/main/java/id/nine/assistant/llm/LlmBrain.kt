@@ -3,6 +3,7 @@ package id.nine.assistant.llm
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import com.google.ai.edge.litertlm.Backend
 import com.google.ai.edge.litertlm.Contents
 import com.google.ai.edge.litertlm.Conversation
@@ -57,6 +58,17 @@ class LlmBrain(context: Context, private val prefs: Prefs, private val models: M
     private var hadSuccess = false
     private var busy = false
 
+    /**
+     * Dipasang oleh aplikasi: true bila layar Nine sedang terbuka. Selama itu model tidak dilepas.
+     * Dipanggil dari thread LLM, jadi harus aman dipanggil dari thread mana pun.
+     */
+    @Volatile
+    var keepWarm: () -> Boolean = { false }
+
+    /** Terakhir kali model dipakai (elapsedRealtime). Hanya diakses di thread LLM. */
+    private var lastUse = 0L
+    private var idleJob: Job? = null
+
     @Volatile
     var state: State = if (models.isReady()) State.IDLE else State.NO_MODEL
         private set
@@ -94,6 +106,7 @@ class LlmBrain(context: Context, private val prefs: Prefs, private val models: M
     private var loadedPath: String? = null
 
     private fun ensureEngine(): Boolean {
+        lastUse = SystemClock.elapsedRealtime()
         val path = models.modelFile.absolutePath
         if (engine != null && loadedPath == path) return true
         if (engine != null) closeEngine() // model diganti (E2B ↔ E4B)
@@ -117,6 +130,7 @@ class LlmBrain(context: Context, private val prefs: Prefs, private val models: M
                 loadedPath = path
                 backendName = name
                 setState(State.READY)
+                watchIdle()
                 return true
             } catch (t: Throwable) {
                 lastError = t.message ?: t.javaClass.simpleName
@@ -152,7 +166,34 @@ class LlmBrain(context: Context, private val prefs: Prefs, private val models: M
         conversation = null
     }
 
+    /**
+     * Lepaskan model (±2,5 GB RAM) bila lama tidak dipakai dan layar Nine tidak terbuka, supaya HP
+     * tetap lega. Dimuat ulang otomatis saat dibutuhkan lagi. Berjalan di thread LLM, jadi tidak
+     * pernah bentrok dengan [ask] yang berjalan di thread yang sama (busy dicek juga).
+     */
+    private fun watchIdle() {
+        idleJob?.cancel()
+        idleJob = scope.launch {
+            while (true) {
+                delay(IDLE_CHECK_MS)
+                if (engine == null) return@launch
+                val now = SystemClock.elapsedRealtime()
+                if (busy || keepWarm()) {
+                    lastUse = now
+                    continue
+                }
+                if (now - lastUse >= IDLE_UNLOAD_MS) {
+                    closeEngine()
+                    setState(if (models.isReady()) State.IDLE else State.NO_MODEL)
+                    return@launch
+                }
+            }
+        }
+    }
+
     private fun closeEngine() {
+        idleJob?.cancel()
+        idleJob = null
         loadedPath = null
         closeConversation()
         try {
@@ -188,6 +229,7 @@ class LlmBrain(context: Context, private val prefs: Prefs, private val models: M
                 failure = t
             } finally {
                 busy = false
+                lastUse = SystemClock.elapsedRealtime()
             }
 
             if (failure == null || cancelled) {
@@ -264,5 +306,10 @@ class LlmBrain(context: Context, private val prefs: Prefs, private val models: M
 
     private inline fun post(crossinline f: () -> Unit) {
         main.post { f() }
+    }
+
+    private companion object {
+        const val IDLE_CHECK_MS = 60_000L
+        const val IDLE_UNLOAD_MS = 10 * 60_000L
     }
 }
