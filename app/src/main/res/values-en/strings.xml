@@ -199,5 +199,5 @@
     <string name="profile_button">Edit profile (name, title, birth date, partner)</string>
     <string name="gpu_switch">Speed up AI with the GPU (answers faster, but the screen may stutter)</string>
     <string name="cd_attach">Send an image</string>
-    <string name="image_failed">That image couldn't be read.</string>
+    <string name="image_failed">That image couldn\'t be read.</string>
 </resources>
