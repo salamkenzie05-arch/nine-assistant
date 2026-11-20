@@ -2,7 +2,10 @@
 
 Nine adalah asisten suara seperti Siri yang berjalan **sepenuhnya di perangkat**. Kepribadiannya tenang, sangat sopan, dan sedikit jenaka, seperti kepala pelayan yang juga insinyur jenius. Nine berbicara dalam **Bahasa Indonesia** dan **English** (aksen Inggris-UK).
 
-- **Perintah perangkat** (cepat, berbasis aturan): alarm, timer, pengingat, buka aplikasi dan pengaturan, senter, volume, baterai/jam/tanggal, catatan, telepon, SMS.
+- **Perintah perangkat** (cepat, berbasis aturan): alarm, timer, pengingat, **acara kalender** (tambah & baca agenda), **daftar tugas harian**, buka aplikasi dan pengaturan, YouTube/Spotify/Maps/WhatsApp/Google, senter, volume, baterai/jam/tanggal, catatan, telepon, SMS.
+- **Mode internet (opsional)**: Gemini + Google Search untuk pertanyaan terkini (cuaca, berita, kurs). Butuh API key gratis dari Google AI Studio; otomatis kembali ke Gemma saat offline.
+- **Wake word** "hey nine" (bisa diubah), dideteksi offline dengan Vosk.
+- **Widget layar utama**: orb (ketuk untuk bicara) dan "Hari ini" (tugas yang belum selesai).
 - **Otak AI: Gemma 4 E2B** (Google, Apache-2.0) lewat LiteRT-LM, memakai GPU HP dan otomatis pindah ke CPU bila GPU gagal. Untuk obrolan dan pertanyaan bebas, jawabannya mulai diucapkan per kalimat sebelum seluruh jawaban selesai dibuat.
 - **UI ala Siri**: orb bercahaya yang bereaksi pada suara, cahaya di tepi layar, tema terang/gelap/ikut sistem.
 
@@ -33,7 +36,9 @@ Internet hanya dipakai untuk mengunduh model. Percakapan, suara, dan catatan tid
 - Android tidak mengizinkan aplikasi biasa menyalakan atau mematikan Wi-Fi/Bluetooth/mode pesawat. Nine membuka panel pengaturannya.
 - Pengingat lebih dari 24 jam dibuka di Kalender, karena alarm Android hanya berlaku 24 jam ke depan.
 - Kunci tanda tangan `app/nine-sideload.jks` sengaja ada di repo agar setiap build CI bisa memperbarui aplikasi. Kunci itu bukan rahasia; jangan pakai untuk Play Store.
-- Belum ada: wake word ("Hai Nine" yang selalu mendengarkan) dan tindakan perangkat yang diputuskan oleh Gemma (function calling).
+- Wake word memakai model bahasa Inggris, jadi frasanya harus kata-kata Inggris. Layar Nine hanya bisa muncul dari latar belakang bila Nine dijadikan asisten digital default atau diberi izin "tampil di atas aplikasi lain"; selain itu muncul notifikasi untuk diketuk.
+- Gemma/Gemini belum bisa memutuskan tindakan HP sendiri (function calling); tindakan tetap lewat perintah yang dikenali parser.
+- Font logo & wordmark: Inter Display Light (SIL Open Font License).
 
 ## Struktur kode
 
