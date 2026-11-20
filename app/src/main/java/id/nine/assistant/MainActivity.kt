@@ -21,6 +21,7 @@ import id.nine.assistant.audio.GuitarTuning
 import id.nine.assistant.audio.MusicReactor
 import id.nine.assistant.core.Affinity
 import id.nine.assistant.core.Greeter
+import id.nine.assistant.core.ImagePrep
 import id.nine.assistant.core.DailyQuota
 import id.nine.assistant.core.UiAction
 import id.nine.assistant.core.Mood
@@ -601,7 +602,7 @@ open class MainActivity : AppCompatActivity(), AssistantController.Ui {
         binding.inputText.clearFocus()
         val app = applicationContext
         Thread({
-            val file = id.nine.assistant.core.ImagePrep.prepare(app, uri)
+            val file = ImagePrep.prepare(app, uri)
             runOnUiThread {
                 if (isFinishing || isDestroyed) {
                     file?.delete()

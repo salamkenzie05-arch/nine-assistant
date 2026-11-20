@@ -1,5 +1,6 @@
 package id.nine.assistant.ui
 
+import id.nine.assistant.core.Perf
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
@@ -133,7 +134,7 @@ class EdgeGlowView @JvmOverloads constructor(
             paint.alpha = (255 * LAYER_ALPHA[i] * current).toInt().coerceIn(0, 255)
             canvas.drawRoundRect(rect, corner, corner, paint)
         }
-        id.nine.assistant.core.Perf.next(this)
+        Perf.next(this)
     }
 
     private companion object {

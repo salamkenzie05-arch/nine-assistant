@@ -1,5 +1,6 @@
 package id.nine.assistant.ui
 
+import id.nine.assistant.core.Perf
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -665,7 +666,7 @@ class NineFaceView @JvmOverloads constructor(
             for (i in 0 until 12) canvas.drawArc(rect, -ringAngle * 0.6f + i * 30f, 12f, false, ringPaint)
         }
 
-        if (isShown) id.nine.assistant.core.Perf.next(this)
+        if (isShown) Perf.next(this)
     }
 
     private fun drawEye(canvas: Canvas, ex: Float, ey: Float, r: Float, e: Eye, blink: Float, isLeft: Boolean, color: Int) {
