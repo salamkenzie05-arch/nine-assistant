@@ -59,10 +59,6 @@ android {
         resources.excludes += setOf("META-INF/LICENSE*", "META-INF/NOTICE*")
     }
 
-    androidResources {
-        // File model Vosk (.fst, .mdl, dll.) disimpan tanpa kompresi agar cepat disalin.
-        noCompress += listOf("fst", "mdl", "int", "conf", "mat", "dubm", "ie", "stats", "txt")
-    }
 }
 
 kotlin {
