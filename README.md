@@ -13,6 +13,19 @@ Nine adalah asisten suara seperti Siri yang berjalan **sepenuhnya di perangkat**
 - **Otak AI: Gemma 4 E2B** (Google, Apache-2.0) lewat LiteRT-LM, berjalan di CPU secara default (GPU bisa dipilih di Pengaturan; otomatis kembali ke CPU bila GPU gagal). Untuk obrolan dan pertanyaan bebas, jawabannya mulai diucapkan per kalimat sebelum seluruh jawaban selesai dibuat.
 - **Wajah Nine**: dua mata ekspresif ala robot meja yang berkedip, melirik, mengikuti jari, senang saat dielus, kesal bila diketuk berkali-kali, kaget lalu senang saat dicas, lesu saat baterai lemah, mengantuk saat lama diam, dan bereaksi pada percakapan (mendengar, berpikir, berbicara, senang, bingung, sedih). Bilah atas hanya "NINE"; ketuk untuk menu (alarm, tugas, pengaturan, bahasa, tema).
 
+### Baru di 3.3 (beta), putaran 2
+
+- **Tombol menu di kanan orb** (menggantikan pintasan tugas): Laporan keuangan, Tugas hari ini, Ruang obrolan, dan Nine.
+- **Ruang obrolan** (seperti "projects"): tiap ruang punya nama, instruksi opsional untuk Nine, dan riwayat obrolannya sendiri; membukanya tidak bercampur dengan obrolan utama. Disimpan di penyimpanan pribadi aplikasi (**tidak dienkripsi**, tidak ikut cadangan); maksimal 20 ruang, 120 pesan per ruang. Nama dan instruksi ruang ikut dikirim ke AI selama kamu mengobrol di ruang itu (ke Gemini bila mode internet dipakai). Setiap kali aplikasi dimulai ulang, yang terbuka adalah obrolan utama.
+- **Layar Nine**: level dan progres kedekatan, streak, hitungan kejutan yang sudah ditemukan, dan tempat **kustomisasi** (kepribadian, pakaian, nada suara) yang **baru kerangka, belum berfungsi**.
+- **Kejutan harian (side quest)**: paling banyak satu per hari, muncul sebagai ajakan santai dari Nine (misalnya menawarkan bernyanyi), bukan sebagai tugas. Memakai fitur itu, lewat ajakan atau sendiri, menambah kedekatan sedikit; menolak tidak apa-apa. Berhenti muncul setelah semua fitur ditemukan.
+- **Tanya info HP**: sisa penyimpanan, RAM, tipe HP, versi Android, status Wi-Fi/Bluetooth/jaringan, kesehatan/suhu baterai, uptime, volume, layar, prosesor. Tidak membaca nomor IMEI, serial, MAC, atau nama jaringan. Status Wi-Fi/Bluetooth bergantung pada pengaturan sistem; bila tidak bisa dipastikan, Nine bilang begitu.
+- **"Ke layar utama"** membawa ke layar utama HP.
+- **Warna biru dihapus**: semua kontrol memakai warna emas Nine. Pengaturan lebih ringkas (tanpa isian sapaan, penjelasan dipersingkat).
+- **Campur bahasa dikurangi**: penjaga bahasa diperketat, dan riwayat yang bahasanya beda tidak lagi dikirim ke AI. Ini mengurangi, bukan menjamin, karena model kecil kadang tetap terpeleset.
+
+> Catatan jujur: semua ini baru dikompilasi dan diuji logikanya di CI, **belum dicoba di perangkat sungguhan**.
+
 ### Baru di 3.3 (beta)
 
 - **Kalkulator** untuk hitungan sampai rumit (kurung, pangkat, akar, persen, fungsi, "dua ratus lima puluh ribu dikali tiga"); kalimat seperti tanggal atau nomor telepon tidak dianggap hitungan.

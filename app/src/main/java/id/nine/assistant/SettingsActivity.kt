@@ -216,8 +216,6 @@ class SettingsActivity : AppCompatActivity() {
                 nine.brain.reset()
             }
         }
-        binding.editHonId.setText(prefs.honorificId)
-        binding.editHonEn.setText(prefs.honorificEn)
         binding.btnProfile.setOnClickListener { startActivity(Intent(this, ProfileActivity::class.java)) }
 
         // --- Suara
@@ -348,13 +346,6 @@ class SettingsActivity : AppCompatActivity() {
         if (phrase.isNotEmpty() && phrase != prefs.wakePhrases) {
             prefs.wakePhrases = phrase
             if (prefs.wakeEnabled) WakeWordService.reload(this)
-        }
-        val hid = binding.editHonId.text.toString().trim()
-        val hen = binding.editHonEn.text.toString().trim()
-        if (hid != prefs.honorificId || hen != prefs.honorificEn) {
-            prefs.honorificId = hid
-            prefs.honorificEn = hen
-            nine.brain.reset() // instruksi sistem Gemma memakai panggilan ini
         }
         val token = binding.editToken.text.toString()
         if (token != prefs.hfToken) prefs.hfToken = token

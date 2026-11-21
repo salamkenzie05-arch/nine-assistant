@@ -27,6 +27,13 @@ class HelpExamplesTest {
     }
 
     @Test
+    fun infoHpDanLayarUtama() {
+        expect("PhoneInfo", "Sisa penyimpanan berapa?", "Wi-Fi nyala nggak?", "How much storage is left?", "Is my Wi-Fi on?")
+        expect("GoHome", "Ke layar utama", "Go home")
+        done()
+    }
+
+    @Test
     fun peta_tutup_hibur_panggilan_status() {
         expect("Navigate", "Navigasi ke Monas naik motor", "Navigate to the airport by motorbike")
         expect("CloseApps", "Tutup semua aplikasi", "Tutup semua termasuk Nine", "Close all apps", "Close everything including Nine")

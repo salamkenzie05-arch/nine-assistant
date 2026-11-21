@@ -22,6 +22,9 @@ enum class NineSetting {
 /** Hiburan yang Nine bawakan sendiri (tanpa AI): gombal, pantun, kata bijak. */
 enum class FunKind { GOMBAL, PANTUN, WISDOM }
 
+/** Pertanyaan tentang HP yang dijawab langsung dari sistem (tanpa data pribadi seperti IMEI atau nomor seri). */
+enum class InfoTopic { STORAGE, RAM, MODEL, ANDROID, NETWORK, BATTERY_HEALTH, SCREEN, UPTIME, WIFI, BLUETOOTH, VOLUME, CPU }
+
 enum class VolumeAction { UP, DOWN, MUTE, UNMUTE, SET, MAX }
 
 /** Pertanyaan lanjutan yang sedang menunggu jawaban pengguna. */
@@ -90,6 +93,9 @@ sealed class Command {
     data object CurrentTime : Command()
     data object CurrentDate : Command()
     data object DeviceInfo : Command()
+    data class PhoneInfo(val topic: InfoTopic) : Command()
+    /** "Ke layar utama": menekan Home. */
+    data object GoHome : Command()
 
     data class AddNote(val text: String) : Command()
     data object ReadNotes : Command()

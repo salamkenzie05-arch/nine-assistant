@@ -58,6 +58,25 @@
             </LinearLayout>
         </FrameLayout>
 
+        <!-- Ruang obrolan aktif (ketuk untuk kembali ke obrolan utama) -->
+        <TextView
+            android:id="@+id/txtSpace"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:background="@drawable/bg_user_pill"
+            android:contentDescription="@string/spaces_back_cd"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:maxWidth="260dp"
+            android:paddingStart="14dp"
+            android:paddingTop="5dp"
+            android:paddingEnd="14dp"
+            android:paddingBottom="5dp"
+            android:textColor="@color/nine_gold"
+            android:textSize="12sp"
+            android:visibility="gone" />
+
         <!-- Kartu aktivasi otak AI -->
         <LinearLayout
             android:id="@+id/modelCard"
@@ -263,14 +282,14 @@
                 app:tint="@color/nine_gold" />
 
             <ImageButton
-                android:id="@+id/btnTodo"
+                android:id="@+id/btnMenu"
                 android:layout_width="52dp"
                 android:layout_height="52dp"
                 android:layout_gravity="end|center_vertical"
                 android:layout_marginEnd="24dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="@string/todo_title"
-                android:src="@drawable/ic_checklist"
+                android:contentDescription="@string/hub_cd"
+                android:src="@drawable/ic_menu"
                 app:tint="@color/nine_gold" />
 
         </FrameLayout>

@@ -169,7 +169,11 @@ open class MainActivity : AppCompatActivity(), AssistantController.Ui {
             true
         }
         binding.btnKeyboard.setOnClickListener { toggleKeyboard() }
-        binding.btnTodo.setOnClickListener { startActivity(Intent(this, TodoActivity::class.java)) }
+        binding.btnMenu.setOnClickListener { showHub() }
+        binding.txtSpace.setOnClickListener {
+            nine.spaces.activeId = ""
+            syncSpace()
+        }
         binding.txtTitle.setOnClickListener { showMenu() }
         binding.txtTitle.setOnLongClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
@@ -244,7 +248,20 @@ open class MainActivity : AppCompatActivity(), AssistantController.Ui {
         if (nine.prefs.wakeEnabled && !RecorderService.recording) WakeWordService.pause(this)
         renderRecording()
         syncAudio()
+        syncSpace()
         greetOrOnboard()
+    }
+
+    /** Samakan isi obrolan dengan ruang yang dipilih (bisa berubah dari layar Ruang obrolan) dan tampilkan chip ruang. */
+    private fun syncSpace() {
+        if (nine.spaceSession.sync()) controller.onSpaceChanged()
+        val space = nine.spaceSession.active()
+        if (space != null && binding.topBar.visibility == View.VISIBLE) {
+            binding.txtSpace.text = space.name + "  ×"
+            binding.txtSpace.visibility = View.VISIBLE
+        } else {
+            binding.txtSpace.visibility = View.GONE
+        }
     }
 
     private var onboardingAsked = false
@@ -264,6 +281,7 @@ open class MainActivity : AppCompatActivity(), AssistantController.Ui {
                 }
                 return
             }
+            if (nine.spaceSession.currentId.isNotEmpty()) return // di dalam ruang obrolan: tanpa sapaan
             val nowMs = System.currentTimeMillis()
             if (prefs.introPending) {
                 prefs.introPending = false
@@ -276,6 +294,8 @@ open class MainActivity : AppCompatActivity(), AssistantController.Ui {
             if (!normalLaunch || (!force && nowMs - prefs.lastGreetAt < GREET_GAP_MS)) return
             prefs.lastGreetAt = nowMs
             nine.log.add(false, buildGreeting(lang, nowMs))
+            // Kejutan harian menyusul sesaat setelah sapaan, bukan bersamaan.
+            binding.root.postDelayed({ if (visible && !isFinishing) controller.offerQuestIfDue() }, QUEST_DELAY_MS)
         } catch (e: Exception) {
             // sapaan tidak boleh membuat aplikasi gagal terbuka
         }
@@ -315,6 +335,7 @@ open class MainActivity : AppCompatActivity(), AssistantController.Ui {
     override fun onStop() {
         super.onStop()
         visible = false
+        nine.spaceSession.flush()
         controller.onBackground()
         syncAudio() // melepas mikrofon (tuner & reaksi musik)
         binding.hearts.clear()
@@ -339,6 +360,7 @@ open class MainActivity : AppCompatActivity(), AssistantController.Ui {
 
     /** Mengusap orb 5 detik: hati bermuncratan (maks. 3 kali sehari). */
     private fun petBurst(x: Float, y: Float) {
+        controller.onPat()
         val p = nine.prefs
         val today = java.time.LocalDate.now().toString()
         val used = DailyQuota.tryUse(today, p.heartDay, p.heartCount, HEART_MAX_PER_DAY)
@@ -521,6 +543,22 @@ open class MainActivity : AppCompatActivity(), AssistantController.Ui {
             v.setPadding(bars.left, bars.top, bars.right, bars.bottom)
             WindowInsetsCompat.CONSUMED
         }
+    }
+
+    /** Menu tombol di samping orb: laporan keuangan, tugas hari ini, ruang obrolan, dan layar Nine. */
+    private fun showHub() {
+        val sheet = BottomSheetDialog(this)
+        val v = layoutInflater.inflate(R.layout.sheet_hub, null)
+        fun go(id: Int, target: Class<*>) = v.findViewById<View>(id).setOnClickListener {
+            sheet.dismiss()
+            startActivity(Intent(this, target))
+        }
+        go(R.id.hubFinance, FinanceActivity::class.java)
+        go(R.id.hubTodo, TodoActivity::class.java)
+        go(R.id.hubSpaces, SpacesActivity::class.java)
+        go(R.id.hubNine, NineActivity::class.java)
+        sheet.setContentView(v)
+        sheet.show()
     }
 
     /** Menu NINE: alarm, tugas, pengaturan, bahasa, tema, dan status otak AI. */
@@ -848,6 +886,7 @@ open class MainActivity : AppCompatActivity(), AssistantController.Ui {
     companion object {
         /** Sapaan baru ditampilkan lagi bila Nine ditinggalkan lebih lama dari ini. */
         private const val GREET_GAP_MS = 20L * 60_000L
+        private const val QUEST_DELAY_MS = 1600L
         const val EXTRA_AUTO_LISTEN = "id.nine.assistant.AUTO_LISTEN"
         const val EXTRA_FROM_WAKE = "id.nine.assistant.FROM_WAKE"
         const val EXTRA_TOKEN = "id.nine.assistant.TOKEN"

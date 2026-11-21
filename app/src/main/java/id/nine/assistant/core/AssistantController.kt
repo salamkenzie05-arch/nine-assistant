@@ -121,6 +121,8 @@ class AssistantController(context: Context, private val ui: Ui) {
 
     private var recognizing = false
     private var pending: Pending? = null
+    /** Konfirmasi yang sedang menunggu adalah ajakan kejutan harian (penolakan dijawab ringan, bukan "dibatalkan"). */
+    private var questOffer = false
     private var retry: Retry? = null
     private var listenAfterPermission = false
     private val denied = HashSet<String>()
@@ -290,6 +292,78 @@ class AssistantController(context: Context, private val ui: Ui) {
         cancelAi = null
     }
 
+    // ------------------------------------------------------------------ ruang obrolan & kejutan harian
+
+    /**
+     * Isi percakapan berganti (membuka/menutup ruang obrolan): hentikan yang sedang berjalan dan mulai konteks AI
+     * dari nol; riwayat ruang itu disisipkan kembali lewat log pada pertanyaan berikutnya.
+     */
+    fun onSpaceChanged() {
+        recognizing = false
+        input.cancel()
+        stopOutput()
+        pending = null
+        questOffer = false
+        retry = null
+        aiSeenUpTo = 0
+        brain.reset()
+        online.reset()
+        ui.onPartial("")
+        ui.onLevel(0f)
+        setState(State.IDLE)
+    }
+
+    /**
+     * Satu kejutan per hari: ajakan santai ke fitur yang belum pernah dipakai, ditaruh sebagai gelembung (tanpa suara).
+     * Mengembalikan true bila ajakan ditampilkan. Tidak muncul di ruang obrolan, saat sibuk/terkunci, atau bila belum akrab.
+     */
+    fun offerQuestIfDue(): Boolean {
+        try {
+            if (!prefs.profileDone || state != State.IDLE || pending != null || ui.isLocked()) return false
+            if (nine.spaceSession.currentId.isNotEmpty()) return false
+            val today = java.time.LocalDate.now()
+            if (prefs.questDay == today.toString()) return false
+            if (nine.affinity.state(today).total < 3) return false
+            val quest = SideQuests.pick(prefs.questsFound, today) ?: return false
+            prefs.questDay = today.toString()
+            prefs.questId = quest.id
+            prefs.questDone = false
+            val l = lang
+            log.add(false, SideQuests.teaser(quest, l, prefs.persona.sfx(l), (System.currentTimeMillis() / 1000L).toInt()))
+            ui.onMood(Mood.CURIOUS)
+            quest.offer?.let {
+                pending = Pending.Confirm(it)
+                questOffer = true
+            }
+            return true
+        } catch (e: Exception) {
+            return false // kejutan tidak boleh mengganggu aplikasi
+        }
+    }
+
+    /** Orb diusap lama (muncratan hati): salah satu kejutan. */
+    fun onPat() = questFound(listOf("pat"))
+
+    private fun questCheck(cmd: Command) = questFound(SideQuests.idsFor(cmd))
+
+    /** Catat fitur yang baru ditemukan; bila itu kejutan hari ini dan belum selesai, kedekatan bertambah. */
+    private fun questFound(ids: List<String>) {
+        if (ids.isEmpty()) return
+        try {
+            val found = prefs.questsFound
+            val fresh = ids.filter { it !in found }
+            if (fresh.isNotEmpty()) prefs.questsFound = found + fresh
+            if (prefs.questDay == java.time.LocalDate.now().toString() && !prefs.questDone && prefs.questId in ids) {
+                prefs.questDone = true
+                val ev = nine.affinity.bonus(SideQuests.REWARD)
+                ui.onNotice(lang.t("Kedekatan +${SideQuests.REWARD}", "Closeness +${SideQuests.REWARD}"))
+                ui.onAffinity(ev)
+            }
+        } catch (e: Exception) {
+            // kejutan tidak boleh mengganggu perintah
+        }
+    }
+
     // ------------------------------------------------------------------ izin
 
     fun onPermissionsResult(result: Map<String, Boolean>) {
@@ -340,6 +414,8 @@ class AssistantController(context: Context, private val ui: Ui) {
         val p = pending
         if (p != null) {
             pending = null
+            val wasQuest = questOffer
+            questOffer = false
             when (val outcome = filler.fill(p, text)) {
                 is SlotOutcome.Resolved -> {
                     // Memilih dari daftar ("yang kedua") sudah merupakan keputusan; tidak perlu ditanya lagi.
@@ -348,7 +424,12 @@ class AssistantController(context: Context, private val ui: Ui) {
                 }
                 SlotOutcome.Cancelled -> {
                     ui.onMood(Mood.NEUTRAL)
-                    reply(lang.t("Baik${prefs.persona.sfx(lang)}, dibatalkan.", "Very well${prefs.persona.sfx(lang)}, cancelled."), listenAfter = false)
+                    val sfx = prefs.persona.sfx(lang)
+                    if (wasQuest) {
+                        reply(lang.t("Baik$sfx, lain kali ya.", "Very well$sfx, another time."), listenAfter = false)
+                    } else {
+                        reply(lang.t("Baik$sfx, dibatalkan.", "Very well$sfx, cancelled."), listenAfter = false)
+                    }
                     return
                 }
                 SlotOutcome.NotAnAnswer -> {
@@ -402,7 +483,7 @@ class AssistantController(context: Context, private val ui: Ui) {
     private fun safeWhileLocked(c: Command): Boolean = when (c) {
         is Command.SetAlarm, is Command.SetTimer, is Command.Flashlight, is Command.Volume,
         Command.CurrentTime, Command.CurrentDate, Command.Battery, Command.StopSpeaking, Command.Greeting,
-        Command.Thanks, Command.WhoAreYou, Command.HowAreYou, Command.Help, is Command.SwitchLanguage,
+        Command.Thanks, Command.WhoAreYou, Command.HowAreYou, Command.Help, is Command.SwitchLanguage, is Command.PhoneInfo, Command.DeviceInfo,
         is Command.NeedInfo, Command.AffinityStatus -> true
         is Command.Camera -> true // kamera aman tersedia di layar kunci
         is Command.AlarmToggle -> true // mematikan alarm yang berbunyi harus bisa dari layar kunci
@@ -453,6 +534,7 @@ class AssistantController(context: Context, private val ui: Ui) {
             return
         }
 
+        questCheck(cmd)
         res.newLang?.let { lang = it }
         if (res.resetChat) {
             brain.reset()
@@ -613,6 +695,10 @@ class AssistantController(context: Context, private val ui: Ui) {
     /** Ringkasan keadaan perangkat untuk AI: tugas hari ini, acara hari ini, acara terakhir yang dibuat Nine. */
     private fun deviceContext(l: AppLang, withMemory: Boolean = true): String {
         val parts = ArrayList<String>()
+        // Ruang obrolan khusus: namanya dan instruksi dari pengguna untuk ruang itu.
+        nine.spaceSession.active()?.let { s ->
+            SpaceRules.contextLine(s.name, s.note, l).takeIf { it.isNotBlank() }?.let { parts += it }
+        }
         // Ingatan tentang pengguna. Gemma menerimanya lewat instruksi sistem (LlmBrain), jadi tidak diulang di tiap pesan.
         if (withMemory) memory.promptBlock(l).takeIf { it.isNotBlank() }?.let { parts += it }
         try {
@@ -657,7 +743,7 @@ class AssistantController(context: Context, private val ui: Ui) {
     /** Riwayat layar untuk Gemini: giliran sebelumnya, role bergantian, dimulai dari pengguna. */
     private fun historyForAi(excludeFrom: Int): List<Pair<String, String>> {
         val entries = log.entries.subList(0, excludeFrom.coerceIn(0, log.entries.size))
-            .filter { it.text.isNotBlank() && it.text != "…" }
+            .filter { it.text.isNotBlank() && it.text != "…" && LangGuard.sameLanguage(it.text, lang) }
             .takeLast(14)
         val out = ArrayList<Pair<String, String>>()
         for (e in entries) {
@@ -677,7 +763,7 @@ class AssistantController(context: Context, private val ui: Ui) {
         // Bila model sempat dilepas dari memori (tak dipakai), Gemma lupa percakapan: sisipkan giliran terakhir lagi.
         val from = if (brain.contextDropped) 0 else aiSeenUpTo
         val missed = log.entries.subList(from.coerceIn(0, userIndex), userIndex.coerceAtMost(log.entries.size))
-            .filter { it.text.isNotBlank() && it.text != "…" }
+            .filter { it.text.isNotBlank() && it.text != "…" && LangGuard.sameLanguage(it.text, l) }
             .takeLast(6)
             .joinToString("\n") { (if (it.fromUser) l.t("Pengguna: ", "User: ") else "Nine: ") + it.text.take(300) }
         val ctx = deviceContext(l, withMemory = false)

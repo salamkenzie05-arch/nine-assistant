@@ -137,6 +137,14 @@
             android:exported="false" />
 
         <activity
+            android:name=".SpacesActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".NineActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".AlarmsActivity"
             android:exported="false" />
 

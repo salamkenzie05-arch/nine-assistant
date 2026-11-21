@@ -21,7 +21,7 @@
     <string name="brain_error">AI brain failed to load</string>
 
     <string name="model_card_title">Enable Nine\'s AI brain</string>
-    <string name="model_card_text">Download Gemma 4 (2.6 GB for E2B or 3.7 GB for E4B, choose in Settings; once, Wi-Fi recommended). Then Nine can chat and answer questions without the internet.</string>
+    <string name="model_card_text">Download Gemma 4 (about 2.6 GB, once, Wi-Fi recommended) so Nine can chat and answer without the internet.</string>
     <string name="model_download">Download Gemma model</string>
     <string name="model_import">Import model file (.litertlm)</string>
     <string name="model_delete">Delete model</string>
@@ -39,38 +39,38 @@
     <string name="model_fail_import">Import failed: %1$s</string>
     <string name="model_delete_confirm">Delete this Gemma model? Nine returns to command mode (or internet mode if enabled).</string>
     <string name="hf_token_hint">Hugging Face token (optional)</string>
-    <string name="hf_token_help">Only needed if the download is refused for requiring a login. The token stays on this device.</string>
+    <string name="hf_token_help">Only if the download asks for a login.</string>
 
     <string name="sec_brain">AI brain (Gemma 4)</string>
     <string name="sec_look">Appearance</string>
     <string name="theme_system">Follow system</string>
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>
-    <string name="sec_language">Language &amp; form of address</string>
+    <string name="sec_language">Language</string>
     <string name="honorific_label">Nine addresses you as (Indonesian / English):</string>
     <string name="sec_voice">Nine\'s voice</string>
     <string name="speak_replies">Droid voice (beeps &amp; whistles)</string>
     <string name="voice_preview">Play a sample</string>
-    <string name="voice_help">Nine does not use a human voice. It talks in droid-style beeps, chirps and whistles generated on the phone, while the content of each answer still appears as text.</string>
+    <string name="voice_help">Nine\'s droid voice is made on the phone; replies still appear as text.</string>
     <string name="sec_assistant">Default assistant</string>
-    <string name="assistant_help">Make Nine your digital assistant so you can summon it by holding the side key (set in Settings > Advanced features > Side key > Press and hold > Wake digital assistant).</string>
+    <string name="assistant_help">So you can call Nine by long-pressing the side button.</string>
     <string name="assistant_button">Choose Nine as digital assistant</string>
     <string name="sec_privacy">Privacy</string>
-    <string name="privacy_text">Your voice, commands, conversations and notes are processed and stored only on this device. The internet is used once, to download the Gemma model from Hugging Face.</string>
+    <string name="privacy_text">Voice, chats and notes stay on this phone. The internet is used to download the model, and for Internet mode if you turn it on.</string>
 
     <string name="todo_title">Today\'s tasks</string>
     <string name="todo_hint">Add a task…</string>
     <string name="todo_add">Add</string>
     <string name="todo_delete">Delete task</string>
     <string name="todo_clear_done">Clear completed</string>
-    <string name="todo_empty">No tasks yet. Type below, or tell Nine: \"add buy milk to my to-do list\".</string>
+    <string name="todo_empty">No tasks yet. Say: \"add buy milk to my to-do list\".</string>
 
     <string name="widget_orb_desc">Nine orb (follows theme): tap to talk</string>
     <string name="widget_today_desc">Nine (follows theme) · today\'s tasks</string>
 
     <string name="sec_internet">Internet mode (smarter)</string>
     <string name="internet_switch">Use Gemini + Google Search when online</string>
-    <string name="internet_help">Open questions are answered by Gemini (Google) with web search, so Nine can handle weather, news, exchange rates and anything recent. Needs a free API key from Google AI Studio. When offline, Nine falls back to on-device Gemma. Phone commands (alarms, calendar, tasks, apps) are still processed on the device.</string>
+    <string name="internet_help">Gemini + Google Search for current questions. Needs a free API key from Google AI Studio. Phone commands are still handled on the device.</string>
     <string name="gemini_key_hint">Gemini API key (AIza…)</string>
     <string name="gemini_get_key">Get a free API key</string>
     <string name="city_hint">Your city (optional, for weather), e.g. Jakarta</string>
@@ -85,7 +85,7 @@
 
     <string name="sec_wake">Voice activation</string>
     <string name="wake_switch">Enable wake phrase</string>
-    <string name="wake_help">English phrases, separate several with commas, e.g. \"hey nine, okay nine\". Detection runs offline and keeps the microphone on (slightly more battery). To let Nine appear over other apps, make it the default digital assistant or grant the permission below.</string>
+    <string name="wake_help">English phrases, separated by commas. Runs offline and uses a little extra battery.</string>
     <string name="wake_overlay_button">Allow Nine to appear over other apps</string>
     <string name="wake_overlay_granted">Display over other apps: granted ✓</string>
     <string name="wake_status_on">Listening for \"%1$s\".</string>
@@ -106,7 +106,7 @@
     <string name="sec_wake_group">Summoning Nine</string>
     <string name="sec_calendar">Calendar</string>
     <string name="calendar_target">Save new events to</string>
-    <string name="calendar_help">\"Automatic\" picks the calendar of the account you use most. Choose one manually if events don\'t show up in your calendar app.</string>
+    <string name="calendar_help">\"Automatic\" uses your most active calendar.</string>
     <string name="calendar_auto">Automatic (most active calendar)</string>
     <string name="calendar_access">Allow calendar access</string>
     <string name="gemini_model_hint">Gemini model (empty = gemini-flash-latest)</string>
@@ -123,7 +123,7 @@
 
     <string name="sec_location">Location</string>
     <string name="location_switch">Use location for accuracy</string>
-    <string name="location_help">Nine uses your approximate location for weather, nearby places and local time. It\'s only sent to Gemini when Internet mode is on, and never stored.</string>
+    <string name="location_help">For weather and nearby places. Sent to Gemini only when Internet mode is on, never stored.</string>
     <string name="location_status_fmt">Last: %1$s</string>
     <string name="location_status_none">No location yet.</string>
 
@@ -137,7 +137,7 @@
     <string name="alarms_title">Alarms</string>
     <string name="alarms_clock_app">Clock app</string>
     <string name="alarms_exact_permission">Allow exact alarms</string>
-    <string name="alarms_empty">No alarms yet. Tap Add alarm, or tell Nine: \"set an alarm on weekdays at 6 AM\".</string>
+    <string name="alarms_empty">No alarms yet.</string>
     <string name="alarm_add">Add alarm</string>
     <string name="alarm_edit">Change alarm time</string>
     <string name="alarm_toggle">Turn alarm on or off</string>
@@ -150,7 +150,7 @@
     <string name="sec_alarm">Alarms</string>
     <string name="alarm_engine_nine">Nine alarms · turn on, off or delete them by voice</string>
     <string name="alarm_engine_clock">The phone\'s Clock app</string>
-    <string name="alarm_help">Nine alarms ring on time even when the phone sleeps, show on the lock screen, and can be controlled by voice (\"turn off the 6am alarm\", \"delete the gym alarm\"). Alarms made in the Clock app can\'t be changed by other apps.</string>
+    <string name="alarm_help">Rings on time even when the phone sleeps. Control it by voice, e.g. \"turn off the 6 AM alarm\".</string>
     <string name="alarm_manage">Manage alarms</string>
     <string name="alarm_fullscreen">Allow full screen when an alarm rings</string>
     <string name="alarm_fullscreen_ok">Full-screen alarms: allowed ✓</string>
@@ -162,17 +162,17 @@
     <string name="memory_delete_selected">Delete selected</string>
     <string name="memory_empty">Nothing remembered yet.</string>
     <string name="memory_clear_confirm">Delete everything Nine remembers about you?</string>
-    <string name="memory_help">Nine remembers lasting things you tell it (name, likes, family, habits) and uses them in later conversations. Everything stays on this phone only. Say \"remember that …\" to save something right away, or \"forget …\" to remove it. This is memory, not retraining of the model.</string>
+    <string name="memory_help">Nine remembers lasting things you tell it, on this phone only. Say \"remember that …\" or \"forget …\".</string>
     <string name="a11y_description">Lets Nine switch Wi-Fi, Bluetooth, airplane mode and hotspot on or off through Quick Settings, play a chosen song in YouTube Music, and close all apps from the Recents screen. Nine only acts when you ask; screen content is not read beyond those tasks, stored, or sent to the internet.</string>
     <string name="sec_a11y">Floating button &amp; phone control</string>
-    <string name="a11y_help">Nine\'s accessibility service (optional) lets Nine switch Wi-Fi, Bluetooth, airplane mode and hotspot on or off, pick and play a song in YouTube Music, and show a floating button. Android 13+: if \"Nine\" is greyed out in the accessibility list, open App info, tap the ⋮ menu and choose \"Allow restricted settings\".</string>
+    <string name="a11y_help">Optional: for Wi-Fi, Bluetooth, airplane mode, hotspot, and songs in YouTube Music. Android 13+: if greyed out, open App info → ⋮ → Allow restricted settings.</string>
     <string name="a11y_button">Open accessibility settings</string>
     <string name="a11y_appinfo_button">Open Nine app info</string>
     <string name="a11y_status_on">Accessibility service: on ✓</string>
-    <string name="a11y_lite_status">Lite edition: the floating button, automatic song playback and direct Wi-Fi/Bluetooth switching are only in the Full edition (Nine-Full.apk; Play Protect scanning must be switched off briefly while installing).</string>
+    <string name="a11y_lite_status">This is only in the Full edition (Nine-Full.apk).</string>
     <string name="a11y_status_off">Accessibility service: not enabled yet</string>
     <string name="music_switch">Nine reacts to music</string>
-    <string name="music_help">While the Nine screen is open, Nine listens to music through the microphone and its face moves with the beat, bass and tone. Audio is never recorded or stored.</string>
+    <string name="music_help">Nine\'s face moves to the music it hears through the microphone. Audio is not recorded.</string>
     <string name="widget_orb_white_desc">White Nine orb: tap to talk</string>
     <string name="widget_orb_large_white_desc">Large white Nine orb 4×4: tap to talk</string>
     <string name="widget_today_white_desc">Nine white · today\'s tasks</string>
@@ -181,23 +181,53 @@
     <string name="fin_p_week">This week</string>
     <string name="fin_p_month">This month</string>
     <string name="fin_p_all">All</string>
-    <string name="fin_empty">No entries in this period yet. Tell Nine: \"spent 18 thousand on coffee\" or \"salary 5 million\".</string>
+    <string name="fin_empty">No entries yet. Say: \"spent 18 thousand on coffee\".</string>
     <string name="fin_delete">Delete</string>
     <string name="profile_title">My profile</string>
-    <string name="profile_intro">Tell Nine a little about yourself so it can greet you properly. All of this stays on this phone and is never sent to the internet.</string>
-    <string name="profile_intro_edit">Change your profile any time. All of this stays on this phone.</string>
+    <string name="profile_intro">Fill in your profile so Nine can greet you properly. It stays on this phone.</string>
+    <string name="profile_intro_edit">Stays on this phone.</string>
     <string name="profile_name">Name</string>
     <string name="profile_call">What to call you (Sir, Madam, Boss, …)</string>
-    <string name="profile_call_hint">Nine will address you this way. You can leave it empty.</string>
+    <string name="profile_call_hint">You can leave it empty.</string>
     <string name="profile_birth">Date of birth (optional)</string>
     <string name="profile_birth_clear">Clear date of birth</string>
     <string name="profile_partner">Partner (optional)</string>
-    <string name="profile_partner_hint">If filled in, Nine will occasionally ask how they are.</string>
+    <string name="profile_partner_hint">Optional.</string>
     <string name="profile_save">Save</string>
     <string name="profile_later">Maybe later</string>
     <string name="profile_saved">Profile saved</string>
-    <string name="profile_button">Edit profile (name, title, birth date, partner)</string>
-    <string name="gpu_switch">Speed up AI with the GPU (answers faster, but the screen may stutter)</string>
+    <string name="profile_button">Edit profile</string>
+    <string name="gpu_switch">AI on GPU (faster, but the screen may stutter)</string>
     <string name="cd_attach">Send an image</string>
     <string name="image_failed">That image couldn\'t be read.</string>
+    <string name="hub_finance">Finance report</string>
+    <string name="hub_spaces">Chat spaces</string>
+    <string name="hub_nine">Nine</string>
+    <string name="hub_cd">Features</string>
+    <string name="act_save">Save</string>
+    <string name="act_cancel">Cancel</string>
+    <string name="act_delete">Delete</string>
+    <string name="spaces_title">Chat spaces</string>
+    <string name="spaces_main">Main chat</string>
+    <string name="spaces_new">New space</string>
+    <string name="spaces_edit">Edit space</string>
+    <string name="spaces_edit_cd">Edit</string>
+    <string name="spaces_name_hint">Name</string>
+    <string name="spaces_note_hint">Instructions for Nine (optional)</string>
+    <string name="spaces_full">Up to %1$d spaces.</string>
+    <string name="spaces_delete_q">Delete \"%1$s\" and its chat?</string>
+    <string name="spaces_back_cd">Back to main chat</string>
+    <string name="nine_level">Level %1$d · %2$s</string>
+    <string name="nine_next">Next: %1$s</string>
+    <string name="nine_top">Top level</string>
+    <string name="nine_stats">%1$d-day streak · %2$d days together</string>
+    <string name="nine_surprise">Surprise</string>
+    <string name="nine_surprise_open">Nine has something for today.</string>
+    <string name="nine_surprise_done">Done for today. See you tomorrow.</string>
+    <string name="nine_surprise_none">Every surprise has been found.</string>
+    <string name="nine_found">Found %1$d of %2$d</string>
+    <string name="nine_custom">Customise · Coming soon</string>
+    <string name="nine_custom_personality">Personality</string>
+    <string name="nine_custom_outfit">Outfit</string>
+    <string name="nine_custom_voice">Voice tone</string>
 </resources>

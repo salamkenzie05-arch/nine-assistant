@@ -61,11 +61,24 @@ object LangGuard {
      * Pertanyaan tentang terjemahan/arti kata dibiarkan, karena memang wajar memuat bahasa lain.
      */
     fun needsRewrite(reply: String, lang: AppLang, question: String = ""): Boolean {
-        if (reply.length < 20) return false
+        if (reply.length < 14) return false
         if (translating.containsMatchIn(question)) return false
         val (id, en) = counts(reply)
         val native = if (lang == AppLang.ID) id else en
         val foreign = if (lang == AppLang.ID) en else id
-        return foreign >= 3 && foreign * 5 >= foreign + native
+        val total = foreign + native
+        // Dua kata asing sudah cukup bila porsinya besar (>= 30%); tiga atau lebih cukup bila >= 1/6.
+        return (foreign >= 2 && foreign * 10 >= total * 3) || (foreign >= 3 && foreign * 6 >= total)
+    }
+
+    /**
+     * False bila [text] jelas berbahasa lain dari [lang]. Dipakai agar riwayat percakapan berbahasa lain
+     * (sebelum pengguna mengganti bahasa) tidak ikut disisipkan ke prompt dan menular ke jawaban berikutnya.
+     */
+    fun sameLanguage(text: String, lang: AppLang): Boolean {
+        val (id, en) = counts(text)
+        val native = if (lang == AppLang.ID) id else en
+        val foreign = if (lang == AppLang.ID) en else id
+        return !(foreign >= 2 && foreign > native)
     }
 }

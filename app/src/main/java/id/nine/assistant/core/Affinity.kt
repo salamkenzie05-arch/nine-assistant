@@ -88,6 +88,14 @@ class Affinity(context: Context) {
     private fun daysUsed(xp: Int): Int =
         if (sp.contains("days")) sp.getInt("days", 0) else if (xp > 0) maxOf(1, sp.getInt("best", 0)) else 0
 
+    /** Poin tambahan (mis. kejutan harian). Tidak mengubah streak atau hari pemakaian; level tetap dibatasi hari pemakaian. */
+    fun bonus(points: Int, today: LocalDate = LocalDate.now()): Event {
+        val before = state(today)
+        sp.edit().putInt("xp", before.xp + points.coerceIn(0, 50)).apply()
+        val after = state(today)
+        return Event(after, after.level.number > before.level.number, false)
+    }
+
     /** Catat satu interaksi dengan Nine. */
     fun record(today: LocalDate = LocalDate.now()): Event {
         val before = state(today)

@@ -32,6 +32,11 @@ class NineApp : Application() {
     /** Otak online (Gemini). */
     val online: OnlineBrain get() = gemini
     val log = ConversationLog()
+    /** Ruang obrolan khusus (tersimpan) dan penukar isi log antara obrolan utama dan ruang. */
+    lateinit var spaces: id.nine.assistant.core.SpaceStore
+        private set
+    lateinit var spaceSession: id.nine.assistant.core.SpaceSession
+        private set
     lateinit var location: id.nine.assistant.core.LocationHelper
         private set
     lateinit var affinity: id.nine.assistant.core.Affinity
@@ -43,6 +48,9 @@ class NineApp : Application() {
         prefs.migrateSecrets()
         location = id.nine.assistant.core.LocationHelper(this, prefs)
         affinity = id.nine.assistant.core.Affinity(this)
+        spaces = id.nine.assistant.core.SpaceStore(this)
+        spaceSession = id.nine.assistant.core.SpaceSession(spaces, log)
+        spaces.activeId = "" // proses baru: selalu mulai dari obrolan utama (log hanya ada di memori)
         location.refresh()
         AppCompatDelegate.setDefaultNightMode(prefs.theme.nightMode)
         models = ModelManager(this, prefs)

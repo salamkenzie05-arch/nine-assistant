@@ -184,6 +184,23 @@ class Prefs(context: Context) {
         get() = sp.getLong("last_greet", 0L)
         set(value) = sp.edit().putLong("last_greet", value).apply()
 
+    /** Kejutan harian (side quest): hari terakhir diberikan, id-nya, sudah selesai atau belum, dan id yang sudah pernah ditemukan. */
+    var questDay: String
+        get() = sp.getString("quest_day", "") ?: ""
+        set(value) = sp.edit().putString("quest_day", value).apply()
+
+    var questId: String
+        get() = sp.getString("quest_id", "") ?: ""
+        set(value) = sp.edit().putString("quest_id", value).apply()
+
+    var questDone: Boolean
+        get() = sp.getBoolean("quest_done", false)
+        set(value) = sp.edit().putBoolean("quest_done", value).apply()
+
+    var questsFound: Set<String>
+        get() = (sp.getString("quests_found", "") ?: "").split(',').filter { it.isNotBlank() }.toSet()
+        set(value) = sp.edit().putString("quests_found", value.joinToString(",")).apply()
+
     /** Tahun terakhir ucapan ulang tahun disampaikan (sekali setahun). */
     var birthdayGreetedYear: Int
         get() = sp.getInt("bday_year", 0)

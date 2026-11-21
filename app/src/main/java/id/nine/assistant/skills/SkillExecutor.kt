@@ -112,6 +112,7 @@ class SkillExecutor(
     private val calendar = CalendarSkill(ctx)
     private val todos = TodoStore(ctx)
     private val finance = FinanceStore(ctx)
+    private val phoneInfo = PhoneInfoSkill(ctx)
     private val affinity = Affinity(ctx)
     private val alarms = AlarmStore(ctx)
     private val location: LocationHelper get() = (ctx as NineApp).location
@@ -164,7 +165,12 @@ class SkillExecutor(
             lang.t("Hari ini ", "Today is ") +
                 now.format(DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy", lang.locale)) + s(lang) + "."
         )
-        Command.DeviceInfo -> deviceInfo(lang)
+        Command.DeviceInfo -> SkillResult(phoneInfo.summary(lang))
+        is Command.PhoneInfo -> SkillResult(phoneInfo.answer(cmd.topic, lang))
+        Command.GoHome -> SkillResult(
+            lang.t("Baik${s(lang)}.", "Going home${s(lang)}."),
+            intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
         is Command.AddNote -> {
             notes.add(cmd.text)
             SkillResult(lang.t("Sudah saya catat${s(lang)}: ${cmd.text}", "Noted${s(lang)}: ${cmd.text}"))
@@ -861,21 +867,6 @@ class SkillExecutor(
         val tail = (if (charging) lang.t(" dan sedang diisi daya", " and charging") else "") + s(lang) + "." +
             (if (!charging && pct <= 20) lang.t(" Mungkin sudah waktunya mencari pengisi daya.", " Might I suggest a charger?") else "")
         return SkillResult(base + tail)
-    }
-
-    private fun deviceInfo(lang: AppLang): SkillResult {
-        val stat = StatFs(Environment.getDataDirectory().path)
-        val freeGb = stat.availableBytes / 1_073_741_824.0
-        val totalGb = stat.totalBytes / 1_073_741_824.0
-        val mi = ActivityManager.MemoryInfo()
-        (ctx.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager).getMemoryInfo(mi)
-        val ramGb = mi.totalMem / 1_073_741_824.0
-        val model = "${Build.MANUFACTURER} ${Build.MODEL}"
-        val text = lang.t(
-            "$model, Android ${Build.VERSION.RELEASE}. Penyimpanan kosong ${"%.1f".format(freeGb)} dari ${"%.0f".format(totalGb)} gigabita. RAM ${"%.1f".format(ramGb)} gigabita.",
-            "$model, Android ${Build.VERSION.RELEASE}. ${"%.1f".format(freeGb)} of ${"%.0f".format(totalGb)} gigabytes of storage free. ${"%.1f".format(ramGb)} gigabytes of RAM."
-        )
-        return SkillResult(text)
     }
 
     // ------------------------------------------------------------ catatan
@@ -2182,6 +2173,7 @@ class SkillExecutor(
             "• \"Buka WhatsApp\" / \"Buka pengaturan Wi-Fi\"\n" +
             "• \"Nyalakan senter\" / \"Volume 50 persen\"\n" +
             "• \"Berapa sisa baterai?\" / \"Jam berapa sekarang?\"\n" +
+            "• \"Sisa penyimpanan berapa?\" / \"Wi-Fi nyala nggak?\" / \"Ke layar utama\"\n" +
             "• \"Catat beli susu\" / \"Baca catatan\"\n" +
             "• \"Ingat bahwa ulang tahun ibu 3 Mei\" / \"Apa yang kamu ingat tentang aku?\" / \"Lupakan ulang tahun ibu\"\n" +
             "• \"Telepon Budi\" / \"Kirim pesan ke Ibu isinya aku pulang telat\"\n" +
@@ -2206,6 +2198,7 @@ class SkillExecutor(
             "• \"Open WhatsApp\" / \"Open Wi-Fi settings\"\n" +
             "• \"Turn on the flashlight\" / \"Set volume to 50 percent\"\n" +
             "• \"How much battery is left?\" / \"What time is it?\"\n" +
+            "• \"How much storage is left?\" / \"Is my Wi-Fi on?\" / \"Go home\"\n" +
             "• \"Take a note: buy milk\" / \"Read my notes\"\n" +
             "• \"Remember that my mom's birthday is May 3\" / \"What do you remember about me?\" / \"Forget my mom's birthday\"\n" +
             "• \"Call Bob\" / \"Send a message to Mom saying I'll be late\"\n" +

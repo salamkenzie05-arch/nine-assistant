@@ -36,4 +36,18 @@ class LangGuardTest {
         val reply = "Dalam bahasa Inggris: the cat is sleeping on the sofa and you are watching it."
         assertFalse(LangGuard.needsRewrite(reply, AppLang.ID, question = "terjemahkan kucing sedang tidur ke bahasa Inggris"))
     }
+
+    @Test
+    fun flagsShortMixedReplies() {
+        assertTrue(LangGuard.needsRewrite("Baik Tuan, I will set the alarm for you.", AppLang.ID))
+        assertTrue(LangGuard.needsRewrite("Very well, sir. Saya akan memasang alarm untuk Anda.", AppLang.EN))
+    }
+
+    @Test
+    fun historyInOtherLanguageIsNotSameLanguage() {
+        assertTrue(LangGuard.sameLanguage("Turn into dark mode", AppLang.EN))
+        assertTrue(LangGuard.sameLanguage("Very well, sir, dark theme.", AppLang.EN))
+        assertFalse(LangGuard.sameLanguage("Baik, saya akan mematikan alarm itu", AppLang.EN))
+        assertFalse(LangGuard.sameLanguage("Very well, sir. I will turn off that alarm for you.", AppLang.ID))
+    }
 }

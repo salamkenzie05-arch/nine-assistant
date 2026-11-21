@@ -65,7 +65,7 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
     private val reQuestion = rx("""^(?:apa(?:kah)?|kenapa|mengapa|bagaimana|gimana|siapa|kapan|dimana|di\s+mana|kemana|ke\s+mana|berapa|bolehkah|haruskah|apa\s+bedanya|why|how|what|who|when|where|which|is|are|does|do|did|should|would|explain|jelaskan|ceritakan|tell\s+me\s+about)\b""")
 
     private fun answersQuestion(c: Command): Boolean = when (c) {
-        Command.CurrentTime, Command.CurrentDate, Command.Battery, Command.DeviceInfo, Command.Help,
+        Command.CurrentTime, Command.CurrentDate, Command.Battery, Command.DeviceInfo, is Command.PhoneInfo, Command.Help,
         Command.WhoAreYou, Command.HowAreYou, Command.TodoList, Command.ReadNotes, Command.ReadMemory, Command.ShowAlarms,
         Command.AffinityStatus, Command.WhereAmI -> true
         is Command.ShowAgenda, is Command.Calculate, is Command.FinanceReport, is Command.FinanceList,
@@ -91,6 +91,8 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
             ?: parseReminder(raw, now)
             ?: parseCalendar(raw, now)
             ?: parseFlashlight(raw)
+            ?: parseGoHome(raw)
+            ?: parsePhoneInfo(raw)
             ?: parseSettings(raw)
             ?: parseVolume(norm)
             ?: (if (FinanceParser.isPlan(planText)) null else FinanceParser.parse(raw))
@@ -438,7 +440,36 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
     private val reBattery = rx("""\b(?:baterai|batre|battery|batere)\b""")
     private val reTime = rx("""(?:jam|pukul)\s+berapa|what(?:'s|\s+is)\s+the\s+time|what\s+time\s+is\s+it|current\s+time|tell\s+me\s+the\s+time|\btime\s+now\b""")
     private val reDate = rx("""tanggal\s+berapa|hari\s+apa|what(?:'s|\s+is)\s+(?:the\s+)?date|what\s+day\s+is\s+(?:it|today)|today'?s\s+date|what\s+is\s+today""")
-    private val reDevice = rx("""\b(?:info(?:rmasi)?\s+(?:perangkat|hp|ponsel|device)|device\s+info(?:rmation)?|about\s+(?:this\s+)?phone|spesifikasi\s+(?:hp|ponsel|perangkat)|penyimpanan|storage)\b""")
+    private val reDevice = rx("""\b(?:info(?:rmasi)?\s+(?:perangkat|hp|ponsel|device)|device\s+info(?:rmation)?|about\s+(?:this\s+)?phone|spesifikasi\s+(?:hp|ponsel|perangkat)|spek(?:\s+(?:hp|ponsel))?|phone\s+(?:specs?|info|status)|kondisi\s+(?:hp|ponsel|perangkat)|status\s+(?:hp|ponsel|perangkat)|cek\s+(?:hp|ponsel)|tentang\s+(?:hp|ponsel)\s+ini)\b""")
+
+    // ------------------------------------------------------------------ layar utama & pertanyaan tentang HP
+
+    private val reGoHome = rx("""^(?:(?:go|come|get|take\s+me|bring\s+me|head|return|back|press|kembali|pergi|balik|buka|open|show|tampilkan|tekan|menuju|ke|to|the|my)\s+)*(?:home(?:\s*screen|\s*page)?|homescreen|layar\s+(?:utama|depan|awal|home)|halaman\s+(?:utama|depan|awal|home)|beranda)$""")
+
+    private fun parseGoHome(raw: String): Command? = if (reGoHome.matches(raw.trim())) Command.GoHome else null
+
+    private val reInfoImperative = rx("""\b(?:nyalakan|hidupkan|aktifkan|matikan|matiin|turn|switch|enable|disable|buka|open|setel|set|atur|ubah|ganti|change|naikkan|turunkan|kecilkan|besarkan|increase|decrease|raise|lower|bersihkan|hapus|clear|delete|reset)\b""")
+
+    private val infoRules: List<Pair<InfoTopic, Regex>> = listOf(
+        InfoTopic.BATTERY_HEALTH to rx("""\b(?:suhu|temperatur|temperature|kesehatan|health|kondisi|voltase|voltage)\s+(?:baterai|batre|battery)\b|\b(?:baterai|batre|battery)\s+(?:saya\s+|ku\s+)?(?:health|temperature|temp|suhu|sehat|panas|overheat|kondisi)\b|\bhp\s+(?:saya\s+|ku\s+)?(?:panas|overheat)\b|\bis\s+(?:my\s+)?(?:phone|battery)\s+(?:hot|overheating|healthy)\b|\b(?:sedang|lagi)\s+(?:di\s*)?(?:cas|charge|charging|isi\s+daya)\b|\bis\s+(?:it|my\s+phone)\s+charging\b"""),
+        InfoTopic.WIFI to rx("""^(?:status|cek|check)\s+(?:wifi|wi-fi)$|^(?:apakah|apa|is)\s+(?:my\s+|the\s+)?(?:wifi|wi-fi)(?:\s+(?:saya|ku))?\s+(?:sedang\s+)?(?:nyala|hidup|aktif|menyala|on|terhubung|tersambung|nyambung|connected|enabled)(?:\s+(?:nggak|ngga|gak|tidak|kah))?$|^(?:wifi|wi-fi)(?:\s+(?:saya|ku))?\s+(?:nyala|hidup|aktif|menyala|on|terhubung|nyambung|connected)\s+(?:nggak|ngga|gak|tidak|kah|atau\s+(?:mati|off)|or\s+off)$"""),
+        InfoTopic.BLUETOOTH to rx("""^(?:status|cek|check)\s+bluetooth$|^(?:apakah|apa|is)\s+(?:my\s+|the\s+)?bluetooth(?:\s+(?:saya|ku))?\s+(?:sedang\s+)?(?:nyala|hidup|aktif|menyala|on|terhubung|tersambung|nyambung|connected|enabled)(?:\s+(?:nggak|ngga|gak|tidak|kah))?$|^bluetooth(?:\s+(?:saya|ku))?\s+(?:nyala|hidup|aktif|menyala|on|terhubung|nyambung|connected)\s+(?:nggak|ngga|gak|tidak|kah|atau\s+(?:mati|off)|or\s+off)$"""),
+        InfoTopic.STORAGE to rx("""\b(?:penyimpanan|storage|memori\s+internal|ruang\s+(?:kosong|penyimpanan|tersisa)|sisa\s+(?:memori|ruang|penyimpanan)|free\s+space|disk\s+space|space\s+left)\b"""),
+        InfoTopic.RAM to rx("""\b(?:ram|memori\s+ram)\b"""),
+        InfoTopic.MODEL to rx("""\b(?:tipe|type|model|merek|merk|brand|seri)\s+(?:hp|ponsel|handphone|phone|perangkat|device)\b|\b(?:hp|ponsel|handphone|phone)\s+(?:ini\s+|saya\s+|ku\s+)?(?:apa|tipe\s+apa|merek\s+apa|merk\s+apa|model\s+apa|type\s+apa)\b|\bphone\s+model\b|\b(?:what|which)\s+(?:phone|device|model)\b|\bmerek\s+apa\b"""),
+        InfoTopic.ANDROID to rx("""\b(?:versi|version)\s+(?:android|one\s*ui|os)\b|\bandroid\s+(?:version|versi|berapa|apa)\b|\bwhat\s+android\b|\bpatch\s+keamanan\b|\bsecurity\s+patch\b|\bone\s*ui\s+(?:berapa|version|versi)\b"""),
+        InfoTopic.NETWORK to rx("""\b(?:status|jenis|tipe|type)\s+(?:internet|jaringan|koneksi|network|connection)\b|\b(?:wifi|wi-fi)\s+(?:atau|or)\s+(?:data|mobile)\b|\b(?:data|mobile\s+data)\s+(?:atau|or)\s+(?:wifi|wi-fi)\b|\b(?:apakah\s+)?(?:aku|saya|gue)\s+(?:sedang\s+)?online(?:\s+(?:nggak|ngga|gak|tidak|kah))?$|\b(?:am\s+i|are\s+we|is\s+(?:it|my\s+phone))\s+(?:online|connected)\b|\bis\s+(?:the\s+)?internet\s+(?:on|working|connected)\b|\b(?:cek|check)\s+(?:my\s+)?(?:internet|koneksi|jaringan|connection|network)\b|\b(?:internet|koneksi|jaringan)\s+(?:saya\s+|ku\s+)?(?:nyambung|tersambung|terhubung|connected)\b"""),
+        InfoTopic.SCREEN to rx("""\b(?:resolusi|resolution|refresh\s*rate|ukuran\s+layar|screen\s+(?:size|resolution)|dpi)\b|\bberapa\s+hz\b"""),
+        InfoTopic.UPTIME to rx("""\buptime\b|\b(?:sudah\s+)?(?:nyala|menyala|hidup)\s+berapa\s+lama\b|\bsudah\s+(?:nyala|menyala|hidup)\s+sejak\b|\b(?:terakhir|kapan)\s+(?:di\s*)?(?:restart|reboot|dinyalakan|dihidupkan)\b|\bsince\s+(?:the\s+)?last\s+(?:reboot|restart)\b|\bhow\s+long\s+(?:has|have)\s+(?:my\s+|the\s+|this\s+)?(?:phone|it|device)\s+(?:been\s+)?(?:on|running|up|awake)\b"""),
+        InfoTopic.VOLUME to rx("""\b(?:volume|suara)\s+(?:sekarang|saat\s+ini|saya|ku|media|musik)?\s*(?:berapa|level)\b|\bberapa\s+(?:persen\s+)?volume(?:nya|ku)?\b|\bwhat(?:'s|\s+is)\s+(?:the\s+|my\s+)?(?:current\s+)?volume\b|\bvolume\s+(?:now|level|status)\b|\bcek\s+volume\b"""),
+        InfoTopic.CPU to rx("""\b(?:prosesor|processor|cpu|chipset|soc)\s+(?:apa|berapa|what|which|specs?|hp|phone)\b|\b(?:what|which)\s+(?:processor|cpu|chipset|soc)\b|\b(?:pakai|pake|memakai|using)\s+(?:prosesor|processor|cpu|chipset)\b|\bjumlah\s+(?:core|inti)\b""")
+    )
+
+    private fun parsePhoneInfo(raw: String): Command? {
+        if (raw.split(" ").size > 12 || raw.any { it.isDigit() } || reInfoImperative.containsMatchIn(raw)) return null
+        for ((topic, re) in infoRules) if (re.containsMatchIn(raw)) return Command.PhoneInfo(topic)
+        return null
+    }
 
     private fun parseDeviceInfo(raw: String): Command? = when {
         reBattery.containsMatchIn(raw) -> Command.Battery
