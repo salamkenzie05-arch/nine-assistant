@@ -502,7 +502,7 @@ class AssistantController(context: Context, private val ui: Ui) {
         if (supportGate(text, userIndex)) return
 
         // Bacaan InBody dari foto menunggu "ya"/"batal"/koreksi angka: jawaban itu tidak boleh dikira perintah lain.
-        if (pending == null && health.hasDraft()) {
+        if (pending == null && !ui.isLocked() && health.hasDraft()) {
             val turn = try { health.draftTurn(text, lang) } catch (e: Exception) { null }
             if (turn != null) {
                 log.markPrivate(userIndex)
@@ -885,12 +885,14 @@ class AssistantController(context: Context, private val ui: Ui) {
         is Command.DeleteEvents -> lang.t("menghapus ${c.items.size} acara", "delete ${c.items.size} events")
         is Command.Forget -> lang.t("melupakan ${c.query}", "forget ${c.query}")
         is Command.CallControl -> if (c.accept) lang.t("menjawab telepon", "answer the call") else lang.t("menolak telepon", "decline the call")
+        is Command.Health -> lang.t("mengubah catatan fitness/gizi", "change your fitness/nutrition log")
         is Command.OpenSettings -> if (c.turnOn != null) lang.t("mengubah pengaturan ponsel", "change a phone setting") else null
         else -> null
     }
 
     private fun execute(cmd: Command, confirmed: Boolean, fromAi: Boolean = false) {
         if (ui.isLocked() && !safeWhileLocked(cmd) && cmd !is Command.Unknown) {
+            if (cmd is Command.Health) markLastUserPrivate() // data kesehatan: tidak ikut riwayat walau ditolak di layar kunci
             reply(lang.t("Buka kunci HP dulu${prefs.persona.sfx(lang)}.", "Please unlock your phone first${prefs.persona.sfx(lang)}."), listenAfter = false)
             ui.onRequestUnlock { execute(cmd, confirmed, fromAi) }
             return
@@ -903,10 +905,6 @@ class AssistantController(context: Context, private val ui: Ui) {
             supportCommand(cmd)
             return
         }
-        if (cmd is Command.Health) {
-            healthCommand(cmd.req)
-            return
-        }
         if (fromAi && !confirmed) {
             aiNeedsConfirm(cmd)?.let { what ->
                 pending = Pending.Confirm(cmd)
@@ -916,6 +914,10 @@ class AssistantController(context: Context, private val ui: Ui) {
                 )
                 return
             }
+        }
+        if (cmd is Command.Health) {
+            healthCommand(cmd.req)
+            return
         }
         val res = executor.execute(cmd, lang, confirmed, denied)
 
