@@ -1,6 +1,5 @@
 package id.nine.assistant
 
-import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -42,11 +41,6 @@ class FinanceActivity : AppCompatActivity() {
     private var all: List<Txn> = emptyList()
     private var items: List<Txn> = emptyList()
     private val lang get() = (application as NineApp).prefs.lang
-
-    private companion object {
-        /** Warna bergilir untuk baris kategori (titik dan batang progres). */
-        val CAT_COLORS = intArrayOf(R.color.cat_1, R.color.cat_2, R.color.cat_3, R.color.cat_4, R.color.cat_5)
-    }
 
     private inner class VH(v: View) : RecyclerView.ViewHolder(v) {
         val title: TextView = v.findViewById(R.id.txtTitle)
@@ -173,11 +167,11 @@ class FinanceActivity : AppCompatActivity() {
             listOf(
                 FinBarsView.Bar(
                     getString(R.string.fin_income), s.income, FinanceMath.money(s.income, lang),
-                    ContextCompat.getColor(this, R.color.fin_income_bar)
+                    ContextCompat.getColor(this, R.color.fin_income)
                 ),
                 FinBarsView.Bar(
                     getString(R.string.fin_expense), s.expense, FinanceMath.money(s.expense, lang),
-                    ContextCompat.getColor(this, R.color.fin_expense_bar)
+                    ContextCompat.getColor(this, R.color.fin_expense)
                 )
             )
         )
@@ -189,12 +183,7 @@ class FinanceActivity : AppCompatActivity() {
             row.findViewById<TextView>(R.id.catName).text = FinanceCats.name(c.first, lang)
             row.findViewById<TextView>(R.id.catAmount).text = FinanceMath.money(c.second, lang)
             row.findViewById<TextView>(R.id.catPct).text = if (pct[i] == 0) "<1%" else pct[i].toString() + "%"
-            val color = ContextCompat.getColor(this, CAT_COLORS[i % CAT_COLORS.size])
-            row.findViewById<View>(R.id.catDot).backgroundTintList = ColorStateList.valueOf(color)
-            row.findViewById<LinearProgressIndicator>(R.id.catBar).apply {
-                setIndicatorColor(color)
-                setProgressCompat(pct[i], false)
-            }
+            row.findViewById<LinearProgressIndicator>(R.id.catBar).setProgressCompat(pct[i], false)
             binding.finCats.addView(row)
         }
         binding.txtCatEmpty.visibility = if (cats.isEmpty()) View.VISIBLE else View.GONE

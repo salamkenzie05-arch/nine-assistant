@@ -12,12 +12,12 @@
         android:layout_marginTop="14dp"
         android:layout_marginEnd="24dp"
         android:layout_marginBottom="4dp"
-        android:background="@drawable/bg_user_bubble"
+        android:background="@drawable/bg_user_pill"
         android:paddingStart="16dp"
         android:paddingTop="9dp"
         android:paddingEnd="16dp"
         android:paddingBottom="9dp"
-        android:textColor="@color/nine_on_lime"
+        android:textColor="@color/nine_muted"
         android:textIsSelectable="true"
         android:textSize="14sp" />
 </FrameLayout>

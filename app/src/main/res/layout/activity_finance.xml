@@ -22,7 +22,7 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/back"
             android:src="@drawable/ic_back"
-            app:tint="@color/nine_orange" />
+            app:tint="@color/nine_gold" />
 
         <TextView
             android:layout_width="0dp"
@@ -38,17 +38,11 @@
         android:id="@+id/finTabs"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="4dp"
-        android:layout_marginEnd="16dp"
-        android:background="@drawable/bg_tabs"
+        android:background="@color/nine_bg"
         app:tabGravity="fill"
-        app:tabIndicator="@drawable/bg_tab_indicator"
-        app:tabIndicatorColor="@color/nine_lime"
-        app:tabIndicatorFullWidth="true"
-        app:tabIndicatorGravity="stretch"
+        app:tabIndicatorColor="@color/nine_gold"
         app:tabMode="fixed"
-        app:tabRippleColor="@android:color/transparent"
+        app:tabRippleColor="@color/nine_pill"
         app:tabSelectedTextColor="@color/nine_on_bg"
         app:tabTextColor="@color/nine_muted">
 
@@ -75,7 +69,7 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnPToday"
-            style="@style/Nine.Toggle"
+            style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
@@ -85,7 +79,7 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnPWeek"
-            style="@style/Nine.Toggle"
+            style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
@@ -95,7 +89,7 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnPMonth"
-            style="@style/Nine.Toggle"
+            style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
@@ -105,7 +99,7 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnPAll"
-            style="@style/Nine.Toggle"
+            style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
@@ -278,7 +272,7 @@
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnTExpense"
-                            style="@style/Nine.Toggle"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
@@ -286,7 +280,7 @@
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnTIncome"
-                            style="@style/Nine.Toggle"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"

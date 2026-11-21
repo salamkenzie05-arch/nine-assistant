@@ -1,35 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="nine_bg">#000000</color>
-    <color name="nine_on_bg">#F4F7EA</color>
-    <color name="nine_muted">#9CA58D</color>
-    <color name="nine_pill">#1F2417</color>
-    <color name="nine_card">#12150E</color>
-    <color name="nine_primary">#5ED6C2</color>
-    <color name="nine_on_primary">#00201A</color>
-    <color name="nine_lime">#D8F24F</color>
-    <color name="nine_on_lime">#1A2000</color>
-    <color name="nine_orange">#FFA03C</color>
-    <color name="nine_pastel_mint">#143A33</color>
-    <color name="nine_pastel_orange">#3F2A12</color>
-    <color name="nine_pastel_lilac">#2A2442</color>
-    <color name="nine_pastel_pink">#40202B</color>
-    <color name="cat_1">#2FD6BE</color>
-    <color name="cat_2">#FFA03C</color>
-    <color name="cat_3">#A99BF0</color>
-    <color name="cat_4">#FF8DA6</color>
-    <color name="cat_5">#B7E04A</color>
+    <color name="nine_on_bg">#F2F5FA</color>
+    <color name="nine_muted">#8A93A6</color>
+    <color name="nine_pill">#1A1F2B</color>
+    <color name="nine_card">#10141C</color>
+    <color name="nine_accent">#C7861A</color>
+    <color name="nine_gold">#C7861A</color>
     <color name="widget_bg">#E60B0F18</color>
     <color name="widget_text">#F2F5FA</color>
     <color name="widget_muted">#8A93A6</color>
     <color name="nine_bg_clear">#00000000</color>
-    <color name="nine_outline">#3C4430</color>
-    <color name="nine_outline_variant">#272D1E</color>
+    <color name="nine_outline">#3A4254</color>
+    <color name="nine_outline_variant">#252B38</color>
     <color name="nine_vignette_edge">#42C7861A</color>
     <color name="assist_bubble">#F70B0F18</color>
     <color name="assist_dim">#B3000000</color>
     <color name="fin_income">#5BD08F</color>
     <color name="fin_expense">#FF8A80</color>
-    <color name="fin_income_bar">#2FD6A0</color>
-    <color name="fin_expense_bar">#FF7A74</color>
 </resources>

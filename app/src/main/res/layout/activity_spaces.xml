@@ -22,7 +22,7 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/back"
             android:src="@drawable/ic_back"
-            app:tint="@color/nine_orange" />
+            app:tint="@color/nine_gold" />
 
         <TextView
             android:layout_width="0dp"
@@ -39,7 +39,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/spaces_new"
-            android:textColor="@color/nine_orange" />
+            android:textColor="@color/nine_gold" />
     </LinearLayout>
 
     <androidx.recyclerview.widget.RecyclerView

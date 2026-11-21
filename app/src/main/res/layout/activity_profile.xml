@@ -22,7 +22,7 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/back"
             android:src="@drawable/ic_back"
-            app:tint="@color/nine_orange" />
+            app:tint="@color/nine_gold" />
 
         <TextView
             android:id="@+id/txtProfileTitle"
@@ -141,7 +141,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/profile_birth_clear"
-                android:textColor="@color/nine_orange" />
+                android:textColor="@color/nine_gold" />
 
             <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
@@ -179,7 +179,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/profile_later"
-                android:textColor="@color/nine_orange" />
+                android:textColor="@color/nine_gold" />
         </LinearLayout>
     </ScrollView>
 </LinearLayout>

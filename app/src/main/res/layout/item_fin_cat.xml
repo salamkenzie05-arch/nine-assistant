@@ -12,13 +12,6 @@
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
-        <View
-            android:id="@+id/catDot"
-            android:layout_width="10dp"
-            android:layout_height="10dp"
-            android:layout_marginEnd="10dp"
-            android:background="@drawable/bg_round_btn" />
-
         <TextView
             android:id="@+id/catName"
             android:layout_width="0dp"
@@ -52,7 +45,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:max="100"
-        app:indicatorColor="@color/cat_1"
+        app:indicatorColor="@color/nine_gold"
         app:trackColor="@color/nine_pill"
         app:trackCornerRadius="3dp"
         app:trackThickness="6dp" />

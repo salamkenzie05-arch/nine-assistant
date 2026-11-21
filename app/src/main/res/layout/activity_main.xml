@@ -52,7 +52,7 @@
                     android:paddingEnd="6dp"
                     android:paddingBottom="1dp"
                     android:text="BETA"
-                    android:textColor="@color/nine_orange"
+                    android:textColor="@color/nine_gold"
                     android:textSize="9sp"
                     android:textStyle="bold" />
             </LinearLayout>
@@ -64,7 +64,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
-            android:background="@drawable/bg_chip_orange"
+            android:background="@drawable/bg_user_pill"
             android:contentDescription="@string/spaces_back_cd"
             android:ellipsize="end"
             android:maxLines="1"
@@ -73,7 +73,7 @@
             android:paddingTop="5dp"
             android:paddingEnd="14dp"
             android:paddingBottom="5dp"
-            android:textColor="@color/nine_orange"
+            android:textColor="@color/nine_gold"
             android:textSize="12sp"
             android:visibility="gone" />
 
@@ -219,7 +219,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/cd_attach"
                 android:src="@drawable/ic_add"
-                app:tint="@color/nine_orange" />
+                app:tint="@color/nine_gold" />
 
             <EditText
                 android:id="@+id/inputText"
@@ -243,7 +243,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/cd_send"
                 android:src="@drawable/ic_send"
-                app:tint="@color/nine_orange" />
+                app:tint="@color/nine_gold" />
         </LinearLayout>
 
         <!-- Tuner gitar (muncul saat diminta) -->
@@ -279,7 +279,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/cd_keyboard"
                 android:src="@drawable/ic_keyboard"
-                app:tint="@color/nine_orange" />
+                app:tint="@color/nine_gold" />
 
             <ImageButton
                 android:id="@+id/btnMenu"
@@ -290,7 +290,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/hub_cd"
                 android:src="@drawable/ic_menu"
-                app:tint="@color/nine_orange" />
+                app:tint="@color/nine_gold" />
 
         </FrameLayout>
 

@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Teks tombol pilihan: gelap di atas lime saat terpilih, teks biasa saat tidak. -->
-<selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:color="@color/nine_on_lime" android:state_checked="true" />
-    <item android:color="@color/nine_on_bg" />
-</selector>
