@@ -15,11 +15,13 @@ import kotlin.math.max
  * Berkas hanya hidup sebentar dan dihapus setelah dijawab.
  */
 object ImagePrep {
-    private const val MAX_SIDE = 1024
+    const val MAX_SIDE = 1024
+    /** Sisi terpanjang untuk membaca teks (lembar InBody): lebih besar agar angka kecil tetap terbaca. */
+    const val OCR_SIDE = 2000
     private const val MAX_AGE_MS = 60L * 60_000L
 
     /** Hasil berupa berkas JPEG baru, atau null bila gambar tidak bisa dibaca. Jangan panggil di thread utama. */
-    fun prepare(ctx: Context, uri: Uri): File? {
+    fun prepare(ctx: Context, uri: Uri, maxSide: Int = MAX_SIDE): File? {
         return try {
             val dir = File(ctx.cacheDir, "pick")
             dir.mkdirs()
@@ -29,7 +31,7 @@ object ImagePrep {
             cr.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) } ?: return null
             if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
             var sample = 1
-            while (max(bounds.outWidth, bounds.outHeight) / sample > MAX_SIDE * 2) sample *= 2
+            while (max(bounds.outWidth, bounds.outHeight) / sample > maxSide * 2) sample *= 2
             val opts = BitmapFactory.Options().apply { inSampleSize = sample }
             val decoded = cr.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, opts) } ?: return null
             val orientation = try {
@@ -47,8 +49,8 @@ object ImagePrep {
                 ExifInterface.ORIENTATION_FLIP_VERTICAL -> m.postScale(1f, -1f)
             }
             val longest = max(decoded.width, decoded.height)
-            if (longest > MAX_SIDE) {
-                val k = MAX_SIDE.toFloat() / longest
+            if (longest > maxSide) {
+                val k = maxSide.toFloat() / longest
                 m.postScale(k, k)
             }
             val out = if (m.isIdentity) decoded else Bitmap.createBitmap(decoded, 0, 0, decoded.width, decoded.height, m, true)

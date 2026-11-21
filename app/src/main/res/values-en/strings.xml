@@ -137,6 +137,8 @@
     <string name="alarm_fullscreen_ok">Full-screen alarms: allowed ✓</string>
     <string name="sec_memory_group">Nine\'s memory</string>
     <string name="memory_auto">Remember automatically</string>
+    <string name="support_auto">Listen automatically when I share feelings</string>
+    <string name="inbody_ocr">Read InBody result photos (on device, via ML Kit)</string>
     <string name="memory_count">%1$d things remembered</string>
     <string name="memory_manage">View &amp; delete</string>
     <string name="memory_clear">Delete all</string>

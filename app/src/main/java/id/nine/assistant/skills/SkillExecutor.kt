@@ -301,6 +301,8 @@ class SkillExecutor(
         is Command.EnglishCoach -> SkillResult(lang.t("Latihan bahasa Inggris dijalankan dari obrolan utama.", "English practice runs from the main chat."))
         // Sesi curhat dikendalikan AssistantController (butuh status percakapan); di sini hanya jaring pengaman.
         is Command.Support -> SkillResult(lang.t("Mode curhat dijalankan dari obrolan utama.", "Venting mode runs from the main chat."))
+        // Pelatih fitness + gizi dikendalikan AssistantController (data pribadi, balasan privat); di sini hanya jaring pengaman.
+        is Command.Health -> SkillResult(lang.t("Pelatih fitness dijalankan dari obrolan utama.", "The fitness coach runs from the main chat."))
         Command.WhereAmI -> whereAmI(lang, denied)
         is Command.MediaControl -> mediaControl(cmd, lang)
         is Command.CallControl -> callControl(cmd, lang, denied)
@@ -2195,6 +2197,8 @@ class SkillExecutor(
             "• \"Panggil saya Tuan\" / \"Status affinity\" / tombol + di kolom ketik untuk kirim gambar\n" +
             "• \"Jadi mentor bahasa Inggris saya\" (koreksi grammar & saran kata, offline) / \"Koreksi kalimat saya: i goes to school\" / \"Kata lain dari good\"\n" +
             "• \"Aku mau curhat\" (teman curhat yang mendengarkan; bukan psikolog, tidak disimpan) / \"Latihan napas\"\n" +
+            "• Pelatih fitness & ahli gizi (bukan nasihat medis): \"Habis bench press 60 kg 3x8\" / \"Tadi makan nasi goreng dan telur\" / \"Menu hari ini\" / \"Progres bench press\" / \"Berapa protein yang aku butuhkan?\"\n" +
+            "• \"Analisis InBody\" lalu kirim fotonya (tombol + di kolom ketik) atau ketik \"inbody berat 70 otot 32 lemak 14\"\n" +
             "• \"Ganti bahasa ke Inggris\" / \"Lupakan percakapan\"",
         "Here are some things I can do:\n" +
             "• Chat or ask me anything (needs the AI brain in Settings)\n" +
@@ -2222,6 +2226,8 @@ class SkillExecutor(
             "• \"Call me Sir\" / \"Affinity status\" / the + button in the typing bar sends an image\n" +
             "• \"Be my English mentor\" (grammar fixes & better words, offline) / \"Correct my sentence: i goes to school\" / \"Another word for good\"\n" +
             "• \"I need to vent\" (a listening companion; not a psychologist, not saved) / \"Breathing exercise\"\n" +
+            "• Fitness coach & nutritionist (not medical advice): \"Just did bench press 60 kg 3x8\" / \"I ate fried rice and eggs\" / \"Today's meals\" / \"Bench press progress\" / \"How much protein do I need?\"\n" +
+            "• \"Analyse my InBody\" then send the photo (the + button in the typing bar) or type \"inbody weight 70 muscle 32 fat 14\"\n" +
             "• \"Switch language to Indonesian\" / \"Forget our conversation\""
     )
 }

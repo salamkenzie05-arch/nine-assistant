@@ -114,5 +114,8 @@ dependencies {
     implementation("com.alphacephei:vosk-android:0.3.47@aar")
     implementation("net.java.dev.jna:jna:5.13.0@aar")
 
+    // Membaca foto lembar InBody (OCR di perangkat; model Latin dibundel, bukan diunduh)
+    implementation("com.google.mlkit:text-recognition:16.0.1")
+
     testImplementation("junit:junit:4.13.2")
 }

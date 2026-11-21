@@ -137,6 +137,8 @@
     <string name="alarm_fullscreen_ok">Layar penuh alarm: diizinkan ✓</string>
     <string name="sec_memory_group">Memori Nine</string>
     <string name="memory_auto">Ingat otomatis</string>
+    <string name="support_auto">Curhat otomatis (Nine mendengarkan saat aku bercerita)</string>
+    <string name="inbody_ocr">Baca foto hasil InBody (di perangkat, lewat ML Kit)</string>
     <string name="memory_count">%1$d hal diingat</string>
     <string name="memory_manage">Lihat &amp; hapus</string>
     <string name="memory_clear">Hapus semua</string>

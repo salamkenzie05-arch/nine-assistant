@@ -235,6 +235,9 @@ sealed class Command {
     /** Mulai ([on] = true, opsional langsung dengan latihan menenangkan diri) atau akhiri sesi curhat. */
     data class Support(val on: Boolean, val exercise: id.nine.assistant.support.SupportIntent.Exercise? = null) : Command()
 
+    // --- Pelatih fitness + ahli gizi (aturan lokal; data hanya di perangkat)
+    data class Health(val req: id.nine.assistant.fit.HealthRequest) : Command()
+
     /** "correct my sentence: ..." — periksa satu kalimat tanpa memulai sesi. */
     data class CorrectEnglish(val sentence: String) : Command()
 

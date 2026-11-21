@@ -48,6 +48,16 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("auto_memory", true)
         set(value) = sp.edit().putBoolean("auto_memory", value).apply()
 
+    /** Nine masuk mode teman curhat sendiri saat pengguna bercerita tentang perasaannya (tanpa kata "aku mau curhat"). */
+    var autoSupport: Boolean
+        get() = sp.getBoolean("auto_support", true)
+        set(value) = sp.edit().putBoolean("auto_support", value).apply()
+
+    /** Foto lembar InBody boleh dibaca (OCR ML Kit di perangkat). Dimatikan = InBody hanya lewat ketikan angka. */
+    var inbodyOcr: Boolean
+        get() = sp.getBoolean("inbody_ocr", true)
+        set(value) = sp.edit().putBoolean("inbody_ocr", value).apply()
+
     var honorificId: String
         get() = sp.getString("hon_id", "Tuan") ?: "Tuan"
         set(value) = sp.edit().putString("hon_id", cleanName(value)).apply()

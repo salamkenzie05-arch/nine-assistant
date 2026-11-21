@@ -70,6 +70,13 @@ class SupportSession {
         )
     }
 
+    /** Masuk sendiri karena pengguna bercerita (tanpa perintah): tanpa sambutan; balasan pertama dibuat oleh [handle]. */
+    fun openNatural() {
+        active = true
+        full = true
+        awaitingCheckIn = false
+    }
+
     fun stop(lang: AppLang): Turn {
         val note = (negTurns >= 3 || turns >= 5) && !referred
         active = false; full = false

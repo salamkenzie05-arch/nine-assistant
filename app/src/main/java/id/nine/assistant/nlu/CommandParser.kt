@@ -72,7 +72,7 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
     private fun answersQuestion(c: Command): Boolean = when (c) {
         Command.CurrentTime, Command.CurrentDate, Command.Battery, Command.DeviceInfo, is Command.PhoneInfo, Command.Help,
         Command.WhoAreYou, Command.HowAreYou, Command.TodoList, Command.ReadNotes, Command.ReadMemory, Command.ShowAlarms,
-        Command.AffinityStatus, Command.WhereAmI, is Command.CorrectEnglish, is Command.BetterWord, is Command.EnglishCoach, is Command.Support -> true
+        Command.AffinityStatus, Command.WhereAmI, is Command.CorrectEnglish, is Command.BetterWord, is Command.EnglishCoach, is Command.Support, is Command.Health -> true
         is Command.ShowAgenda, is Command.Calculate, is Command.FinanceReport, is Command.FinanceList,
         is Command.Entertain -> true
         else -> false
@@ -85,6 +85,7 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
         return parseLanguage(raw)
             ?: parseSupport(raw)
             ?: parseCoach(raw)
+            ?: parseHealth(raw)
             ?: parseReset(raw)
             ?: parseControl(raw)
             ?: parseCalc(raw)
@@ -945,6 +946,10 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
         is CoachIntent.BetterWord -> Command.BetterWord(i.word)
         else -> null
     }
+
+    // ------------------------------------------------------------------ pelatih fitness + ahli gizi
+
+    private fun parseHealth(raw: String): Command? = id.nine.assistant.fit.HealthIntent.parse(raw)?.let { Command.Health(it) }
 
     // ------------------------------------------------------------------ teman curhat
 

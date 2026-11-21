@@ -309,6 +309,24 @@
                     android:textColor="@color/nine_on_bg"
                     android:textSize="15sp" />
 
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switchAutoSupport"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="48dp"
+                    android:text="@string/support_auto"
+                    android:textColor="@color/nine_on_bg"
+                    android:textSize="15sp" />
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switchInbodyOcr"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="48dp"
+                    android:text="@string/inbody_ocr"
+                    android:textColor="@color/nine_on_bg"
+                    android:textSize="15sp" />
+
                 <TextView
                     android:id="@+id/txtMemoryCount"
                     style="@style/Nine.Status" />

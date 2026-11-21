@@ -231,6 +231,10 @@ class SettingsActivity : AppCompatActivity() {
         // --- Memori
         binding.switchMemory.isChecked = prefs.autoMemory
         binding.switchMemory.setOnCheckedChangeListener { _, checked -> prefs.autoMemory = checked }
+        binding.switchAutoSupport.isChecked = prefs.autoSupport
+        binding.switchAutoSupport.setOnCheckedChangeListener { _, checked -> prefs.autoSupport = checked }
+        binding.switchInbodyOcr.isChecked = prefs.inbodyOcr
+        binding.switchInbodyOcr.setOnCheckedChangeListener { _, checked -> prefs.inbodyOcr = checked }
         binding.btnMemoryManage.setOnClickListener { showMemoryDialog() }
         binding.btnMemoryClear.setOnClickListener { confirmClearMemory() }
         renderMemory()

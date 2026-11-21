@@ -638,15 +638,17 @@ open class MainActivity : AppCompatActivity(), AssistantController.Ui {
         hideKeyboard()
         binding.inputText.clearFocus()
         val app = applicationContext
+        // Lembar InBody dibaca OCR di perangkat: butuh gambar lebih besar supaya angka kecil tetap terbaca.
+        val inbody = controller.wantsInBodyImage(caption)
         Thread({
-            val file = ImagePrep.prepare(app, uri)
+            val file = ImagePrep.prepare(app, uri, if (inbody) ImagePrep.OCR_SIDE else ImagePrep.MAX_SIDE)
             runOnUiThread {
                 if (isFinishing || isDestroyed) {
                     file?.delete()
                 } else if (file == null) {
                     Toast.makeText(this, R.string.image_failed, Toast.LENGTH_SHORT).show()
                 } else {
-                    controller.submitImage(file.absolutePath, caption)
+                    controller.submitImage(file.absolutePath, caption, inbody)
                 }
             }
         }, "nine-image").start()
