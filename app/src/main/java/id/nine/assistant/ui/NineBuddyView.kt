@@ -1,6 +1,5 @@
 package id.nine.assistant.ui
 
-import android.animation.ValueAnimator
 import android.content.Context
 import android.content.res.Configuration
 import android.graphics.Canvas
@@ -11,9 +10,9 @@ import android.graphics.Shader
 import android.os.SystemClock
 import android.util.AttributeSet
 import android.view.Gravity
-import android.view.animation.LinearInterpolator
 import android.widget.FrameLayout
 import id.nine.assistant.core.Mood
+import id.nine.assistant.core.Perf
 import kotlin.math.max
 import kotlin.math.min
 
@@ -38,7 +37,7 @@ class NineBuddyView @JvmOverloads constructor(
     private val baseX = ArrayList<Float>()
     private val t0 = SystemClock.uptimeMillis()
     private var lastMs = 0L
-    private var animator: ValueAnimator? = null
+    private var running = false
     private val taps = ArrayDeque<Long>()
 
     private val bodyShadow = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -130,8 +129,18 @@ class NineBuddyView @JvmOverloads constructor(
 
     // ------------------------------------------------------------------ animasi
 
-    private fun step() {
-        val nowMs = SystemClock.uptimeMillis()
+    /** Satu langkah animasi, lalu jadwalkan berikutnya: ~60 fps saat ada gerak cepat, ~30 fps saat hanya mengayun pelan. */
+    private val tick = object : Runnable {
+        override fun run() {
+            if (!running) return
+            val start = SystemClock.uptimeMillis()
+            step(start)
+            val pace = if (motion.lively((start - t0) / 1000f)) Perf.Pace.ACTIVE else Perf.Pace.CALM
+            postOnAnimationDelayed(this, Perf.delayFor(Perf.tickMs(pace), SystemClock.uptimeMillis() - start))
+        }
+    }
+
+    private fun step(nowMs: Long) {
         val dt = if (lastMs == 0L) 1f / 60f else (nowMs - lastMs) / 1000f
         lastMs = nowMs
         motion.step((nowMs - t0) / 1000f, dt)
@@ -148,20 +157,15 @@ class NineBuddyView @JvmOverloads constructor(
     }
 
     private fun startAnim() {
-        if (animator != null) return
+        if (running) return
+        running = true
         lastMs = 0L
-        animator = ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = 4000L
-            repeatCount = ValueAnimator.INFINITE
-            interpolator = LinearInterpolator()
-            addUpdateListener { step() }
-            start()
-        }
+        postOnAnimation(tick)
     }
 
     private fun stopAnim() {
-        animator?.cancel()
-        animator = null
+        running = false
+        removeCallbacks(tick)
     }
 
     override fun onAttachedToWindow() {

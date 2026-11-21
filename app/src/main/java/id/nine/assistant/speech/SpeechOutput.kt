@@ -160,8 +160,12 @@ class SpeechOutput(@Suppress("UNUSED_PARAMETER") context: Context, @Suppress("UN
             track = t
             t.write(pcm, 0, pcm.size)
             t.play()
-            while (gen == generation && t.playState == AudioTrack.PLAYSTATE_PLAYING && t.playbackHeadPosition < pcm.size - 1) {
-                Thread.sleep(10)
+            while (gen == generation && t.playState == AudioTrack.PLAYSTATE_PLAYING) {
+                val head = t.playbackHeadPosition
+                if (head >= pcm.size - 1) break
+                // Tidur lebih lama saat masih jauh dari ujung (hemat CPU), dan makin rapat menjelang selesai agar jeda antarkalimat tetap rapat.
+                val remainMs = (pcm.size - head) * 1000L / rate
+                Thread.sleep(remainMs.coerceIn(5L, 40L))
             }
         } catch (e: Exception) {
             main.post { if (gen == generation) onNotice("Suara tidak bisa diputar / Sound could not be played.") }

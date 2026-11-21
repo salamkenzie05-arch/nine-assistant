@@ -85,6 +85,7 @@
     <string name="wake_turn_off">Turn off</string>
     <string name="wake_loading">Preparing the wake detector…</string>
     <string name="wake_no_model">The wake-phrase model is missing from this APK.</string>
+    <string name="wake_hot">Phone is hot, listening paused for now</string>
     <string name="wake_error">Wake phrase error: %1$s</string>
     <string name="wake_tap_to_talk">Yes, sir? Tap to talk.</string>
 
@@ -195,9 +196,6 @@
     <string name="spaces_delete_q">Delete \"%1$s\" and its chat?</string>
     <string name="spaces_back_cd">Back to main chat</string>
     <string name="nine_top">Top level</string>
-    <string name="nine_custom_personality">Persona</string>
-    <string name="nine_custom_outfit">Outfit</string>
-    <string name="nine_custom_voice">Voice</string>
     <string name="sec_loc_cal">Location &amp; calendar</string>
     <string name="nine_streak_label">Day streak</string>
     <string name="nine_lv">LV</string>
@@ -212,7 +210,6 @@
     <string name="nine_xp_fmt">%1$d/%2$d XP</string>
     <string name="nine_hint_streak">Chat daily to keep your streak.</string>
     <string name="nine_hint_days">%1$d more days to the next level.</string>
-    <string name="nine_soon">Coming soon</string>
     <string name="fin_tab_recap">Recap</string>
     <string name="fin_tab_list">History</string>
     <string name="fin_recap">Recap</string>

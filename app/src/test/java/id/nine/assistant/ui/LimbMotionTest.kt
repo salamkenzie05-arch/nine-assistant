@@ -135,4 +135,34 @@ class LimbMotionTest {
             assertEquals(a.limbs[i].y, b.limbs[i].y, 1e-4f)
         }
     }
+
+    @Test
+    fun livelyHanyaSaatAdaGerakCepat() {
+        val m = LimbMotion(autoGestures = false)
+        run(m, 0f, 5f)
+        assertTrue("diam saja bukan lively", !m.lively(5f))
+        // Lompatan: lively selama lompat + tertinggal + mengendap, lalu tenang lagi.
+        m.hop(5f)
+        run(m, 5f, 5.5f)
+        assertTrue(m.lively(5.5f))
+        run(m, 5.5f, 8f)
+        assertTrue("setelah mengendap tenang lagi", !m.lively(8f))
+        // Suasana hati: lively selama suasana hati dan sesaat sesudahnya.
+        m.setMood(Mood.HAPPY, 8f, 1500)
+        run(m, 8f, 9f)
+        assertTrue(m.lively(9f))
+        run(m, 9f, 14f)
+        assertTrue("suasana hati sudah lewat", !m.lively(14f))
+    }
+
+    @Test
+    fun livelyMenyalaSaatGesturAcak() {
+        val m = LimbMotion(seed = 3L)
+        var livelyFrames = 0
+        var calmFrames = 0
+        run(m, 0f, 120f) { t -> if (m.lively(t)) livelyFrames++ else calmFrames++ }
+        // Gestur acak terjadi tapi sebagian besar waktu gerak hanya ayunan pelan (hemat gambar).
+        assertTrue(livelyFrames > 0)
+        assertTrue("terlalu sering lively: $livelyFrames vs $calmFrames", calmFrames > livelyFrames / 2)
+    }
 }

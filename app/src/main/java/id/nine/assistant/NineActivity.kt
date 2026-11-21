@@ -4,7 +4,6 @@ import android.content.res.Configuration
 import android.os.Bundle
 import android.view.View
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
@@ -19,7 +18,7 @@ import java.time.LocalDate
 
 /**
  * Layar "Nine" (gaya halaman streak): hari beruntun, level, Nine dengan tangan dan kaki berupa bola melayang,
- * bar XP, cara menumbuhkan kedekatan, dan tempat kustomisasi (sifat, pakaian, suara) yang disiapkan untuk nanti.
+ * bar XP, dan cara menumbuhkan kedekatan.
  */
 class NineActivity : AppCompatActivity() {
 
@@ -32,10 +31,6 @@ class NineActivity : AppCompatActivity() {
         setContentView(binding.root)
         setupInsets()
         binding.btnBack.setOnClickListener { finish() }
-        val soon = View.OnClickListener { Toast.makeText(this, R.string.nine_soon, Toast.LENGTH_SHORT).show() }
-        binding.chipPersonality.setOnClickListener(soon)
-        binding.chipOutfit.setOnClickListener(soon)
-        binding.chipVoice.setOnClickListener(soon)
     }
 
     override fun onResume() {

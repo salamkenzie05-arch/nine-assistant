@@ -6,11 +6,14 @@ import android.content.ComponentCallbacks2
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.os.Build
+import android.os.PowerManager
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
 import id.nine.assistant.alarm.AlarmRingService
 import id.nine.assistant.alarm.AlarmScheduler
 import id.nine.assistant.core.ConversationLog
+import id.nine.assistant.core.Perf
 import id.nine.assistant.core.Prefs
 import id.nine.assistant.llm.GeminiClient
 import id.nine.assistant.llm.LlmBrain
@@ -80,12 +83,36 @@ class NineApp : Application() {
             addAction(Intent.ACTION_POWER_DISCONNECTED)
             addAction(Intent.ACTION_BATTERY_LOW)
             addAction(Intent.ACTION_BATTERY_OKAY)
+            addAction(PowerManager.ACTION_POWER_SAVE_MODE_CHANGED)
         }
         ContextCompat.registerReceiver(this, object : BroadcastReceiver() {
             override fun onReceive(c: Context, i: Intent) {
+                if (i.action == PowerManager.ACTION_POWER_SAVE_MODE_CHANGED) {
+                    Perf.saver = getSystemService(PowerManager::class.java)?.isPowerSaveMode == true
+                }
                 WidgetUpdater.refresh(c)
             }
         }, power, ContextCompat.RECEIVER_NOT_EXPORTED)
+        watchHeat()
+    }
+
+    /**
+     * Pantau Hemat Daya dan suhu HP: saat Hemat Daya menyala atau HP hangat/panas, animasi di layar digambar lebih jarang
+     * ([Perf]) dan widget berhenti beranimasi, supaya Nine tidak ikut menambah panas.
+     */
+    private fun watchHeat() {
+        val pm = getSystemService(PowerManager::class.java) ?: return
+        Perf.saver = pm.isPowerSaveMode
+        if (Build.VERSION.SDK_INT < 29) return
+        try {
+            Perf.thermal = Perf.thermalLevel(pm.currentThermalStatus)
+            pm.addThermalStatusListener(ContextCompat.getMainExecutor(this)) { status ->
+                Perf.thermal = Perf.thermalLevel(status)
+                WidgetUpdater.refreshFace(this) // hanya menggambar ulang bila mode diam berubah
+            }
+        } catch (e: Exception) {
+            // tanpa pemantau suhu, hanya batas laju biasa yang berlaku
+        }
     }
 
     @Suppress("DEPRECATION")

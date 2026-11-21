@@ -146,33 +146,6 @@
                 android:layout_width="match_parent"
                 android:layout_height="300dp" />
 
-            <!-- Tempat kustomisasi (belum aktif) -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:gravity="center"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:id="@+id/chipPersonality"
-                    style="@style/Nine.Chip"
-                    android:drawableStart="@drawable/ic_persona"
-                    android:text="@string/nine_custom_personality" />
-
-                <TextView
-                    android:id="@+id/chipOutfit"
-                    style="@style/Nine.Chip"
-                    android:drawableStart="@drawable/ic_outfit"
-                    android:text="@string/nine_custom_outfit" />
-
-                <TextView
-                    android:id="@+id/chipVoice"
-                    style="@style/Nine.Chip"
-                    android:drawableStart="@drawable/ic_voice"
-                    android:text="@string/nine_custom_voice" />
-            </LinearLayout>
-
             <!-- Bar XP -->
             <FrameLayout
                 android:layout_width="match_parent"

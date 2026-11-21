@@ -12,6 +12,7 @@ import android.os.SystemClock
 import android.util.AttributeSet
 import android.view.View
 import id.nine.assistant.audio.BeatAnalyzer
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 
@@ -134,7 +135,10 @@ class EdgeGlowView @JvmOverloads constructor(
             paint.alpha = (255 * LAYER_ALPHA[i] * current).toInt().coerceIn(0, 255)
             canvas.drawRoundRect(rect, corner, corner, paint)
         }
-        Perf.next(this)
+        // Gerakan cepat / musik / suara masuk → 60 fps; putaran pelan yang stabil cukup ~30 fps.
+        val lively = music || beatPulse > 0.02f || spin > 90f ||
+            abs(eff - current) > 0.01f || abs(targetLevel - level) > 0.01f
+        Perf.next(this, if (lively) Perf.Pace.ACTIVE else Perf.Pace.CALM, now)
     }
 
     private companion object {

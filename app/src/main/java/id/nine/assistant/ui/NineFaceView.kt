@@ -666,8 +666,33 @@ class NineFaceView @JvmOverloads constructor(
             for (i in 0 until 12) canvas.drawArc(rect, -ringAngle * 0.6f + i * 30f, 12f, false, ringPaint)
         }
 
-        if (isShown) Perf.next(this)
+        if (isShown) Perf.next(this, paceNow(now), now)
     }
+
+    /**
+     * Seberapa sering wajah perlu digambar. Saat ada sesuatu yang bergerak cepat (bicara, sentuhan,
+     * ekspresi, musik, lirikan yang belum selesai) → 60 fps. Saat hanya "bernapas" → ~30 fps.
+     * Saat mengantuk atau baterai lemah (nyaris tak bergerak) → ~20 fps.
+     */
+    private fun paceNow(now: Long): Perf.Pace {
+        if (mode != Mode.IDLE || touching) return Perf.Pace.ACTIVE
+        if (hop > 0.02f || shake > 0.02f || beatPulse > 0.02f || tremble > 0.02f) return Perf.Pace.ACTIVE
+        if (musicOn(now) || musicLevel > 0.02f) return Perf.Pace.ACTIVE
+        if (activeMood(now) != null || blinkStart >= 0L) return Perf.Pace.ACTIVE
+        if (now - lastActivity < 1500L) return Perf.Pace.ACTIVE
+        if (abs(ringAlpha - 0.18f) > 0.02f && showRing) return Perf.Pace.ACTIVE
+        if (!settled()) return Perf.Pace.ACTIVE
+        return if (sleepyNow(now) || lowBattery()) Perf.Pace.SLEEP else Perf.Pace.CALM
+    }
+
+    /** True bila mata, lirikan, dan kemiringan sudah sampai di tujuan (tidak ada gerakan yang perlu mulus). */
+    private fun settled(): Boolean =
+        abs(gazeX - tGazeX) + abs(gazeY - tGazeY) < 0.03f &&
+            abs(faceTilt - tFaceTilt) < 0.3f &&
+            abs(left.sx - tl.sx) + abs(left.sy - tl.sy) + abs(left.lid - tl.lid) +
+            abs(left.happy - tl.happy) + abs(left.heart - tl.heart) + abs(left.chevron - tl.chevron) < 0.04f &&
+            abs(right.sx - tr.sx) + abs(right.sy - tr.sy) + abs(right.lid - tr.lid) +
+            abs(right.happy - tr.happy) + abs(right.heart - tr.heart) + abs(right.chevron - tr.chevron) < 0.04f
 
     private fun drawEye(canvas: Canvas, ex: Float, ey: Float, r: Float, e: Eye, blink: Float, isLeft: Boolean, color: Int) {
         val baseW = r * 0.33f

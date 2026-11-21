@@ -108,6 +108,17 @@ class LimbMotion(seed: Long = 9L, private val autoGestures: Boolean = true) {
         moodUntil = now + ms / 1000f
     }
 
+    /**
+     * True bila ada gerak cepat yang perlu digambar mulus (lompat, gestur, suasana hati). Ayunan diam saja
+     * pelan (maks. beberapa dp per detik), jadi cukup digambar ~30 fps; ini dipakai untuk memilih laju gambar.
+     */
+    fun lively(now: Float): Boolean {
+        if (now - hopAt < HOP_T + 0.7f) return true // lompatan + tertinggalnya tangan/kaki + mengendap
+        if (moodW > 0.01f) return true
+        for (l in limbs) if (l.kind != Gesture.NONE) return true
+        return false
+    }
+
     /** Majukan simulasi ke waktu [now] (detik) dengan selang [dtRaw] detik. */
     fun step(now: Float, dtRaw: Float) {
         val dt = dtRaw.coerceIn(0f, 0.05f)

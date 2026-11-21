@@ -7,11 +7,13 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
+import android.os.PowerManager
 import android.view.View
 import android.widget.RemoteViews
 import id.nine.assistant.MainActivity
 import id.nine.assistant.R
 import id.nine.assistant.TodoActivity
+import id.nine.assistant.core.Perf
 import id.nine.assistant.core.Prefs
 import id.nine.assistant.skills.TodoStore
 import java.time.LocalDate
@@ -38,14 +40,31 @@ object WidgetUpdater {
     @Volatile
     private var lastFace: Face? = null
 
-    /** Perbarui widget hanya bila ekspresinya berubah (agar animasi tidak terus diulang dari awal). */
+    @Volatile
+    private var lastStill: Boolean? = null
+
+    /**
+     * Widget diam (satu bingkai, tanpa animasi) saat mode Hemat Daya menyala atau HP mulai hangat. Animasi widget digambar
+     * ulang oleh launcher belasan kali per detik selama layar utama terlihat, jadi ini penghematan nyata di saat baterai/suhu kritis.
+     */
+    fun still(ctx: Context): Boolean {
+        val saver = try {
+            ctx.applicationContext.getSystemService(PowerManager::class.java)?.isPowerSaveMode == true
+        } catch (e: Exception) {
+            false
+        }
+        return saver || Perf.thermal >= 1
+    }
+
+    /** Perbarui widget hanya bila ekspresinya (atau mode diam) berubah, agar animasi tidak terus diulang dari awal. */
     fun refreshFace(ctx: Context) {
-        if (face(ctx) != lastFace) refresh(ctx)
+        if (face(ctx) != lastFace || still(ctx) != lastStill) refresh(ctx)
     }
 
     fun refresh(ctx: Context) {
         val app = ctx.applicationContext
         lastFace = face(app)
+        lastStill = still(app)
         val mgr = AppWidgetManager.getInstance(app) ?: return
         try {
             val orbIds = mgr.getAppWidgetIds(ComponentName(app, OrbWidgetProvider::class.java))
@@ -134,6 +153,18 @@ object WidgetUpdater {
             hold("lowbatblink", 420) + hold("lowbat1", 700) + hold("lowbat2", 700)
     }
 
+    /** Bingkai tunggal untuk mode diam: ekspresi yang sama dengan awal animasinya. */
+    private fun stillFrame(f: Face): String = when (f) {
+        Face.NEUTRAL -> "neutral"
+        Face.HAPPY -> "happy"
+        Face.SLEEPY -> "sleepy1"
+        Face.CHARGING -> "charge1"
+        Face.LOWBAT -> "lowbat1"
+    }
+
+    /** Nama bingkai yang dimasukkan ke ViewFlipper: satu bingkai bila [still], selain itu urutan animasi penuh. */
+    internal fun frameNames(f: Face, still: Boolean): List<String> = if (still) listOf(stillFrame(f)) else sequence(f)
+
     /**
      * Warna wajah widget mengikuti warna Nine di aplikasi: tema Terang -> "light", Gelap -> "dark",
      * Ikuti sistem -> "auto" (terang/gelap mengikuti mode gelap sistem).
@@ -152,7 +183,7 @@ object WidgetUpdater {
             else -> FaceFrames.LIGHT
         }
         views.removeAllViews(flipperId)
-        for (name in sequence(face)) {
+        for (name in frameNames(face, still(ctx))) {
             val frame = RemoteViews(ctx.packageName, R.layout.widget_face_frame)
             frame.setImageViewResource(R.id.faceFrame, table[name] ?: table.getValue("neutral"))
             views.addView(flipperId, frame)

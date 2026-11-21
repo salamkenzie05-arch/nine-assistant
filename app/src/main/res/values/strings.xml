@@ -85,6 +85,7 @@
     <string name="wake_turn_off">Matikan</string>
     <string name="wake_loading">Menyiapkan pendeteksi suara…</string>
     <string name="wake_no_model">Model kata pemanggil tidak ada di APK ini.</string>
+    <string name="wake_hot">HP sedang panas, pendengar dijeda sementara</string>
     <string name="wake_error">Kata pemanggil error: %1$s</string>
     <string name="wake_tap_to_talk">Ya, Tuan? Ketuk untuk bicara.</string>
 
@@ -195,9 +196,6 @@
     <string name="spaces_delete_q">Hapus \"%1$s\" beserta obrolannya?</string>
     <string name="spaces_back_cd">Kembali ke obrolan utama</string>
     <string name="nine_top">Level tertinggi</string>
-    <string name="nine_custom_personality">Sifat</string>
-    <string name="nine_custom_outfit">Pakaian</string>
-    <string name="nine_custom_voice">Suara</string>
     <string name="sec_loc_cal">Lokasi &amp; kalender</string>
     <string name="nine_streak_label">Hari beruntun</string>
     <string name="nine_lv">LV</string>
@@ -212,7 +210,6 @@
     <string name="nine_xp_fmt">%1$d/%2$d XP</string>
     <string name="nine_hint_streak">Mengobrol tiap hari menjaga hari beruntun.</string>
     <string name="nine_hint_days">Level berikutnya butuh %1$d hari lagi.</string>
-    <string name="nine_soon">Segera hadir</string>
     <string name="fin_tab_recap">Rekap</string>
     <string name="fin_tab_list">Riwayat</string>
     <string name="fin_recap">Rekap keuangan</string>
