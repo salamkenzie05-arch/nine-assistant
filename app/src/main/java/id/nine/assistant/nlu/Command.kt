@@ -231,6 +231,10 @@ sealed class Command {
     /** Mulai ([on] = true) atau akhiri sesi latihan bahasa Inggris. */
     data class EnglishCoach(val on: Boolean) : Command()
 
+    // --- Teman curhat (aturan lokal; AI lokal hanya bila terpasang)
+    /** Mulai ([on] = true, opsional langsung dengan latihan menenangkan diri) atau akhiri sesi curhat. */
+    data class Support(val on: Boolean, val exercise: id.nine.assistant.support.SupportIntent.Exercise? = null) : Command()
+
     /** "correct my sentence: ..." — periksa satu kalimat tanpa memulai sesi. */
     data class CorrectEnglish(val sentence: String) : Command()
 

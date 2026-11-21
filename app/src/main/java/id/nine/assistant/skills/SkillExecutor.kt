@@ -299,6 +299,8 @@ class SkillExecutor(
         is Command.BetterWord -> SkillResult(CoachFeedback.betterWordReply(cmd.word, lang))
         // Sesi latihan dikendalikan AssistantController (butuh status percakapan); di sini hanya jaring pengaman.
         is Command.EnglishCoach -> SkillResult(lang.t("Latihan bahasa Inggris dijalankan dari obrolan utama.", "English practice runs from the main chat."))
+        // Sesi curhat dikendalikan AssistantController (butuh status percakapan); di sini hanya jaring pengaman.
+        is Command.Support -> SkillResult(lang.t("Mode curhat dijalankan dari obrolan utama.", "Venting mode runs from the main chat."))
         Command.WhereAmI -> whereAmI(lang, denied)
         is Command.MediaControl -> mediaControl(cmd, lang)
         is Command.CallControl -> callControl(cmd, lang, denied)
@@ -2192,6 +2194,7 @@ class SkillExecutor(
             "• \"Gombalin dong\" / \"Pantun\" / \"Kata bijak\" / \"Nyanyi lagu bar droid\"\n" +
             "• \"Panggil saya Tuan\" / \"Status affinity\" / tombol + di kolom ketik untuk kirim gambar\n" +
             "• \"Jadi mentor bahasa Inggris saya\" (koreksi grammar & saran kata, offline) / \"Koreksi kalimat saya: i goes to school\" / \"Kata lain dari good\"\n" +
+            "• \"Aku mau curhat\" (teman curhat yang mendengarkan; bukan psikolog, tidak disimpan) / \"Latihan napas\"\n" +
             "• \"Ganti bahasa ke Inggris\" / \"Lupakan percakapan\"",
         "Here are some things I can do:\n" +
             "• Chat or ask me anything (needs the AI brain in Settings)\n" +
@@ -2218,6 +2221,7 @@ class SkillExecutor(
             "• \"Flirt with me\" / \"Pantun\" / \"A wise quote\" / \"Sing the bar droid song\"\n" +
             "• \"Call me Sir\" / \"Affinity status\" / the + button in the typing bar sends an image\n" +
             "• \"Be my English mentor\" (grammar fixes & better words, offline) / \"Correct my sentence: i goes to school\" / \"Another word for good\"\n" +
+            "• \"I need to vent\" (a listening companion; not a psychologist, not saved) / \"Breathing exercise\"\n" +
             "• \"Switch language to Indonesian\" / \"Forget our conversation\""
     )
 }

@@ -2,7 +2,11 @@ package id.nine.assistant.core
 
 /** Riwayat percakapan di memori (tidak disimpan ke disk). */
 class ConversationLog {
-    data class Entry(val fromUser: Boolean, var text: String)
+    /**
+     * [private] = isi curhat/krisis: tetap tampil di layar, tetapi TIDAK disimpan ke ruang obrolan dan TIDAK dikirim
+     * ke AI sebagai riwayat.
+     */
+    data class Entry(val fromUser: Boolean, var text: String, var private: Boolean = false)
 
     interface Listener {
         fun onAdded(index: Int)
@@ -22,11 +26,16 @@ class ConversationLog {
         listeners.remove(l)
     }
 
-    fun add(fromUser: Boolean, text: String): Int {
-        entries.add(Entry(fromUser, text))
+    fun add(fromUser: Boolean, text: String, private: Boolean = false): Int {
+        entries.add(Entry(fromUser, text, private))
         val i = entries.size - 1
         for (l in listeners.toList()) l.onAdded(i)
         return i
+    }
+
+    /** Tandai entri sebagai pribadi (curhat/krisis). */
+    fun markPrivate(index: Int) {
+        if (index in entries.indices) entries[index].private = true
     }
 
     fun update(index: Int, text: String) {

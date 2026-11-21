@@ -38,7 +38,8 @@ class SpaceSession(private val store: SpaceStore, private val log: ConversationL
     fun flush() {
         handler.removeCallbacks(saveRunnable)
         if (currentId.isEmpty() || switching) return
-        store.save(currentId, log.entries.map { SpaceStore.Msg(it.fromUser, it.text) })
+        // Entri pribadi (curhat/krisis) tidak pernah ikut tersimpan.
+        store.save(currentId, log.entries.filter { !it.private }.map { SpaceStore.Msg(it.fromUser, it.text) })
     }
 
     /**
@@ -59,7 +60,7 @@ class SpaceSession(private val store: SpaceStore, private val log: ConversationL
             log.clear()
             currentId = want
             if (want.isEmpty()) {
-                for (e in stash) log.add(e.fromUser, e.text)
+                for (e in stash) log.add(e.fromUser, e.text, e.private)
                 stash = emptyList()
             } else {
                 for (m in store.load(want)) log.add(m.fromUser, m.text)

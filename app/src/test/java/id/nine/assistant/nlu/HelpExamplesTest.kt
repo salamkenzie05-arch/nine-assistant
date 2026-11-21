@@ -44,6 +44,12 @@ class HelpExamplesTest {
     }
 
     @Test
+    fun temanCurhat() {
+        expect("Support", "Aku mau curhat", "Latihan napas", "I need to vent", "Breathing exercise")
+        done()
+    }
+
+    @Test
     fun mentorBahasaInggris() {
         expect("EnglishCoach", "Jadi mentor bahasa Inggris saya", "Be my English mentor")
         expect("CorrectEnglish", "Koreksi kalimat saya: i goes to school", "Correct my sentence: i goes to school")
