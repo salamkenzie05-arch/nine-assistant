@@ -202,4 +202,5 @@
     <string name="voice_droid">Droid</string>
     <string name="voice_female">Wanita</string>
     <string name="voice_male">Pria</string>
+    <string name="version_label" translatable="false">Nine BETA 1.0</string>
 </resources>

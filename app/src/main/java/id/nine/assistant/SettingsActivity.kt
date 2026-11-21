@@ -203,11 +203,8 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
-        binding.txtVersion.text = "Nine " + try {
-            packageManager.getPackageInfo(packageName, 0).versionName
-        } catch (e: Exception) {
-            ""
-        }
+        // Hanya "BETA 1.0": tanpa nomor build dan tanpa nama edisi.
+        binding.txtVersion.setText(R.string.version_label)
 
     }
 
