@@ -10,16 +10,17 @@ import android.graphics.RadialGradient
 import android.graphics.Shader
 import android.os.SystemClock
 import android.util.AttributeSet
+import android.view.Gravity
 import android.view.animation.LinearInterpolator
 import android.widget.FrameLayout
 import id.nine.assistant.core.Mood
-import kotlin.math.PI
-import kotlin.math.sin
+import kotlin.math.max
+import kotlin.math.min
 
 /**
  * Nine utuh untuk layar Nine: badan berupa wajah bulat ([face]) dengan dua tangan dan dua kaki berupa bola kecil yang
- * melayang tanpa sambungan. Tangan dan kaki melayang pelan; mengetuk badan membuat mereka melompat kecil.
- * Animasi hanya berjalan saat tampil di layar.
+ * melayang tanpa sambungan. Gerak tangan dan kaki dihitung oleh [LimbMotion] (pegas, gestur acak, ikut suasana hati,
+ * melompat saat diketuk). Animasi hanya berjalan saat tampil di layar.
  */
 class NineBuddyView @JvmOverloads constructor(
     context: Context,
@@ -31,98 +32,124 @@ class NineBuddyView @JvmOverloads constructor(
         showRing = false
     }
 
-    private class Limb(
-        val view: SphereView,
-        val baseX: Float,
-        val phase: Float,
-        val period: Float,
-        val ampY: Float,
-        val ampX: Float,
-        val hop: Float
-    )
-
     private val d = resources.displayMetrics.density
-    private val limbs = ArrayList<Limb>()
-    private var hopStart = 0L
+    private val motion = LimbMotion()
+    private val limbViews = ArrayList<SphereView>()
+    private val baseX = ArrayList<Float>()
+    private val t0 = SystemClock.uptimeMillis()
+    private var lastMs = 0L
     private var animator: ValueAnimator? = null
+    private val taps = ArrayDeque<Long>()
 
-    private val shadowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val bodyShadow = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val footShadow = Paint(Paint.ANTI_ALIAS_FLAG)
     private var shadowKey = -1
 
     private fun dp(v: Float) = v * d
+
+    private fun nowSec(): Float = (SystemClock.uptimeMillis() - t0) / 1000f
+
+    private fun isDarkTheme(): Boolean =
+        (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
 
     init {
         clipChildren = false
         clipToPadding = false
 
         val faceSize = dp(230f).toInt()
-        addView(face, LayoutParams(faceSize, faceSize, android.view.Gravity.TOP or android.view.Gravity.CENTER_HORIZONTAL).apply {
+        addView(face, LayoutParams(faceSize, faceSize, Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply {
             topMargin = dp(8f).toInt()
         })
         face.contentDescription = null
         face.setOnClickListener {
-            hopStart = SystemClock.uptimeMillis()
+            val now = nowSec()
+            motion.hop(now)
+            // Diketuk berkali-kali: kesal (wajah juga ikut kesal), kaki menghentak.
+            val ms = SystemClock.uptimeMillis()
+            taps.addLast(ms)
+            while (taps.isNotEmpty() && ms - taps.first() > 2200) taps.removeFirst()
+            if (taps.size >= 4) motion.setMood(Mood.ANNOYED, now, 1800)
         }
 
-        // Tangan (kiri/kanan) di sisi badan, kaki (kiri/kanan) di bawahnya. Posisi dasar = translasi dari tengah atas.
-        addLimb(46f, -110f, 150f, 0.0f, 3.4f, 5f, 3f, 20f)
-        addLimb(46f, 110f, 150f, 2.1f, 3.8f, 5f, 3f, 20f)
-        addLimb(52f, -42f, 238f, 1.0f, 3.1f, 4f, 2f, 8f)
-        addLimb(52f, 42f, 238f, 3.3f, 3.6f, 4f, 2f, 8f)
+        // Urutan harus sama dengan LimbMotion.limbs: tangan kiri, tangan kanan, kaki kiri, kaki kanan.
+        // (diameter bola, x dari tengah, pusat y dari atas, semuanya dp)
+        addLimb(46f, -110f, 150f)
+        addLimb(46f, 110f, 150f)
+        addLimb(52f, -42f, 238f)
+        addLimb(52f, 42f, 238f)
     }
 
-    private fun addLimb(size: Float, x: Float, centerY: Float, phase: Float, period: Float, ampY: Float, ampX: Float, hop: Float) {
+    private fun addLimb(diameter: Float, x: Float, centerY: Float) {
         val v = SphereView(context)
-        val px = dp(size).toInt()
-        addView(v, LayoutParams(px, px, android.view.Gravity.TOP or android.view.Gravity.CENTER_HORIZONTAL).apply {
+        val px = dp(diameter * SphereView.PAD).toInt()
+        addView(v, LayoutParams(px, px, Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply {
             topMargin = (dp(centerY) - px / 2f).toInt()
         })
-        limbs += Limb(v, dp(x), phase, period, dp(ampY), dp(ampX), dp(hop))
+        limbViews += v
+        baseX += dp(x)
         v.translationX = dp(x)
     }
 
-    private fun isDarkTheme(): Boolean =
-        (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-
     override fun dispatchDraw(canvas: Canvas) {
         if (!isDarkTheme()) {
-            // Bayangan lembut di "lantai" di bawah kaki.
-            val key = width
-            if (key != shadowKey) {
-                shadowKey = key
-                shadowPaint.shader = RadialGradient(0f, 0f, 1f, intArrayOf(Color.argb(60, 11, 18, 32), Color.TRANSPARENT), null, Shader.TileMode.CLAMP)
+            // Bayangan lembut di "lantai": satu di bawah badan, satu kecil di bawah tiap kaki (mengecil saat kaki terangkat).
+            if (width != shadowKey) {
+                shadowKey = width
+                val g = RadialGradient(0f, 0f, 1f, intArrayOf(Color.argb(60, 11, 18, 32), Color.TRANSPARENT), null, Shader.TileMode.CLAMP)
+                bodyShadow.shader = g
+                footShadow.shader = g
             }
-            val t = SystemClock.uptimeMillis() / 1000f
-            val breathe = 1f + 0.05f * sin(2f * PI.toFloat() * t / 3.4f)
+            val floorY = dp(284f)
+            val breathe = 1f + 0.05f * kotlin.math.sin(2f * Math.PI.toFloat() * nowSec() / 3.4f)
+            bodyShadow.alpha = 150
             canvas.save()
-            canvas.translate(width / 2f, dp(282f))
+            canvas.translate(width / 2f, floorY)
             canvas.scale(dp(78f) * breathe, dp(9f) * breathe)
-            canvas.drawCircle(0f, 0f, 1f, shadowPaint)
+            canvas.drawCircle(0f, 0f, 1f, bodyShadow)
             canvas.restore()
+            for (i in 2..3) {
+                val l = motion.limbs[i]
+                val lift = max(0f, -l.y)
+                val sc = 1f / (1f + lift / 30f)
+                footShadow.alpha = (255f * min(1f, sc + 0.1f)).toInt()
+                canvas.save()
+                canvas.translate(width / 2f + baseX[i] + l.x * d, floorY)
+                canvas.scale(dp(24f) * sc, dp(5f) * sc)
+                canvas.drawCircle(0f, 0f, 1f, footShadow)
+                canvas.restore()
+            }
         }
         super.dispatchDraw(canvas)
     }
 
-    /** Ekspresi sesaat pada wajah (mis. saat layar dibuka). */
-    fun react(mood: Mood, ms: Long = 1800) = face.react(mood, ms)
+    /** Ekspresi sesaat pada wajah dan gerak tubuh yang sesuai (mis. saat layar dibuka). */
+    fun react(mood: Mood, ms: Long = 1800) {
+        face.react(mood, ms)
+        motion.setMood(mood, nowSec(), ms)
+    }
 
     // ------------------------------------------------------------------ animasi
 
     private fun step() {
-        val now = SystemClock.uptimeMillis()
-        val t = now / 1000f
-        val hopK = ((now - hopStart) / 650f).coerceIn(0f, 1f)
-        val hopWave = if (hopStart == 0L || hopK >= 1f) 0f else sin(PI.toFloat() * hopK)
-        for (l in limbs) {
-            val w = 2f * PI.toFloat() * t / l.period + l.phase
-            l.view.translationY = l.ampY * sin(w) - l.hop * hopWave
-            l.view.translationX = l.baseX + l.ampX * sin(w * 0.77f)
+        val nowMs = SystemClock.uptimeMillis()
+        val dt = if (lastMs == 0L) 1f / 60f else (nowMs - lastMs) / 1000f
+        lastMs = nowMs
+        motion.step((nowMs - t0) / 1000f, dt)
+        face.translationY = motion.bodyY * d
+        for (i in limbViews.indices) {
+            val l = motion.limbs[i]
+            val v = limbViews[i]
+            v.translationX = baseX[i] + l.x * d
+            v.translationY = l.y * d
+            v.scaleX = l.scaleX
+            v.scaleY = l.scaleY
         }
-        if (!isDarkTheme()) invalidate() // bayangan lantai (hanya tema terang) ikut bernapas
+        if (!isDarkTheme()) invalidate() // bayangan lantai (hanya tema terang) ikut bergerak
     }
 
     private fun startAnim() {
         if (animator != null) return
+        lastMs = 0L
         animator = ValueAnimator.ofFloat(0f, 1f).apply {
             duration = 4000L
             repeatCount = ValueAnimator.INFINITE

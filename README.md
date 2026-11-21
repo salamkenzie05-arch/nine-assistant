@@ -17,7 +17,7 @@ Nine adalah asisten suara seperti Siri yang berjalan **sepenuhnya di perangkat**
 
 - **Tombol menu di kanan orb** (menggantikan pintasan tugas): Laporan keuangan, Tugas hari ini, Ruang obrolan, dan Nine.
 - **Ruang obrolan** (seperti "projects"): tiap ruang punya nama, instruksi opsional untuk Nine, dan riwayat obrolannya sendiri; membukanya tidak bercampur dengan obrolan utama. Disimpan di penyimpanan pribadi aplikasi (**tidak dienkripsi**, tidak ikut cadangan); maksimal 20 ruang, 120 pesan per ruang. Nama dan instruksi ruang ikut dikirim ke AI selama kamu mengobrol di ruang itu (ke Gemini bila mode internet dipakai). Setiap kali aplikasi dimulai ulang, yang terbuka adalah obrolan utama.
-- **Layar Nine** (gaya halaman streak): hari beruntun, level, Nine dengan gelembung ucapan, bar XP, dan daftar cara menumbuhkan kedekatan. Tangan dan kaki Nine berupa **empat bola melayang** (dua tangan, dua kaki) yang bergerak pelan dan melompat saat Nine diketuk. Tombol **Sifat, Pakaian, Suara** hanya tempat kosong untuk nanti (menampilkan "Segera hadir").
+- **Layar Nine** (gaya halaman streak): hari beruntun, level, Nine dengan gelembung ucapan, bar XP, dan daftar cara menumbuhkan kedekatan. Tangan dan kaki Nine berupa **empat bola melayang** (dua tangan, dua kaki) bertekstur sama dengan orb (gradien, tepi, bayangan, cahaya emas tipis). Geraknya berbasis pegas (`LimbMotion`): berayun pelan dengan periode berbeda-beda, kadang melambai, merentang, bersorak, mengetuk, menggeser, atau menendang, ikut suasana hati Nine, dan melompat saat Nine diketuk. Tombol **Sifat, Pakaian, Suara** hanya tempat kosong untuk nanti (menampilkan "Segera hadir").
 - **Layar Keuangan** (gaya rekap bank): tab Rekap dan Riwayat, pilihan periode (hari ini, minggu, bulan, semua), ringkasan pemasukan, pengeluaran, dan selisih, grafik batang per jenis, dan kategori dengan persen (dibulatkan agar total tepat 100%).
 - **Kejutan harian (side quest)**: paling banyak satu per hari, muncul sebagai ajakan santai dari Nine (misalnya menawarkan bernyanyi), bukan sebagai tugas. Memakai fitur itu, lewat ajakan atau sendiri, menambah kedekatan sedikit; menolak tidak apa-apa. Berhenti muncul setelah semua fitur ditemukan.
 - **Tanya info HP**: sisa penyimpanan, RAM, tipe HP, versi Android, status Wi-Fi/Bluetooth/jaringan, kesehatan/suhu baterai, uptime, volume, layar, prosesor. Tidak membaca nomor IMEI, serial, MAC, atau nama jaringan. Status Wi-Fi/Bluetooth bergantung pada pengaturan sistem; bila tidak bisa dipastikan, Nine bilang begitu.
@@ -136,7 +136,7 @@ Internet hanya dipakai untuk mengunduh model. Percakapan, suara, dan catatan tid
 | `audio/` | Deteksi nada (YIN) + tuner gitar, analisis ketukan musik, daftar lagu |
 | `a11y/` | Layanan aksesibilitas: ubin pengaturan cepat, YouTube Music, tutup semua aplikasi. Kode aslinya ada di `src/full/`; `src/lite/` berisi stub kosong dengan API sama (`AVAILABLE = false`) |
 | `call/` | Terima/tolak telepon masuk |
-| `ui/` | `NineOrbView`, `EdgeGlowView`, `SphereView` + `NineBuddyView` (Nine dengan tangan dan kaki bola), `FinBarsView` (grafik batang), daftar pesan |
+| `ui/` | `NineOrbView`, `EdgeGlowView`, `SphereView` + `NineBuddyView` + `LimbMotion` (Nine dengan tangan dan kaki bola, gerak pegas), `FinBarsView` (grafik batang), daftar pesan |
 | `widget/` | Widget orb (kecil dan 4x4) dan "Hari ini"; frame wajah dibuat `tools/face_sphere.py` |
 | `service/` | Peran asisten digital default |
 
