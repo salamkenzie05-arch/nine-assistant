@@ -50,13 +50,22 @@ android {
     }
 
     signingConfigs {
-        // Kunci khusus sideload, sengaja disimpan di repo agar setiap build CI punya tanda tangan
-        // yang sama (update bisa dipasang menimpa versi lama). Bukan rahasia; jangan dipakai untuk Play Store.
+        // Kunci rilis: berkas PKCS12 terenkripsi di repo (nine-release.p12); kata sandinya HANYA di rahasia CI
+        // (NINE_KEYSTORE_PASSWORD). Bila rahasia itu belum dipasang, build sementara memakai kunci lama yang
+        // publik (nine-sideload.jks) agar rilis tetap jalan; CI memberi peringatan dan menyebut kunci mana yang dipakai.
         create("sideload") {
-            storeFile = file("nine-sideload.jks")
-            storePassword = "nine-sideload"
-            keyAlias = "nine"
-            keyPassword = "nine-sideload"
+            val pass = System.getenv("NINE_KEYSTORE_PASSWORD")
+            if (!pass.isNullOrBlank()) {
+                storeFile = file("nine-release.p12")
+                storePassword = pass
+                keyAlias = "nine"
+                keyPassword = pass
+            } else {
+                storeFile = file("nine-sideload.jks")
+                storePassword = "nine-sideload"
+                keyAlias = "nine"
+                keyPassword = "nine-sideload"
+            }
         }
     }
 

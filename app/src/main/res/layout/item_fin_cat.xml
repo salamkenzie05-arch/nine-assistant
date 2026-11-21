@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingTop="12dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/catName"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/nine_on_bg"
+            android:textSize="15sp" />
+
+        <TextView
+            android:id="@+id/catPct"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:textColor="@color/nine_on_bg"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/catAmount"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/nine_muted"
+        android:textSize="13sp" />
+
+    <com.google.android.material.progressindicator.LinearProgressIndicator
+        android:id="@+id/catBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:max="100"
+        app:indicatorColor="@color/nine_gold"
+        app:trackColor="@color/nine_pill"
+        app:trackCornerRadius="3dp"
+        app:trackThickness="6dp" />
+</LinearLayout>

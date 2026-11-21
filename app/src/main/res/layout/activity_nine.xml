@@ -7,142 +7,225 @@
     android:background="@color/nine_bg"
     android:orientation="vertical">
 
-    <LinearLayout
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="56dp"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:paddingStart="8dp"
-        android:paddingEnd="8dp">
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp">
 
         <ImageButton
             android:id="@+id/btnBack"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_gravity="start|center_vertical"
+            android:background="@drawable/bg_round_btn"
             android:contentDescription="@string/back"
-            android:src="@drawable/ic_back"
-            app:tint="@color/nine_gold" />
+            android:src="@drawable/ic_close"
+            app:tint="@color/nine_on_bg" />
 
         <TextView
+            android:id="@+id/txtTitlePill"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:fontFamily="@font/nine_light"
-            android:letterSpacing="0.35"
-            android:text="@string/hub_nine"
+            android:layout_height="40dp"
+            android:layout_gravity="center"
+            android:background="@drawable/bg_round_pill"
+            android:gravity="center"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
             android:textColor="@color/nine_on_bg"
-            android:textSize="20sp" />
-    </LinearLayout>
+            android:textSize="16sp"
+            android:textStyle="bold" />
+    </FrameLayout>
 
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
         android:clipToPadding="false"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
         android:paddingBottom="24dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp">
 
+            <!-- Hari beruntun + lencana level -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/bg_card"
-                android:orientation="vertical"
-                android:padding="20dp">
+                android:layout_marginTop="4dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/nine_streak_label"
+                        android:textColor="@color/nine_on_bg"
+                        android:textSize="20sp" />
+
+                    <TextView
+                        android:id="@+id/txtStreak"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/nine_light"
+                        android:includeFontPadding="false"
+                        android:textColor="@color/nine_on_bg"
+                        android:textSize="72sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="68dp"
+                    android:layout_height="68dp"
+                    android:background="@drawable/bg_level_badge"
+                    android:gravity="center"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:letterSpacing="0.15"
+                        android:text="@string/nine_lv"
+                        android:textColor="@color/nine_gold"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/txtLevelNum"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:includeFontPadding="false"
+                        android:textColor="@color/nine_on_bg"
+                        android:textSize="26sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Ucapan Nine -->
+            <TextView
+                android:id="@+id/txtSay"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_bubble"
+                android:gravity="center"
+                android:maxWidth="280dp"
+                android:paddingStart="20dp"
+                android:paddingTop="12dp"
+                android:paddingEnd="20dp"
+                android:paddingBottom="12dp"
+                android:textColor="@color/nine_on_bg"
+                android:textSize="16sp" />
+
+            <View
+                android:layout_width="9dp"
+                android:layout_height="9dp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="6dp"
+                android:background="@drawable/bg_dot" />
+
+            <View
+                android:layout_width="5dp"
+                android:layout_height="5dp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="3dp"
+                android:background="@drawable/bg_dot" />
+
+            <id.nine.assistant.ui.NineBuddyView
+                android:id="@+id/buddy"
+                android:layout_width="match_parent"
+                android:layout_height="300dp" />
+
+            <!-- Tempat kustomisasi (belum aktif) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:gravity="center"
+                android:orientation="horizontal">
 
                 <TextView
-                    android:id="@+id/txtLevel"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:textColor="@color/nine_on_bg"
-                    android:textSize="22sp" />
+                    android:id="@+id/chipPersonality"
+                    style="@style/Nine.Chip"
+                    android:drawableStart="@drawable/ic_persona"
+                    android:text="@string/nine_custom_personality" />
+
+                <TextView
+                    android:id="@+id/chipOutfit"
+                    style="@style/Nine.Chip"
+                    android:drawableStart="@drawable/ic_outfit"
+                    android:text="@string/nine_custom_outfit" />
+
+                <TextView
+                    android:id="@+id/chipVoice"
+                    style="@style/Nine.Chip"
+                    android:drawableStart="@drawable/ic_voice"
+                    android:text="@string/nine_custom_voice" />
+            </LinearLayout>
+
+            <!-- Bar XP -->
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="28dp"
+                android:layout_marginTop="20dp">
 
                 <com.google.android.material.progressindicator.LinearProgressIndicator
                     android:id="@+id/progress"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="14dp"
+                    android:layout_height="match_parent"
                     android:max="1000"
                     app:indicatorColor="@color/nine_gold"
                     app:trackColor="@color/nine_pill"
-                    app:trackCornerRadius="4dp"
-                    app:trackThickness="8dp" />
+                    app:trackCornerRadius="14dp"
+                    app:trackThickness="28dp" />
 
                 <TextView
-                    android:id="@+id/txtNext"
+                    android:id="@+id/txtXp"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:textColor="@color/nine_muted"
-                    android:textSize="13sp" />
-
-                <TextView
-                    android:id="@+id/txtStats"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:textColor="@color/nine_muted"
-                    android:textSize="13sp" />
-            </LinearLayout>
-
-            <TextView
-                style="@style/Nine.SectionTitle"
-                android:text="@string/nine_surprise" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/bg_card"
-                android:orientation="vertical"
-                android:padding="20dp">
-
-                <TextView
-                    android:id="@+id/txtSurprise"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
                     android:textColor="@color/nine_on_bg"
-                    android:textSize="15sp" />
-
-                <TextView
-                    android:id="@+id/txtFound"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:textColor="@color/nine_muted"
-                    android:textSize="13sp" />
-            </LinearLayout>
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+            </FrameLayout>
 
             <TextView
-                style="@style/Nine.SectionTitle"
-                android:text="@string/nine_custom" />
-
-            <LinearLayout
+                android:id="@+id/txtHint"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/bg_card"
-                android:orientation="vertical"
-                android:paddingStart="20dp"
-                android:paddingTop="4dp"
-                android:paddingEnd="20dp"
-                android:paddingBottom="4dp">
+                android:layout_marginTop="10dp"
+                android:gravity="center"
+                android:textColor="@color/nine_muted"
+                android:textSize="14sp" />
+
+            <!-- Cara menumbuhkan kedekatan -->
+            <LinearLayout
+                style="@style/Nine.Card"
+                android:layout_marginTop="20dp">
 
                 <TextView
-                    style="@style/Nine.SoonRow"
-                    android:text="@string/nine_custom_personality" />
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:text="@string/nine_grow"
+                    android:textColor="@color/nine_on_bg"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
 
-                <TextView
-                    style="@style/Nine.SoonRow"
-                    android:text="@string/nine_custom_outfit" />
-
-                <TextView
-                    style="@style/Nine.SoonRow"
-                    android:text="@string/nine_custom_voice" />
+                <LinearLayout
+                    android:id="@+id/growList"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
             </LinearLayout>
         </LinearLayout>
     </ScrollView>

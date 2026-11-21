@@ -2,8 +2,11 @@ package id.nine.assistant.nlu
 
 import id.nine.assistant.core.AppLang
 import java.time.DayOfWeek
+import java.time.Instant
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 
 enum class FinType { INCOME, EXPENSE }
 
@@ -63,6 +66,9 @@ object FinanceCats {
 /** Hitung periode & ringkasan catatan keuangan (Kotlin murni). */
 object FinanceMath {
 
+    /** Senin pada minggu [day]. */
+    fun weekStart(day: LocalDate): LocalDate = day.with(DayOfWeek.MONDAY)
+
     /** Rentang [dari, sampai) dalam epoch ms untuk [period]. */
     fun range(period: FinPeriod, today: LocalDate, zone: ZoneId = ZoneId.systemDefault()): Pair<Long, Long> {
         fun ms(d: LocalDate) = d.atStartOfDay(zone).toInstant().toEpochMilli()
@@ -70,7 +76,7 @@ object FinanceMath {
             FinPeriod.TODAY -> ms(today) to ms(today.plusDays(1))
             FinPeriod.YESTERDAY -> ms(today.minusDays(1)) to ms(today)
             FinPeriod.WEEK -> {
-                val start = today.with(DayOfWeek.MONDAY)
+                val start = weekStart(today)
                 ms(start) to ms(start.plusDays(7))
             }
             FinPeriod.MONTH -> {
@@ -116,6 +122,92 @@ object FinanceMath {
         val exp = sel.filter { it.type == FinType.EXPENSE }
         fun by(l: List<Txn>) = l.groupBy { it.cat }.map { (k, v) -> k to v.sumOf { it.amount } }.sortedByDescending { it.second }
         return Summary(inc.sumOf { it.amount }, exp.sumOf { it.amount }, sel.size, by(exp), by(inc))
+    }
+
+    /** Satu batang grafik rekap. */
+    data class Bucket(val label: String, val value: Long)
+
+    private val DAYS_ID = listOf("Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min")
+    private val DAYS_EN = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+    private val MONTHS_ID = listOf("Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des")
+    private val MONTHS_EN = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+
+    /**
+     * Data batang untuk grafik rekap satu jenis ([type]) pada [period]:
+     * hari ini/kemarin = 4 blok 6 jam, minggu = 7 hari (Senin dulu), bulan = blok 7 hari (1, 8, 15, 22, 29),
+     * tahun = 12 bulan, semua = 6 bulan terakhir.
+     */
+    fun buckets(
+        all: List<Txn>, period: FinPeriod, type: FinType, today: LocalDate, lang: AppLang,
+        zone: ZoneId = ZoneId.systemDefault()
+    ): List<Bucket> {
+        val sel = all.filter { it.type == type }
+        fun at(t: Txn) = Instant.ofEpochMilli(t.time).atZone(zone)
+        val months = if (lang == AppLang.ID) MONTHS_ID else MONTHS_EN
+        return when (period) {
+            FinPeriod.TODAY, FinPeriod.YESTERDAY -> {
+                val day = if (period == FinPeriod.TODAY) today else today.minusDays(1)
+                val sums = LongArray(4)
+                for (t in sel) {
+                    val z = at(t)
+                    if (z.toLocalDate() == day) sums[z.hour / 6] += t.amount
+                }
+                listOf("00", "06", "12", "18").mapIndexed { i, l -> Bucket(l, sums[i]) }
+            }
+            FinPeriod.WEEK -> {
+                val start = weekStart(today)
+                val sums = LongArray(7)
+                for (t in sel) {
+                    val i = ChronoUnit.DAYS.between(start, at(t).toLocalDate())
+                    if (i in 0L..6L) sums[i.toInt()] += t.amount
+                }
+                (if (lang == AppLang.ID) DAYS_ID else DAYS_EN).mapIndexed { i, n -> Bucket(n, sums[i]) }
+            }
+            FinPeriod.MONTH, FinPeriod.LAST_MONTH -> {
+                val first = (if (period == FinPeriod.MONTH) today else today.minusMonths(1)).withDayOfMonth(1)
+                val sums = LongArray((first.lengthOfMonth() + 6) / 7)
+                for (t in sel) {
+                    val d = at(t).toLocalDate()
+                    if (d.year == first.year && d.month == first.month) sums[(d.dayOfMonth - 1) / 7] += t.amount
+                }
+                sums.mapIndexed { i, v -> Bucket((i * 7 + 1).toString(), v) }
+            }
+            FinPeriod.YEAR -> {
+                val sums = LongArray(12)
+                for (t in sel) {
+                    val d = at(t).toLocalDate()
+                    if (d.year == today.year) sums[d.monthValue - 1] += t.amount
+                }
+                months.mapIndexed { i, n -> Bucket(n, sums[i]) }
+            }
+            FinPeriod.ALL -> {
+                val last = YearMonth.from(today)
+                val keys = (5 downTo 0).map { last.minusMonths(it.toLong()) }
+                val sums = LongArray(6)
+                for (t in sel) {
+                    val i = keys.indexOf(YearMonth.from(at(t)))
+                    if (i >= 0) sums[i] += t.amount
+                }
+                keys.mapIndexed { i, k -> Bucket(months[k.monthValue - 1], sums[i]) }
+            }
+        }
+    }
+
+    /** Persentase bulat per nilai (metode sisa terbesar) agar totalnya tepat 100; semua 0 bila tidak ada nilai positif. */
+    fun shares(values: List<Long>): List<Int> {
+        val total = values.filter { it > 0 }.sum()
+        if (total <= 0L) return values.map { 0 }
+        val raw = values.map { if (it > 0) it * 100.0 / total else 0.0 }
+        val out = raw.map { it.toInt() }.toMutableList()
+        var left = 100 - out.sum()
+        val order = raw.indices.sortedByDescending { raw[it] - out[it] }
+        var k = 0
+        while (left > 0 && order.isNotEmpty()) {
+            out[order[k % order.size]]++
+            left--
+            k++
+        }
+        return out
     }
 
     /** "Rp 25.000" (ID) / "Rp 25,000" (EN). */

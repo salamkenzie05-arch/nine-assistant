@@ -47,26 +47,7 @@
 
             <TextView style="@style/Nine.SectionTitle" android:text="@string/sec_brain_group" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/bg_card"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/sec_internet"
-                    android:textColor="@color/nine_on_bg"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    style="@style/Nine.Body"
-                    android:layout_marginTop="4dp"
-                    android:textSize="13sp"
-                    android:text="@string/internet_help" />
+            <LinearLayout style="@style/Nine.Card">
 
                 <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/switchInternet"
@@ -87,7 +68,7 @@
                         style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
+                        android:layout_marginTop="4dp"
                         android:hint="@string/gemini_key_hint"
                         app:endIconMode="password_toggle">
 
@@ -106,15 +87,14 @@
                         style="@style/Widget.Material3.Button.TextButton"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="@string/gemini_get_key"
-                        android:textColor="@color/nine_gold" />
+                        android:textColor="@color/nine_gold"
+                        android:text="@string/gemini_get_key" />
 
                     <com.google.android.material.textfield.TextInputLayout
                         style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
+                        android:layout_marginTop="4dp"
                         android:hint="@string/gemini_model_hint">
 
                         <com.google.android.material.textfield.TextInputEditText
@@ -127,7 +107,6 @@
                             android:textSize="15sp" />
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
-
 
                 <com.google.android.material.textfield.TextInputLayout
                     style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
@@ -148,49 +127,47 @@
 
                 <TextView
                     android:id="@+id/txtInternetStatus"
-                    style="@style/Nine.Body"
-                    android:layout_marginTop="8dp"
-                    android:textSize="12sp" />
+                    style="@style/Nine.Status"
+                    android:layout_marginTop="8dp" />
             </LinearLayout>
 
             <Space android:layout_width="match_parent" android:layout_height="12dp" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/bg_card"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/sec_brain"
-                    android:textColor="@color/nine_on_bg"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
+            <LinearLayout style="@style/Nine.Card">
 
                 <TextView
                     android:id="@+id/brainStatus"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
                     android:textColor="@color/nine_on_bg"
-                    android:textSize="14sp" />
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
 
                 <TextView
                     android:id="@+id/brainDetail"
-                    style="@style/Nine.Body"
-                    android:layout_marginTop="4dp"
-                    android:textSize="13sp" />
+                    style="@style/Nine.Status"
+                    android:visibility="gone" />
 
                 <RadioGroup
                     android:id="@+id/groupVariant"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp">
-                    <RadioButton android:id="@+id/variantE2b" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="44dp" android:text="@string/variant_e2b" android:textColor="@color/nine_on_bg" android:textSize="15sp" />
-                    <RadioButton android:id="@+id/variantE4b" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="44dp" android:text="@string/variant_e4b" android:textColor="@color/nine_on_bg" android:textSize="15sp" />
+                    android:layout_height="wrap_content">
+                    <RadioButton
+                        android:id="@+id/variantE2b"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:minHeight="44dp"
+                        android:text="@string/variant_e2b"
+                        android:textColor="@color/nine_on_bg"
+                        android:textSize="15sp" />
+                    <RadioButton
+                        android:id="@+id/variantE4b"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:minHeight="44dp"
+                        android:text="@string/variant_e4b"
+                        android:textColor="@color/nine_on_bg"
+                        android:textSize="15sp" />
                 </RadioGroup>
 
                 <com.google.android.material.progressindicator.LinearProgressIndicator
@@ -203,6 +180,7 @@
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnDownload"
+                    style="@style/Widget.Material3.Button"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
@@ -212,7 +190,6 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal">
-
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnImport"
                         style="@style/Widget.Material3.Button.OutlinedButton"
@@ -222,7 +199,6 @@
                         android:layout_marginEnd="8dp"
                         android:layout_weight="1"
                         android:text="@string/model_import_short" />
-
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnDelete"
                         style="@style/Widget.Material3.Button.OutlinedButton"
@@ -233,20 +209,22 @@
                         android:text="@string/model_delete" />
                 </LinearLayout>
 
-                <TextView
+                <View style="@style/Nine.Divider" />
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switchGpu"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="@string/advanced"
-                    android:textColor="@color/nine_gold"
-                    android:textSize="12sp"
-                    android:textStyle="bold" />
+                    android:minHeight="48dp"
+                    android:text="@string/gpu_switch"
+                    android:textColor="@color/nine_on_bg"
+                    android:textSize="15sp" />
 
                 <com.google.android.material.textfield.TextInputLayout
                     style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
+                    android:layout_marginTop="4dp"
                     android:hint="@string/hf_token_hint"
                     app:endIconMode="password_toggle">
 
@@ -259,39 +237,35 @@
                         android:maxLines="1"
                         android:textSize="15sp" />
                 </com.google.android.material.textfield.TextInputLayout>
-
-                <TextView
-                    style="@style/Nine.Body"
-                    android:layout_marginTop="4dp"
-                    android:textSize="12sp"
-                    android:text="@string/hf_token_help" />
             </LinearLayout>
 
             <TextView style="@style/Nine.SectionTitle" android:text="@string/sec_voice_group" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/bg_card"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/sec_language"
-                    android:textColor="@color/nine_on_bg"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
+            <LinearLayout style="@style/Nine.Card">
 
                 <RadioGroup
                     android:id="@+id/groupLang"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
                     android:orientation="horizontal">
-                    <RadioButton android:id="@+id/langId" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:minHeight="44dp" android:text="Indonesia" android:textColor="@color/nine_on_bg" android:textSize="15sp" />
-                    <RadioButton android:id="@+id/langEn" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:minHeight="44dp" android:text="English" android:textColor="@color/nine_on_bg" android:textSize="15sp" />
+                    <RadioButton
+                        android:id="@+id/langId"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:minHeight="44dp"
+                        android:text="Indonesia"
+                        android:textColor="@color/nine_on_bg"
+                        android:textSize="15sp" />
+                    <RadioButton
+                        android:id="@+id/langEn"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:minHeight="44dp"
+                        android:text="English"
+                        android:textColor="@color/nine_on_bg"
+                        android:textSize="15sp" />
                 </RadioGroup>
 
                 <com.google.android.material.button.MaterialButton
@@ -302,20 +276,7 @@
                     android:layout_marginTop="8dp"
                     android:text="@string/profile_button" />
 
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginTop="16dp"
-                    android:layout_marginBottom="8dp"
-                    android:background="@color/nine_pill" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/sec_voice"
-                    android:textColor="@color/nine_on_bg"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
+                <View style="@style/Nine.Divider" />
 
                 <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/switchSpeak"
@@ -331,24 +292,13 @@
                     style="@style/Widget.Material3.Button.TonalButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="4dp"
                     android:text="@string/voice_preview" />
-
-                <TextView
-                    style="@style/Nine.Body"
-                    android:layout_marginTop="8dp"
-                    android:textSize="12sp"
-                    android:text="@string/voice_help" />
             </LinearLayout>
 
             <TextView style="@style/Nine.SectionTitle" android:text="@string/sec_memory_group" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/bg_card"
-                android:orientation="vertical"
-                android:padding="16dp">
+            <LinearLayout style="@style/Nine.Card">
 
                 <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/switchMemory"
@@ -361,23 +311,18 @@
 
                 <TextView
                     android:id="@+id/txtMemoryCount"
-                    style="@style/Nine.Body"
-                    android:layout_marginTop="4dp"
-                    android:textSize="13sp" />
+                    style="@style/Nine.Status" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
                     android:orientation="horizontal">
-
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnMemoryManage"
                         style="@style/Widget.Material3.Button.TonalButton"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/memory_manage" />
-
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnMemoryClear"
                         style="@style/Widget.Material3.Button.TextButton"
@@ -386,36 +331,11 @@
                         android:layout_marginStart="8dp"
                         android:text="@string/memory_clear" />
                 </LinearLayout>
-
-                <TextView
-                    style="@style/Nine.Body"
-                    android:layout_marginTop="8dp"
-                    android:textSize="12sp"
-                    android:text="@string/memory_help" />
             </LinearLayout>
 
             <TextView style="@style/Nine.SectionTitle" android:text="@string/sec_wake_group" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/bg_card"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/sec_wake"
-                    android:textColor="@color/nine_on_bg"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    style="@style/Nine.Body"
-                    android:layout_marginTop="4dp"
-                    android:textSize="13sp"
-                    android:text="@string/wake_help" />
+            <LinearLayout style="@style/Nine.Card">
 
                 <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/switchWake"
@@ -430,7 +350,7 @@
                     style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
+                    android:layout_marginTop="4dp"
                     android:hint="@string/wake_phrase_hint">
 
                     <com.google.android.material.textfield.TextInputEditText
@@ -445,9 +365,8 @@
 
                 <TextView
                     android:id="@+id/txtWakeStatus"
-                    style="@style/Nine.Body"
-                    android:layout_marginTop="8dp"
-                    android:textSize="12sp" />
+                    style="@style/Nine.Status"
+                    android:layout_marginTop="8dp" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnOverlay"
@@ -457,44 +376,20 @@
                     android:layout_marginTop="8dp"
                     android:text="@string/wake_overlay_button" />
 
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginTop="16dp"
-                    android:layout_marginBottom="8dp"
-                    android:background="@color/nine_pill" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/sec_assistant"
-                    android:textColor="@color/nine_on_bg"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    style="@style/Nine.Body"
-                    android:layout_marginTop="4dp"
-                    android:textSize="13sp"
-                    android:text="@string/assistant_help" />
+                <View style="@style/Nine.Divider" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnDefaultAssistant"
                     style="@style/Widget.Material3.Button.TonalButton"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="0dp"
                     android:text="@string/assistant_button" />
             </LinearLayout>
 
-            <TextView style="@style/Nine.SectionTitle" android:text="@string/sec_location" />
+            <TextView style="@style/Nine.SectionTitle" android:text="@string/sec_loc_cal" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/bg_card"
-                android:orientation="vertical"
-                android:padding="16dp">
+            <LinearLayout style="@style/Nine.Card">
 
                 <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/switchLocation"
@@ -506,47 +401,21 @@
                     android:textSize="15sp" />
 
                 <TextView
-                    style="@style/Nine.Body"
-                    android:layout_marginTop="4dp"
-                    android:text="@string/location_help"
-                    android:textSize="13sp" />
-
-                <TextView
                     android:id="@+id/txtLocationStatus"
-                    style="@style/Nine.Body"
-                    android:layout_marginTop="8dp"
-                    android:textColor="@color/nine_gold"
-                    android:textSize="12sp" />
-            </LinearLayout>
+                    style="@style/Nine.Status"
+                    android:textColor="@color/nine_gold" />
 
-            <TextView style="@style/Nine.SectionTitle" android:text="@string/sec_calendar" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/bg_card"
-                android:orientation="vertical"
-                android:padding="16dp">
+                <View style="@style/Nine.Divider" />
 
                 <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/calendar_target"
-                    android:textColor="@color/nine_on_bg"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    style="@style/Nine.Body"
-                    android:layout_marginTop="4dp"
-                    android:textSize="13sp"
-                    android:text="@string/calendar_help" />
+                    style="@style/Nine.Status"
+                    android:layout_marginTop="0dp"
+                    android:text="@string/calendar_target" />
 
                 <Spinner
                     android:id="@+id/spinnerCalendar"
                     android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:layout_marginTop="8dp" />
+                    android:layout_height="48dp" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnCalendarAccess"
@@ -559,25 +428,31 @@
 
             <TextView style="@style/Nine.SectionTitle" android:text="@string/sec_alarm" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/bg_card"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <TextView
-                    style="@style/Nine.Body"
-                    android:text="@string/alarm_help"
-                    android:textSize="13sp" />
+            <LinearLayout style="@style/Nine.Card">
 
                 <RadioGroup
                     android:id="@+id/groupAlarmEngine"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp">
-                    <RadioButton android:id="@+id/alarmEngineNine" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="44dp" android:text="@string/alarm_engine_nine" android:textColor="@color/nine_on_bg" android:textSize="15sp" />
-                    <RadioButton android:id="@+id/alarmEngineClock" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="44dp" android:text="@string/alarm_engine_clock" android:textColor="@color/nine_on_bg" android:textSize="15sp" />
+                    android:orientation="horizontal">
+                    <RadioButton
+                        android:id="@+id/alarmEngineNine"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:minHeight="44dp"
+                        android:text="@string/alarm_engine_nine"
+                        android:textColor="@color/nine_on_bg"
+                        android:textSize="15sp" />
+                    <RadioButton
+                        android:id="@+id/alarmEngineClock"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:minHeight="44dp"
+                        android:text="@string/alarm_engine_clock"
+                        android:textColor="@color/nine_on_bg"
+                        android:textSize="15sp" />
                 </RadioGroup>
 
                 <com.google.android.material.button.MaterialButton
@@ -593,55 +468,91 @@
                     style="@style/Widget.Material3.Button.TextButton"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="0dp"
                     android:text="@string/alarm_fullscreen"
                     android:textColor="@color/nine_gold" />
             </LinearLayout>
 
-            <TextView style="@style/Nine.SectionTitle" android:text="@string/sec_a11y" />
-
             <LinearLayout
+                android:id="@+id/a11ySection"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/bg_card"
-                android:orientation="vertical"
-                android:padding="16dp">
+                android:orientation="vertical">
 
-                <TextView
-                    style="@style/Nine.Body"
-                    android:layout_marginTop="0dp"
-                    android:textSize="13sp"
-                    android:text="@string/a11y_help" />
+                <TextView style="@style/Nine.SectionTitle" android:text="@string/sec_a11y" />
 
-                <TextView
-                    android:id="@+id/txtA11yStatus"
-                    style="@style/Nine.Body"
-                    android:layout_marginTop="8dp"
-                    android:textSize="12sp" />
+                <LinearLayout style="@style/Nine.Card">
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnA11y"
-                    style="@style/Widget.Material3.Button.TonalButton"
+                    <TextView
+                        android:id="@+id/txtA11yStatus"
+                        style="@style/Nine.Status"
+                        android:layout_marginTop="0dp"
+                        android:textColor="@color/nine_on_bg"
+                        android:textSize="14sp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnA11y"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/a11y_button" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnAppInfo"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/a11y_appinfo_button" />
+
+                    <TextView
+                        android:id="@+id/txtA11yHelp"
+                        style="@style/Nine.Status"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/a11y_help" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <TextView style="@style/Nine.SectionTitle" android:text="@string/sec_look" />
+
+            <LinearLayout style="@style/Nine.Card">
+
+                <RadioGroup
+                    android:id="@+id/groupTheme"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="@string/a11y_button" />
+                    android:orientation="horizontal">
+                    <RadioButton
+                        android:id="@+id/themeSystem"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:minHeight="44dp"
+                        android:text="@string/theme_system"
+                        android:textColor="@color/nine_on_bg"
+                        android:textSize="15sp" />
+                    <RadioButton
+                        android:id="@+id/themeLight"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:minHeight="44dp"
+                        android:text="@string/theme_light"
+                        android:textColor="@color/nine_on_bg"
+                        android:textSize="15sp" />
+                    <RadioButton
+                        android:id="@+id/themeDark"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:minHeight="44dp"
+                        android:text="@string/theme_dark"
+                        android:textColor="@color/nine_on_bg"
+                        android:textSize="15sp" />
+                </RadioGroup>
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnAppInfo"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="@string/a11y_appinfo_button" />
-
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/switchGpu"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:minHeight="48dp"
-                    android:text="@string/gpu_switch"
-                    android:textColor="@color/nine_on_bg"
-                    android:textSize="15sp" />
+                <View style="@style/Nine.Divider" />
 
                 <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/switchMusic"
@@ -651,54 +562,21 @@
                     android:text="@string/music_switch"
                     android:textColor="@color/nine_on_bg"
                     android:textSize="15sp" />
-
-                <TextView
-                    style="@style/Nine.Body"
-                    android:layout_marginTop="4dp"
-                    android:textSize="12sp"
-                    android:text="@string/music_help" />
-            </LinearLayout>
-
-            <TextView style="@style/Nine.SectionTitle" android:text="@string/sec_look" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/bg_card"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <RadioGroup
-                    android:id="@+id/groupTheme"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp">
-                    <RadioButton android:id="@+id/themeSystem" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="44dp" android:text="@string/theme_system" android:textColor="@color/nine_on_bg" android:textSize="15sp" />
-                    <RadioButton android:id="@+id/themeLight" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="44dp" android:text="@string/theme_light" android:textColor="@color/nine_on_bg" android:textSize="15sp" />
-                    <RadioButton android:id="@+id/themeDark" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="44dp" android:text="@string/theme_dark" android:textColor="@color/nine_on_bg" android:textSize="15sp" />
-                </RadioGroup>
             </LinearLayout>
 
             <TextView style="@style/Nine.SectionTitle" android:text="@string/sec_privacy" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/bg_card"
-                android:orientation="vertical"
-                android:padding="16dp">
+            <LinearLayout style="@style/Nine.Card">
 
                 <TextView
                     style="@style/Nine.Body"
-                    android:layout_marginTop="0dp"
                     android:textSize="13sp"
                     android:text="@string/privacy_text" />
 
                 <TextView
                     android:id="@+id/txtVersion"
-                    style="@style/Nine.Body"
-                    android:layout_marginTop="8dp"
-                    android:textSize="12sp" />
+                    style="@style/Nine.Status"
+                    android:layout_marginTop="8dp" />
             </LinearLayout>
 
         </LinearLayout>

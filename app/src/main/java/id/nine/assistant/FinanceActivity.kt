@@ -15,6 +15,8 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.progressindicator.LinearProgressIndicator
+import com.google.android.material.tabs.TabLayout
 import id.nine.assistant.databinding.ActivityFinanceBinding
 import id.nine.assistant.nlu.FinPeriod
 import id.nine.assistant.nlu.FinType
@@ -24,6 +26,8 @@ import id.nine.assistant.nlu.Txn
 import id.nine.assistant.skills.FinanceStore
 import java.text.DateFormat
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import java.util.Date
 
 /** Layar catatan pemasukan & pengeluaran (dicatat lewat suara/ketikan ke Nine). */
@@ -32,7 +36,10 @@ class FinanceActivity : AppCompatActivity() {
     private lateinit var binding: ActivityFinanceBinding
     private lateinit var store: FinanceStore
     private var period = FinPeriod.MONTH
+    private var type = FinType.EXPENSE
+    private var all: List<Txn> = emptyList()
     private var items: List<Txn> = emptyList()
+    private val lang get() = (application as NineApp).prefs.lang
 
     private inner class VH(v: View) : RecyclerView.ViewHolder(v) {
         val title: TextView = v.findViewById(R.id.txtTitle)
@@ -49,7 +56,6 @@ class FinanceActivity : AppCompatActivity() {
 
         override fun onBindViewHolder(holder: VH, position: Int) {
             val t = items[position]
-            val lang = (application as NineApp).prefs.lang
             val income = t.type == FinType.INCOME
             holder.title.text = t.note.ifBlank { FinanceCats.name(t.cat, lang) }
             val whenText = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, lang.locale).format(Date(t.time))
@@ -69,51 +75,104 @@ class FinanceActivity : AppCompatActivity() {
         binding.finList.layoutManager = LinearLayoutManager(this)
         binding.finList.adapter = adapter
         binding.btnBack.setOnClickListener { finish() }
-        binding.btnPToday.setOnClickListener { select(FinPeriod.TODAY) }
-        binding.btnPWeek.setOnClickListener { select(FinPeriod.WEEK) }
-        binding.btnPMonth.setOnClickListener { select(FinPeriod.MONTH) }
-        binding.btnPAll.setOnClickListener { select(FinPeriod.ALL) }
+        binding.finPeriod.check(R.id.btnPMonth)
+        binding.finType.check(R.id.btnTExpense)
+        binding.finPeriod.addOnButtonCheckedListener { _, btn, checked ->
+            if (!checked) return@addOnButtonCheckedListener
+            period = when (btn) {
+                R.id.btnPToday -> FinPeriod.TODAY
+                R.id.btnPWeek -> FinPeriod.WEEK
+                R.id.btnPAll -> FinPeriod.ALL
+                else -> FinPeriod.MONTH
+            }
+            render()
+        }
+        binding.finType.addOnButtonCheckedListener { _, btn, checked ->
+            if (!checked) return@addOnButtonCheckedListener
+            type = if (btn == R.id.btnTIncome) FinType.INCOME else FinType.EXPENSE
+            renderChart()
+        }
+        binding.finTabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab) = showTab()
+            override fun onTabUnselected(tab: TabLayout.Tab) {}
+            override fun onTabReselected(tab: TabLayout.Tab) {}
+        })
     }
 
     override fun onResume() {
         super.onResume()
-        reload()
+        all = store.all()
+        render()
     }
 
-    private fun select(p: FinPeriod) {
-        period = p
-        reload()
+    private fun recapShown(): Boolean = binding.finTabs.selectedTabPosition != 1
+
+    private fun showTab() {
+        val recap = recapShown()
+        binding.finRecap.visibility = if (recap) View.VISIBLE else View.GONE
+        binding.finList.visibility = if (recap || items.isEmpty()) View.GONE else View.VISIBLE
+        binding.txtEmpty.visibility = if (!recap && items.isEmpty()) View.VISIBLE else View.GONE
     }
 
     private fun confirmDelete(t: Txn) {
-        val lang = (application as NineApp).prefs.lang
         AlertDialog.Builder(this)
-            .setMessage(lang.t("Hapus catatan ${FinanceMath.money(t.amount, lang)} ini?", "Delete this ${FinanceMath.money(t.amount, lang)} entry?"))
+            .setMessage(getString(R.string.fin_delete_msg, FinanceMath.money(t.amount, lang)))
             .setPositiveButton(R.string.fin_delete) { _, _ ->
                 store.remove(t.id)
-                reload()
+                all = store.all()
+                render()
             }
-            .setNegativeButton(android.R.string.cancel, null)
+            .setNegativeButton(R.string.act_cancel, null)
             .show()
     }
 
+    private fun periodTitle(today: LocalDate): String = when (period) {
+        FinPeriod.TODAY -> DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG).withLocale(lang.locale).format(today)
+        FinPeriod.WEEK -> {
+            val f = DateTimeFormatter.ofPattern("d MMM", lang.locale)
+            val start = FinanceMath.weekStart(today)
+            f.format(start) + " – " + f.format(start.plusDays(6))
+        }
+        FinPeriod.MONTH -> DateTimeFormatter.ofPattern("LLLL yyyy", lang.locale).format(today)
+        else -> getString(R.string.fin_all_time)
+    }
+
     @Suppress("NotifyDataSetChanged")
-    private fun reload() {
-        val lang = (application as NineApp).prefs.lang
-        val (from, to) = FinanceMath.range(period, LocalDate.now())
-        val all = store.all()
+    private fun render() {
+        val today = LocalDate.now()
+        val (from, to) = FinanceMath.range(period, today)
         val s = FinanceMath.summarize(all, from, to)
         items = all.filter { it.time >= from && it.time < to }.sortedByDescending { it.time }
-        binding.txtBalance.text = lang.t("Saldo ", "Balance ") + FinanceMath.money(s.balance, lang) + " · " + FinanceMath.label(period, lang)
-        binding.txtIncome.text = lang.t("Pemasukan ", "Income ") + FinanceMath.money(s.income, lang)
-        binding.txtExpense.text = lang.t("Pengeluaran ", "Spending ") + FinanceMath.money(s.expense, lang)
-        val top = s.expenseByCat.firstOrNull()
-        binding.txtTop.text = if (top != null) {
-            lang.t("Terbesar: ", "Biggest: ") + FinanceCats.name(top.first, lang) + " " + FinanceMath.money(top.second, lang)
-        } else ""
-        binding.txtTop.visibility = if (top != null) View.VISIBLE else View.GONE
+        binding.txtPeriod.text = periodTitle(today)
+        binding.txtIncome.text = FinanceMath.money(s.income, lang)
+        binding.txtExpense.text = FinanceMath.money(s.expense, lang)
+        val diff = s.balance
+        binding.txtDiff.text = (if (diff > 0) "+" else "") + FinanceMath.money(diff, lang)
+        binding.txtDiff.setTextColor(ContextCompat.getColor(this, if (diff >= 0) R.color.fin_income else R.color.fin_expense))
+        renderChart()
         adapter.notifyDataSetChanged()
-        binding.txtEmpty.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
+        showTab()
+    }
+
+    /** Grafik batang dan daftar kategori untuk jenis yang dipilih (pengeluaran/pemasukan) pada periode ini. */
+    private fun renderChart() {
+        val today = LocalDate.now()
+        val (from, to) = FinanceMath.range(period, today)
+        val buckets = FinanceMath.buckets(all, period, type, today, lang)
+        binding.finBars.setData(buckets.map { it.label }, buckets.map { it.value })
+        val s = FinanceMath.summarize(all, from, to)
+        val cats = if (type == FinType.EXPENSE) s.expenseByCat else s.incomeByCat
+        val pct = FinanceMath.shares(cats.map { it.second })
+        binding.finCats.removeAllViews()
+        for ((i, c) in cats.withIndex()) {
+            val row = layoutInflater.inflate(R.layout.item_fin_cat, binding.finCats, false)
+            row.findViewById<TextView>(R.id.catName).text = FinanceCats.name(c.first, lang)
+            row.findViewById<TextView>(R.id.catAmount).text = FinanceMath.money(c.second, lang)
+            row.findViewById<TextView>(R.id.catPct).text = if (pct[i] == 0) "<1%" else pct[i].toString() + "%"
+            row.findViewById<LinearProgressIndicator>(R.id.catBar).setProgressCompat(pct[i], false)
+            binding.finCats.addView(row)
+        }
+        binding.txtCatEmpty.visibility = if (cats.isEmpty()) View.VISIBLE else View.GONE
     }
 
     private fun setupInsets() {

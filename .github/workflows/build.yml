@@ -49,6 +49,8 @@ jobs:
 
       - name: Unit tests + release APK (lite & full)
         shell: bash
+        env:
+          NINE_KEYSTORE_PASSWORD: ${{ secrets.NINE_KEYSTORE_PASSWORD }}
         run: |
           chmod +x gradlew
           set -o pipefail
@@ -91,6 +93,30 @@ jobs:
             echo "::error::Nine-Full.apk tidak memuat layanan aksesibilitas"; exit 1
           fi
 
+      # Menyebut kunci mana yang menandatangani APK (sidik jari SHA-256 sertifikat), agar jelas kapan kunci baru aktif.
+      - name: Check signing key
+        id: sig
+        shell: bash
+        run: |
+          set +e
+          tool=$(ls "${ANDROID_HOME:-/usr/local/lib/android/sdk}"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -1)
+          fp=""
+          if [ -n "$tool" ]; then
+            fp=$("$tool" verify --print-certs app/build/outputs/apk/lite/release/app-lite-release.apk 2>/dev/null \
+              | grep -m1 'certificate SHA-256 digest' | sed 's/.*: *//' | tr -d ':' | tr 'A-F' 'a-f')
+          fi
+          echo "sidik jari: ${fp:-tidak terbaca}"
+          if [ "$fp" = "3be21637a261df39afb1895e374d99545d86bb72b670d899843c84460a6a9a1d" ]; then
+            echo "label=kunci rilis baru (rahasia CI)" >> "$GITHUB_OUTPUT"
+            echo "::notice::APK ditandatangani KUNCI BARU."
+          elif [ "$fp" = "9441722a211023f8fccfcd4df93850e99b35ecb898b3ae4e8d2efa549d966cb2" ]; then
+            echo "label=kunci lama yang publik (rahasia NINE_KEYSTORE_PASSWORD belum dipasang)" >> "$GITHUB_OUTPUT"
+            echo "::warning::APK masih ditandatangani kunci LAMA yang publik. Pasang rahasia NINE_KEYSTORE_PASSWORD di Settings > Secrets and variables > Actions."
+          else
+            echo "label=tidak terverifikasi" >> "$GITHUB_OUTPUT"
+            echo "::warning::Sidik jari tanda tangan tidak dikenali atau tidak terbaca."
+          fi
+
       - name: Rename APKs
         shell: bash
         run: |
@@ -112,6 +138,8 @@ jobs:
           tag_name: build-${{ github.run_number }}
           name: Nine build ${{ github.run_number }}
           body: |
+            Tanda tangan APK: ${{ steps.sig.outputs.label }}.
+
             **Versi BETA** - masih dalam pengujian. Fitur yang memakai layanan aksesibilitas (on/off Wi-Fi/Bluetooth otomatis, putar lagu otomatis di YouTube Music) belum teruji di semua HP; bila gagal, Nine menampilkan kode galat singkat.
 
             APK Nine untuk Android (arm64, Android 8.0+). Dua edisi dengan package yang sama (bisa saling menimpa):

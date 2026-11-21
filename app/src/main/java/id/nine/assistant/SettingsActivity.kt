@@ -74,7 +74,7 @@ class SettingsActivity : AppCompatActivity() {
                     nine.brain.unload()
                     nine.models.delete()
                 }
-                .setNegativeButton(android.R.string.cancel, null)
+                .setNegativeButton(R.string.act_cancel, null)
                 .show()
         }
 
@@ -261,12 +261,15 @@ class SettingsActivity : AppCompatActivity() {
         nine.models.addListener(modelListener)
     }
 
+    private fun showBrainDetail(text: String) {
+        binding.brainDetail.text = text
+        binding.brainDetail.visibility = View.VISIBLE
+    }
+
     private fun renderA11y() {
         if (!NineAccessibilityService.AVAILABLE) {
             // Edisi ringan (Nine.apk): tanpa aksesibilitas supaya lolos Play Protect.
-            binding.txtA11yStatus.setText(R.string.a11y_lite_status)
-            binding.btnA11y.visibility = android.view.View.GONE
-            binding.btnAppInfo.visibility = android.view.View.GONE
+            binding.a11ySection.visibility = View.GONE
             return
         }
         val on = NineAccessibilityService.instance != null || NineAccessibilityService.isEnabled(this)
@@ -399,7 +402,7 @@ class SettingsActivity : AppCompatActivity() {
                     renderMemory()
                 }
             }
-            .setNegativeButton(android.R.string.cancel, null)
+            .setNegativeButton(R.string.act_cancel, null)
             .show()
     }
 
@@ -415,7 +418,7 @@ class SettingsActivity : AppCompatActivity() {
                 nine.brain.reset()
                 renderMemory()
             }
-            .setNegativeButton(android.R.string.cancel, null)
+            .setNegativeButton(R.string.act_cancel, null)
             .show()
     }
 
@@ -490,18 +493,18 @@ class SettingsActivity : AppCompatActivity() {
         when (s) {
             ModelManager.Status.Ready -> {
                 binding.brainStatus.text = getString(R.string.model_ready, nine.models.variant.label, size(nine.models.modelFile.length()))
-                binding.brainDetail.text = getString(R.string.privacy_text)
+                binding.brainDetail.visibility = View.GONE
                 binding.btnDownload.visibility = View.GONE
                 binding.btnDelete.visibility = View.VISIBLE
             }
             ModelManager.Status.Missing -> {
                 binding.brainStatus.text = getString(R.string.model_missing)
-                binding.brainDetail.text = getString(R.string.model_card_text)
+                showBrainDetail(getString(R.string.model_card_text))
                 binding.btnDownload.setText(R.string.model_download)
             }
             is ModelManager.Status.Downloading -> {
                 binding.brainStatus.text = getString(R.string.model_downloading, size(s.downloaded), size(s.total))
-                binding.brainDetail.text = getString(R.string.model_card_text)
+                binding.brainDetail.visibility = View.GONE
                 binding.brainProgress.visibility = View.VISIBLE
                 binding.brainProgress.max = 1000
                 if (s.total > 0) binding.brainProgress.setProgressCompat((s.downloaded * 1000 / s.total).toInt(), true)
@@ -518,13 +521,15 @@ class SettingsActivity : AppCompatActivity() {
             }
             is ModelManager.Status.Failed -> {
                 binding.brainStatus.text = getString(R.string.model_missing)
-                binding.brainDetail.text = when (s.reason) {
-                    ModelManager.Reason.NEED_TOKEN -> getString(R.string.model_fail_token)
-                    ModelManager.Reason.STORAGE -> getString(R.string.model_fail_storage)
-                    ModelManager.Reason.CORRUPT -> getString(R.string.model_fail_corrupt)
-                    ModelManager.Reason.IMPORT -> getString(R.string.model_fail_import, s.detail)
-                    else -> getString(R.string.model_fail_network, s.detail)
-                }
+                showBrainDetail(
+                    when (s.reason) {
+                        ModelManager.Reason.NEED_TOKEN -> getString(R.string.model_fail_token)
+                        ModelManager.Reason.STORAGE -> getString(R.string.model_fail_storage)
+                        ModelManager.Reason.CORRUPT -> getString(R.string.model_fail_corrupt)
+                        ModelManager.Reason.IMPORT -> getString(R.string.model_fail_import, s.detail)
+                        else -> getString(R.string.model_fail_network, s.detail)
+                    }
+                )
                 binding.btnDownload.setText(R.string.model_retry)
             }
         }

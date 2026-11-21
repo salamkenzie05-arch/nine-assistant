@@ -68,16 +68,6 @@
     </style>
 
     <!-- Baris kustomisasi yang belum aktif: redup, dengan keterangan di kanan. -->
-    <style name="Nine.SoonRow" parent="">
-        <item name="android:layout_width">match_parent</item>
-        <item name="android:layout_height">52dp</item>
-        <item name="android:gravity">center_vertical</item>
-        <item name="android:drawableEnd">@drawable/ic_lock_soon</item>
-        <item name="android:drawableTint">@color/nine_muted</item>
-        <item name="android:drawablePadding">8dp</item>
-        <item name="android:textColor">@color/nine_muted</item>
-        <item name="android:textSize">16sp</item>
-    </style>
 
     <style name="Nine.MenuRow" parent="">
         <item name="android:layout_width">match_parent</item>
@@ -90,6 +80,45 @@
         <item name="android:paddingStart">8dp</item>
         <item name="android:textColor">@color/nine_on_bg</item>
         <item name="android:textSize">16sp</item>
+    </style>
+
+    <!-- Kartu isi (Pengaturan, Nine, Keuangan): latar bulat, isi vertikal. -->
+    <style name="Nine.Card" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:background">@drawable/bg_card</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:padding">16dp</item>
+    </style>
+
+    <!-- Pil kecil (kustomisasi Nine yang belum aktif): ikon di kiri, redup. -->
+    <style name="Nine.Chip" parent="">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">40dp</item>
+        <item name="android:layout_marginStart">4dp</item>
+        <item name="android:layout_marginEnd">4dp</item>
+        <item name="android:alpha">0.75</item>
+        <item name="android:background">@drawable/bg_pill_soft</item>
+        <item name="android:drawablePadding">6dp</item>
+        <item name="android:drawableTint">@color/nine_gold</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:paddingStart">12dp</item>
+        <item name="android:paddingEnd">14dp</item>
+        <item name="android:textColor">@color/nine_on_bg</item>
+        <item name="android:textSize">13sp</item>
+    </style>
+
+    <style name="Nine.Divider" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">1dp</item>
+        <item name="android:layout_marginTop">12dp</item>
+        <item name="android:layout_marginBottom">8dp</item>
+        <item name="android:background">@color/nine_pill</item>
+    </style>
+
+    <style name="Nine.Status" parent="Nine.Body">
+        <item name="android:layout_marginTop">4dp</item>
+        <item name="android:textSize">12sp</item>
     </style>
 
     <style name="Nine.Body" parent="">

@@ -12,7 +12,6 @@
     <string name="status_listening">Mendengarkan…</string>
     <string name="status_thinking">Berpikir…</string>
     <string name="status_speaking">Berbicara · ketuk untuk berhenti</string>
-    <string name="welcome">Selamat datang. Saya Nine, asisten pribadi Anda yang bekerja sepenuhnya di perangkat ini. Ketuk orb dan ucapkan perintah, misalnya \"pasang alarm jam 6 pagi\", atau ajak saya mengobrol.</string>
 
     <string name="brain_none">Mode perintah · otak AI belum aktif</string>
     <string name="brain_idle">Gemma 4 · siaga</string>
@@ -21,7 +20,7 @@
     <string name="brain_error">Otak AI gagal dimuat</string>
 
     <string name="model_card_title">Aktifkan otak AI Nine</string>
-    <string name="model_card_text">Unduh Gemma 4 (±2,6 GB, sekali saja, sebaiknya lewat Wi-Fi) agar Nine bisa mengobrol dan menjawab tanpa internet.</string>
+    <string name="model_card_text">Unduh sekali (±2,6 GB, sebaiknya lewat Wi-Fi) agar Nine bisa mengobrol tanpa internet.</string>
     <string name="model_download">Unduh model Gemma</string>
     <string name="model_import">Impor file model (.litertlm)</string>
     <string name="model_delete">Hapus model</string>
@@ -39,55 +38,43 @@
     <string name="model_fail_import">Gagal mengimpor file: %1$s</string>
     <string name="model_delete_confirm">Hapus model Gemma ini? Nine kembali ke mode perintah (atau mode internet bila aktif).</string>
     <string name="hf_token_hint">Token Hugging Face (opsional)</string>
-    <string name="hf_token_help">Hanya bila unduhan meminta login.</string>
 
-    <string name="sec_brain">Otak AI (Gemma 4)</string>
     <string name="sec_look">Tampilan</string>
-    <string name="theme_system">Ikuti sistem</string>
+    <string name="theme_system">Sistem</string>
     <string name="theme_light">Terang</string>
     <string name="theme_dark">Gelap</string>
-    <string name="sec_language">Bahasa</string>
-    <string name="honorific_label">Nine memanggil Anda (Indonesia / English):</string>
-    <string name="sec_voice">Suara Nine</string>
-    <string name="speak_replies">Suara droid (bip &amp; siul)</string>
-    <string name="voice_preview">Dengarkan contoh</string>
-    <string name="voice_help">Suara droid dibuat di HP; isi jawaban tetap tampil sebagai teks.</string>
-    <string name="sec_assistant">Asisten default</string>
-    <string name="assistant_help">Agar Nine bisa dipanggil dengan menekan lama tombol samping.</string>
-    <string name="assistant_button">Pilih Nine sebagai asisten digital</string>
+    <string name="speak_replies">Suara droid</string>
+    <string name="voice_preview">Contoh suara</string>
+    <string name="assistant_button">Jadikan asisten default</string>
     <string name="sec_privacy">Privasi</string>
-    <string name="privacy_text">Suara, percakapan, dan catatan disimpan hanya di HP ini. Internet dipakai untuk mengunduh model, dan Mode internet bila Anda aktifkan.</string>
+    <string name="privacy_text">Semua data tetap di HP ini. Internet hanya untuk mengunduh model dan Mode internet.</string>
 
     <string name="todo_title">Tugas hari ini</string>
     <string name="todo_hint">Tambah tugas…</string>
     <string name="todo_add">Tambah</string>
     <string name="todo_delete">Hapus tugas</string>
-    <string name="todo_clear_done">Hapus yang selesai</string>
+    <string name="todo_clear_done">Hapus selesai</string>
     <string name="todo_empty">Belum ada tugas. Katakan: \"tambah tugas beli susu\".</string>
 
     <string name="widget_orb_desc">Orb Nine (ikut tema): ketuk untuk bicara</string>
     <string name="widget_today_desc">Nine (ikut tema) · tugas hari ini</string>
 
-    <string name="sec_internet">Mode internet (lebih pintar)</string>
-    <string name="internet_switch">Gunakan Gemini + Google Search bila online</string>
-    <string name="internet_help">Gemini + Google Search untuk pertanyaan terkini. Perlu API key gratis dari Google AI Studio. Perintah HP tetap diproses di perangkat.</string>
-    <string name="gemini_key_hint">API key Gemini (AIza…)</string>
-    <string name="gemini_get_key">Dapatkan API key gratis</string>
-    <string name="city_hint">Kota Anda (opsional, untuk cuaca), mis. Jakarta</string>
-    <string name="internet_status_off">Mode internet mati · semua jawaban dari Gemma offline.</string>
-    <string name="internet_status_nokey">Isi API key untuk mengaktifkan.</string>
-    <string name="internet_status_online">Aktif · terhubung ke internet.</string>
-    <string name="internet_status_offline">Aktif · sedang tidak ada internet, memakai Gemma offline.</string>
+    <string name="internet_switch">Mode internet · Gemini</string>
+    <string name="gemini_key_hint">Kunci API Gemini</string>
+    <string name="gemini_get_key">Dapatkan kunci gratis</string>
+    <string name="city_hint">Kota untuk cuaca (opsional)</string>
+    <string name="internet_status_off">Mati. Jawaban dari Gemma offline.</string>
+    <string name="internet_status_nokey">Isi kunci API untuk mengaktifkan.</string>
+    <string name="internet_status_online">Aktif · online</string>
+    <string name="internet_status_offline">Aktif · offline, memakai Gemma</string>
     <string name="brain_online">Online · %1$s + pencarian web</string>
 
-    <string name="variant_e2b">Gemma 4 E2B · 2,6 GB · cepat</string>
-    <string name="variant_e4b">Gemma 4 E4B · 3,7 GB · lebih pintar, sedikit lebih lambat</string>
+    <string name="variant_e2b">E2B · 2,6 GB · cepat</string>
+    <string name="variant_e4b">E4B · 3,7 GB · lebih pintar</string>
 
-    <string name="sec_wake">Panggil dengan suara</string>
-    <string name="wake_switch">Aktifkan kata pemanggil</string>
-    <string name="wake_help">Frasa berbahasa Inggris, pisahkan dengan koma. Berjalan offline dan sedikit menambah pemakaian baterai.</string>
-    <string name="wake_overlay_button">Izinkan Nine muncul di atas aplikasi lain</string>
-    <string name="wake_overlay_granted">Izin tampil di atas aplikasi lain: sudah diberikan ✓</string>
+    <string name="wake_switch">Kata pemanggil</string>
+    <string name="wake_overlay_button">Izinkan tampil di atas aplikasi</string>
+    <string name="wake_overlay_granted">Tampil di atas aplikasi: diizinkan ✓</string>
     <string name="wake_status_on">Mendengarkan \"%1$s\".</string>
     <string name="wake_status_off">Mati.</string>
     <string name="wake_no_phrase">Isi minimal satu frasa.</string>
@@ -104,15 +91,12 @@
     <string name="sec_brain_group">Otak AI</string>
     <string name="sec_voice_group">Bahasa &amp; suara</string>
     <string name="sec_wake_group">Memanggil Nine</string>
-    <string name="sec_calendar">Kalender</string>
     <string name="calendar_target">Simpan acara baru ke</string>
-    <string name="calendar_help">\"Otomatis\" memakai kalender yang paling aktif.</string>
-    <string name="calendar_auto">Otomatis (kalender paling aktif)</string>
+    <string name="calendar_auto">Otomatis</string>
     <string name="calendar_access">Izinkan akses kalender</string>
-    <string name="gemini_model_hint">Model Gemini (kosong = gemini-flash-latest)</string>
-    <string name="wake_phrase_hint">Frasa pemanggil, mis. hey nine</string>
+    <string name="gemini_model_hint">Model (opsional)</string>
+    <string name="wake_phrase_hint">Frasa, mis. hey nine</string>
     <string name="model_import_short">Impor file</string>
-    <string name="advanced">Lanjutan</string>
 
 
     <string name="rec_channel">Perekam suara Nine</string>
@@ -121,15 +105,12 @@
     <string name="rec_stop">Berhenti</string>
     <string name="rec_banner">● Merekam %1$s · ketuk orb untuk berhenti</string>
 
-    <string name="sec_location">Lokasi</string>
-    <string name="location_switch">Gunakan lokasi untuk akurasi</string>
-    <string name="location_help">Untuk cuaca dan tempat terdekat. Dikirim ke Gemini hanya bila Mode internet aktif, tidak disimpan.</string>
+    <string name="location_switch">Gunakan lokasi</string>
     <string name="location_status_fmt">Terakhir: %1$s</string>
     <string name="location_status_none">Belum ada lokasi.</string>
 
     <string name="widget_orb_dark_desc">Orb Nine (ikut tema): ketuk untuk bicara</string>
     <string name="widget_orb_large_desc">Orb Nine besar 4×4 (ikut tema): ketuk untuk bicara</string>
-    <string name="unlock_reason">Buka kunci untuk melanjutkan perintah Nine</string>
 
     <string name="cd_menu">Menu Nine</string>
     <string name="menu_lang">Bahasa</string>
@@ -148,38 +129,34 @@
     <string name="alarm_default_label">Alarm</string>
     <string name="alarm_channel">Alarm Nine</string>
     <string name="sec_alarm">Alarm</string>
-    <string name="alarm_engine_nine">Alarm Nine · bisa dinyalakan, dimatikan, dihapus lewat suara</string>
-    <string name="alarm_engine_clock">Aplikasi Jam bawaan HP</string>
-    <string name="alarm_help">Berbunyi tepat waktu walau HP tidur. Bisa diatur lewat suara, mis. \"matikan alarm jam 6\".</string>
+    <string name="alarm_engine_nine">Alarm Nine</string>
+    <string name="alarm_engine_clock">Aplikasi Jam</string>
     <string name="alarm_manage">Kelola alarm</string>
-    <string name="alarm_fullscreen">Izinkan layar penuh saat alarm berbunyi</string>
+    <string name="alarm_fullscreen">Izinkan layar penuh saat alarm</string>
     <string name="alarm_fullscreen_ok">Layar penuh alarm: diizinkan ✓</string>
     <string name="sec_memory_group">Memori Nine</string>
-    <string name="memory_auto">Ingat otomatis hal yang saya ceritakan</string>
+    <string name="memory_auto">Ingat otomatis</string>
     <string name="memory_count">%1$d hal diingat</string>
     <string name="memory_manage">Lihat &amp; hapus</string>
     <string name="memory_clear">Hapus semua</string>
     <string name="memory_delete_selected">Hapus terpilih</string>
     <string name="memory_empty">Belum ada yang diingat.</string>
     <string name="memory_clear_confirm">Hapus semua ingatan Nine tentang Anda?</string>
-    <string name="memory_help">Nine mengingat hal tetap yang Anda ceritakan, hanya di HP ini. Katakan \"ingat bahwa …\" atau \"lupakan …\".</string>
     <string name="a11y_description">Membantu Nine menyalakan atau mematikan Wi-Fi, Bluetooth, mode pesawat dan hotspot lewat Panel Cepat, memutar lagu pilihan di YouTube Music, dan menutup semua aplikasi lewat layar Recents. Nine hanya bertindak saat Anda memerintahkan; isi layar tidak dibaca di luar tugas itu, tidak disimpan, dan tidak dikirim ke internet.</string>
-    <string name="sec_a11y">Tombol melayang &amp; kendali ponsel</string>
-    <string name="a11y_help">Opsional: untuk Wi-Fi, Bluetooth, mode pesawat, hotspot, dan lagu di YouTube Music. Android 13+: bila abu-abu, buka Info aplikasi → ⋮ → Izinkan pengaturan terbatas.</string>
-    <string name="a11y_button">Buka pengaturan aksesibilitas</string>
-    <string name="a11y_appinfo_button">Buka info aplikasi Nine</string>
-    <string name="a11y_status_on">Layanan aksesibilitas: aktif ✓</string>
-    <string name="a11y_lite_status">Fitur ini hanya ada di edisi Full (Nine-Full.apk).</string>
-    <string name="a11y_status_off">Layanan aksesibilitas: belum aktif</string>
-    <string name="music_switch">Nine bereaksi pada musik</string>
-    <string name="music_help">Wajah Nine bergoyang mengikuti musik lewat mikrofon. Suara tidak direkam.</string>
+    <string name="sec_a11y">Kendali ponsel</string>
+    <string name="a11y_help">Bila abu-abu: Info aplikasi → ⋮ → Izinkan pengaturan terbatas.</string>
+    <string name="a11y_button">Pengaturan aksesibilitas</string>
+    <string name="a11y_appinfo_button">Info aplikasi Nine</string>
+    <string name="a11y_status_on">Aksesibilitas: aktif ✓</string>
+    <string name="a11y_status_off">Aksesibilitas: belum aktif</string>
+    <string name="music_switch">Wajah bergoyang ikut musik</string>
     <string name="widget_orb_white_desc">Orb Nine putih: ketuk untuk bicara</string>
     <string name="widget_orb_large_white_desc">Orb Nine putih besar 4×4: ketuk untuk bicara</string>
     <string name="widget_today_white_desc">Nine putih · tugas hari ini</string>
     <string name="fin_title">Keuangan</string>
     <string name="fin_p_today">Hari ini</string>
-    <string name="fin_p_week">Minggu ini</string>
-    <string name="fin_p_month">Bulan ini</string>
+    <string name="fin_p_week">Minggu</string>
+    <string name="fin_p_month">Bulan</string>
     <string name="fin_p_all">Semua</string>
     <string name="fin_empty">Belum ada catatan. Katakan: \"tadi beli kopi 18 ribu\".</string>
     <string name="fin_delete">Hapus</string>
@@ -197,7 +174,7 @@
     <string name="profile_later">Nanti saja</string>
     <string name="profile_saved">Profil disimpan</string>
     <string name="profile_button">Ubah profil</string>
-    <string name="gpu_switch">AI dengan GPU (lebih cepat, layar bisa patah-patah)</string>
+    <string name="gpu_switch">AI dengan GPU (bisa patah-patah)</string>
     <string name="cd_attach">Kirim gambar</string>
     <string name="image_failed">Gambar tidak bisa dibaca.</string>
     <string name="hub_finance">Laporan keuangan</string>
@@ -217,17 +194,33 @@
     <string name="spaces_full">Maksimal %1$d ruang.</string>
     <string name="spaces_delete_q">Hapus \"%1$s\" beserta obrolannya?</string>
     <string name="spaces_back_cd">Kembali ke obrolan utama</string>
-    <string name="nine_level">Level %1$d · %2$s</string>
-    <string name="nine_next">Berikutnya: %1$s</string>
     <string name="nine_top">Level tertinggi</string>
-    <string name="nine_stats">Streak %1$d hari · %2$d hari bersama</string>
-    <string name="nine_surprise">Kejutan</string>
-    <string name="nine_surprise_open">Nine punya sesuatu untuk hari ini.</string>
-    <string name="nine_surprise_done">Hari ini sudah. Sampai besok.</string>
-    <string name="nine_surprise_none">Semua kejutan sudah ditemukan.</string>
-    <string name="nine_found">Ditemukan %1$d dari %2$d</string>
-    <string name="nine_custom">Kustomisasi · Segera hadir</string>
-    <string name="nine_custom_personality">Kepribadian</string>
+    <string name="nine_custom_personality">Sifat</string>
     <string name="nine_custom_outfit">Pakaian</string>
-    <string name="nine_custom_voice">Nada suara</string>
+    <string name="nine_custom_voice">Suara</string>
+    <string name="sec_loc_cal">Lokasi &amp; kalender</string>
+    <string name="nine_streak_label">Hari beruntun</string>
+    <string name="nine_lv">LV</string>
+    <string name="nine_grow">Tumbuhkan Nine</string>
+    <string name="nine_grow_talk">Obrolan hari ini</string>
+    <string name="nine_grow_talk_sub">+10 poin dan bonus hari beruntun</string>
+    <string name="nine_grow_more">Obrolan tambahan</string>
+    <string name="nine_grow_more_sub">+2 poin tiap obrolan, maks. 10 per hari</string>
+    <string name="nine_grow_surprise">Kejutan hari ini</string>
+    <string name="nine_grow_surprise_sub">+%1$d poin · %2$d/%3$d ditemukan</string>
+    <string name="nine_grow_surprise_all">Semua kejutan sudah ditemukan</string>
+    <string name="nine_xp_fmt">%1$d/%2$d XP</string>
+    <string name="nine_hint_streak">Mengobrol tiap hari menjaga hari beruntun.</string>
+    <string name="nine_hint_days">Level berikutnya butuh %1$d hari lagi.</string>
+    <string name="nine_soon">Segera hadir</string>
+    <string name="fin_tab_recap">Rekap</string>
+    <string name="fin_tab_list">Riwayat</string>
+    <string name="fin_recap">Rekap keuangan</string>
+    <string name="fin_income">Pemasukan</string>
+    <string name="fin_expense">Pengeluaran</string>
+    <string name="fin_diff">Selisih</string>
+    <string name="fin_cats">Kategori</string>
+    <string name="fin_none">Belum ada data</string>
+    <string name="fin_all_time">Semua waktu</string>
+    <string name="fin_delete_msg">Hapus catatan %1$s?</string>
 </resources>

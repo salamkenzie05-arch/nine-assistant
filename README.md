@@ -17,7 +17,8 @@ Nine adalah asisten suara seperti Siri yang berjalan **sepenuhnya di perangkat**
 
 - **Tombol menu di kanan orb** (menggantikan pintasan tugas): Laporan keuangan, Tugas hari ini, Ruang obrolan, dan Nine.
 - **Ruang obrolan** (seperti "projects"): tiap ruang punya nama, instruksi opsional untuk Nine, dan riwayat obrolannya sendiri; membukanya tidak bercampur dengan obrolan utama. Disimpan di penyimpanan pribadi aplikasi (**tidak dienkripsi**, tidak ikut cadangan); maksimal 20 ruang, 120 pesan per ruang. Nama dan instruksi ruang ikut dikirim ke AI selama kamu mengobrol di ruang itu (ke Gemini bila mode internet dipakai). Setiap kali aplikasi dimulai ulang, yang terbuka adalah obrolan utama.
-- **Layar Nine**: level dan progres kedekatan, streak, hitungan kejutan yang sudah ditemukan, dan tempat **kustomisasi** (kepribadian, pakaian, nada suara) yang **baru kerangka, belum berfungsi**.
+- **Layar Nine** (gaya halaman streak): hari beruntun, level, Nine dengan gelembung ucapan, bar XP, dan daftar cara menumbuhkan kedekatan. Tangan dan kaki Nine berupa **empat bola melayang** (dua tangan, dua kaki) yang bergerak pelan dan melompat saat Nine diketuk. Tombol **Sifat, Pakaian, Suara** hanya tempat kosong untuk nanti (menampilkan "Segera hadir").
+- **Layar Keuangan** (gaya rekap bank): tab Rekap dan Riwayat, pilihan periode (hari ini, minggu, bulan, semua), ringkasan pemasukan, pengeluaran, dan selisih, grafik batang per jenis, dan kategori dengan persen (dibulatkan agar total tepat 100%).
 - **Kejutan harian (side quest)**: paling banyak satu per hari, muncul sebagai ajakan santai dari Nine (misalnya menawarkan bernyanyi), bukan sebagai tugas. Memakai fitur itu, lewat ajakan atau sendiri, menambah kedekatan sedikit; menolak tidak apa-apa. Berhenti muncul setelah semua fitur ditemukan.
 - **Tanya info HP**: sisa penyimpanan, RAM, tipe HP, versi Android, status Wi-Fi/Bluetooth/jaringan, kesehatan/suhu baterai, uptime, volume, layar, prosesor. Tidak membaca nomor IMEI, serial, MAC, atau nama jaringan. Status Wi-Fi/Bluetooth bergantung pada pengaturan sistem; bila tidak bisa dipastikan, Nine bilang begitu.
 - **"Ke layar utama"** membawa ke layar utama HP.
@@ -116,7 +117,7 @@ Internet hanya dipakai untuk mengunduh model. Percakapan, suara, dan catatan tid
 - Terima/tolak telepon butuh izin **Telepon** dan hanya lewat perintah suara: Nine tidak otomatis menyebut siapa yang menelepon.
 - Nyanyian adalah melodi bersuara droid, tanpa lirik. Reaksi musik memakai mikrofon hanya saat layar Nine terbuka dan Nine sedang diam; layar kunci dan aplikasi lain tidak diawasi.
 - Pengingat lebih dari 24 jam dibuka di Kalender, karena alarm Android hanya berlaku 24 jam ke depan.
-- Kunci tanda tangan `app/nine-sideload.jks` (beserta passwordnya) sengaja ada di repo **publik** agar setiap build CI bisa memperbarui aplikasi. Artinya siapa pun bisa membuat APK yang ditandatangani kunci yang sama; pasang APK hanya dari rilis repo ini. Jangan pakai untuk Play Store. Untuk memutarnya, buat kunci baru dan simpan sebagai rahasia CI; pengguna lama harus pasang ulang sekali.
+- Tanda tangan APK: bila rahasia CI `NINE_KEYSTORE_PASSWORD` diisi, build memakai kunci privat `app/nine-release.p12` (terenkripsi; sandinya hanya ada di rahasia CI). Bila belum diisi, build memakai kunci publik lama `app/nine-sideload.jks` (sandi ada di repo). Catatan rilis menyebut kunci mana yang dipakai. Berpindah kunci memaksa **hapus lalu pasang ulang** sekali (data dan model Gemma ikut hilang), karena Android menolak pembaruan dengan tanda tangan berbeda. Jangan pakai untuk Play Store.
 - Wake word memakai model bahasa Inggris, jadi frasanya harus kata-kata Inggris. Layar Nine hanya bisa muncul dari latar belakang bila Nine dijadikan asisten digital default atau diberi izin "tampil di atas aplikasi lain"; selain itu muncul notifikasi untuk diketuk.
 - Gemma/Gemini belum memutuskan tindakan HP lewat function calling; mereka menulis perintah yang lalu dijalankan parser. Tindakan berisiko (telepon, WhatsApp, membuka situs, merekam, menghapus) yang diusulkan AI selalu dikonfirmasi dulu.
 - Alarm yang dibuat di aplikasi Jam tidak bisa dinyalakan/dimatikan/dihapus oleh aplikasi lain; itu sebabnya Nine punya alarm sendiri.
@@ -135,7 +136,7 @@ Internet hanya dipakai untuk mengunduh model. Percakapan, suara, dan catatan tid
 | `audio/` | Deteksi nada (YIN) + tuner gitar, analisis ketukan musik, daftar lagu |
 | `a11y/` | Layanan aksesibilitas: ubin pengaturan cepat, YouTube Music, tutup semua aplikasi. Kode aslinya ada di `src/full/`; `src/lite/` berisi stub kosong dengan API sama (`AVAILABLE = false`) |
 | `call/` | Terima/tolak telepon masuk |
-| `ui/` | `NineOrbView`, `EdgeGlowView`, daftar pesan |
+| `ui/` | `NineOrbView`, `EdgeGlowView`, `SphereView` + `NineBuddyView` (Nine dengan tangan dan kaki bola), `FinBarsView` (grafik batang), daftar pesan |
 | `widget/` | Widget orb (kecil dan 4x4) dan "Hari ini"; frame wajah dibuat `tools/face_sphere.py` |
 | `service/` | Peran asisten digital default |
 
