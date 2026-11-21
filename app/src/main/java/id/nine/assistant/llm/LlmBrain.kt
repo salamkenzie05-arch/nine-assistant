@@ -186,7 +186,7 @@ class LlmBrain(context: Context, private val prefs: Prefs, private val models: M
         if (c != null && conversationLang == lang && !stale) return c
         closeConversation()
         val cfg = ConversationConfig(
-            systemInstruction = Contents.of(prefs.persona.systemPrompt(lang, LocalDateTime.now(), memory.promptBlock(lang))),
+            systemInstruction = Contents.of(prefs.persona.systemPrompt(lang, LocalDateTime.now(), memory.promptBlock(lang), prefs.autoMemory)),
             samplerConfig = SamplerConfig(topK = 40, topP = 0.95, temperature = 0.6)
         )
         val created = engine!!.createConversation(cfg)

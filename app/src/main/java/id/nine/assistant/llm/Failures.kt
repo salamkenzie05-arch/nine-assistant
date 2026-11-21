@@ -8,8 +8,7 @@ import java.net.UnknownHostException
 
 enum class FailKind { RATE_LIMIT, QUOTA_DAILY, AUTH, NOT_FOUND, BAD_REQUEST, TOO_LARGE, SERVER, TIMEOUT, NETWORK, BLOCKED, EMPTY, OTHER }
 
-/** [dailyLimit]: batas permintaan per hari yang disebut Google di galat kuota (bila ada). */
-data class Failure(val kind: FailKind, val code: Int?, val message: String, val retryAfterMs: Long? = null, val dailyLimit: Int? = null)
+data class Failure(val kind: FailKind, val code: Int?, val message: String, val retryAfterMs: Long? = null)
 
 /** Kegagalan dari satu panggilan ke penyedia. */
 class ProviderException(val failure: Failure) : IOException(failure.message)
@@ -50,31 +49,7 @@ object Failures {
             }
             else -> FailKind.OTHER
         }
-        return Failure(kind, code, msg.ifBlank { "HTTP $code" }, retry, if (code == 429) dailyRequestLimit(body) else null)
-    }
-
-    /**
-     * Batas permintaan per hari yang disebut Google di galat 429: detail "QuotaFailure" berisi "quotaId" (…PerDay…)
-     * dan "quotaValue". Null bila tidak ada, bukan JSON, atau bukan batas harian.
-     */
-    fun dailyRequestLimit(body: String): Int? {
-        val v0 = MiniJson.parseOrNull(body)
-        val v = if (v0 is List<*>) v0.firstOrNull() else v0
-        val details = MiniJson.arr(v, "error", "details") ?: return null
-        for (d in details) {
-            val violations = MiniJson.arr(d, "violations") ?: continue
-            for (x in violations) {
-                val id = MiniJson.str(x, "quotaId") ?: continue
-                if (!id.contains("PerDay", ignoreCase = true) || !id.contains("Request", ignoreCase = true)) continue
-                val value = when (val q = MiniJson.get(x, "quotaValue")) {
-                    is String -> q.trim().toLongOrNull()
-                    is Number -> q.toLong()
-                    else -> null
-                } ?: continue
-                if (value in 1..10_000_000L) return value.toInt()
-            }
-        }
-        return null
+        return Failure(kind, code, msg.ifBlank { "HTTP $code" }, retry)
     }
 
     /** Galat di tengah aliran: [code] bila ada, kalau tidak lihat isi pesannya. */

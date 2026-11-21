@@ -1,6 +1,7 @@
 package id.nine.assistant.llm
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -76,22 +77,11 @@ class WireTest {
     }
 
     @Test
-    fun usageIsReadFromMetadataIncludingThinkingTokens() {
-        val line = """data: {"candidates":[{"content":{"parts":[{"text":"x"}]}}],"usageMetadata":{"promptTokenCount":120,"candidatesTokenCount":30,"totalTokenCount":210,"thoughtsTokenCount":60}}"""
-        assertEquals(TokenUsage(120, 90), GeminiWire.parseUsage(line))
-    }
-
-    @Test
-    fun usageWithoutTotalFallsBackToSum() {
-        val line = """data: {"usageMetadata":{"promptTokenCount":10,"candidatesTokenCount":5}}"""
-        assertEquals(TokenUsage(10, 5), GeminiWire.parseUsage(line))
-    }
-
-    @Test
-    fun usageAbsentOrMalformedIsNull() {
-        assertNull(GeminiWire.parseUsage("""data: {"candidates":[]}"""))
-        assertNull(GeminiWire.parseUsage("data: {oops"))
-        assertNull(GeminiWire.parseUsage(": comment"))
-        assertNull(GeminiWire.parseUsage("""data: {"usageMetadata":{}}"""))
+    fun thinkingLevelIsSentOnlyWhenAsked() {
+        val req = ChatRequest("sys", emptyList(), "halo")
+        assertFalse(GeminiWire.body(req, false).contains("thinkingConfig"))
+        val json = GeminiWire.body(req, false, thinking = true)
+        val cfg = MiniJson.get(MiniJson.parseOrNull(json), "generationConfig", "thinkingConfig")
+        assertEquals("MINIMAL", MiniJson.str(cfg, "thinkingLevel"))
     }
 }

@@ -2,6 +2,7 @@ package id.nine.assistant.llm
 
 import id.nine.assistant.core.AppLang
 import id.nine.assistant.core.Persona
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -82,5 +83,27 @@ class OnlinePromptTest {
         for (name in ExpressionTag.PROMPT_NAMES) {
             assertTrue("$name tidak dikenali", ExpressionTag.parse("[$name] x").text == "x")
         }
+    }
+
+    @Test
+    fun memoryRuleIsOptionalAndKeepsLanguageRuleLast() {
+        for (lang in AppLang.values()) {
+            val marker = if (lang == AppLang.ID) "INGATAN OTOMATIS" else "AUTOMATIC MEMORY"
+            val language = if (lang == AppLang.ID) "ATURAN BAHASA" else "LANGUAGE RULE"
+            for (s in listOf(p.onlinePrompt(lang, now, ""), p.systemPrompt(lang, now))) {
+                assertTrue(s.indexOf(marker) in 0 until s.indexOf(language))
+                assertTrue(s.contains(if (lang == AppLang.ID) "[ingat:" else "[remember:"))
+            }
+            assertFalse(p.onlinePrompt(lang, now, "", autoMemory = false).contains(marker))
+            assertFalse(p.systemPrompt(lang, now, autoMemory = false).contains(marker))
+        }
+    }
+
+    @Test
+    fun theExamplesInTheMemoryRuleAreParsedByTheTagParser() {
+        val id = ExpressionTag.parse("[happy] [ingat: Nama pengguna Budi] Halo, Budi.")
+        assertEquals(listOf("Nama pengguna Budi"), id.facts)
+        val en = ExpressionTag.parse("[happy] [remember: User's name is Budi] Hello, Budi.")
+        assertEquals(listOf("User's name is Budi"), en.facts)
     }
 }

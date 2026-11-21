@@ -31,6 +31,11 @@ object FactExtractor {
         rx("""^my\s+(?:wife|husband|son|daughter|mother|mom|father|dad|brother|sister|friend|best\s+friend|boss|girlfriend|boyfriend|partner|cat|dog|pet|birthday|home|house|address|job|office|hobby|age|favou?rite\s+\w+)\b\s*(?:is|are|was|lives?|works?|loves?|likes?|hates?)?\s*\S+.*""")
     )
 
+    private val secret = rx("""\d{7,}|(?:\d[\s.-]?){9,}|\b(?:password|kata\s*sandi|sandi|passcode|pin|otp|cvv|cvc|nomor\s+kartu|card\s+number|ktp|nik|paspor|passport|ssn|rekening|iban)\b""")
+
+    /** Fakta yang tampak rahasia (kata sandi, nomor kartu/identitas/telepon): tidak pernah disimpan, apa pun sumbernya. */
+    fun looksSensitive(fact: String): Boolean = secret.containsMatchIn(fact)
+
     /** Kalimat-kalimat dalam [utterance] yang layak diingat (sudah dibersihkan dari kata sambung di depan). */
     fun extract(utterance: String): List<String> {
         val out = ArrayList<String>()
@@ -45,7 +50,7 @@ object FactExtractor {
             val words = s.split(Regex("\\s+")).size
             if (words < 3 || words > 30) continue
             if (transient.containsMatchIn(s)) continue
-            if (patterns.any { it.containsMatchIn(s) }) out.add(s)
+            if (patterns.any { it.containsMatchIn(s) } && !looksSensitive(s)) out.add(s)
         }
         return out
     }

@@ -11,7 +11,11 @@ sealed class SseEvent {
 /** Format API Gemini (Google AI Studio). */
 object GeminiWire {
 
-    fun body(req: ChatRequest, search: Boolean): String {
+    /**
+     * [thinking]: minta berpikir seminimal mungkin ("thinkingLevel": MINIMAL). Model Gemini 3 ke atas berpikir panjang secara
+     * bawaan, sehingga huruf pertama baru muncul puluhan detik kemudian; untuk percakapan, jawaban cepat lebih penting.
+     */
+    fun body(req: ChatRequest, search: Boolean, thinking: Boolean = false): String {
         val m = LinkedHashMap<String, Any?>()
         if (req.system.isNotBlank()) {
             m["system_instruction"] = mapOf("parts" to listOf(mapOf("text" to req.system)))
@@ -20,6 +24,7 @@ object GeminiWire {
             mapOf("role" to (if (r == "user") "user" else "model"), "parts" to listOf(mapOf("text" to t)))
         }
         if (search) m["tools"] = listOf(mapOf("google_search" to emptyMap<String, Any?>()))
+        if (thinking) m["generationConfig"] = mapOf("thinkingConfig" to mapOf("thinkingLevel" to "MINIMAL"))
         return MiniJson.write(m)
     }
 
@@ -31,20 +36,6 @@ object GeminiWire {
         )
         is String -> SseEvent.Error(err, null)
         else -> SseEvent.Error("error", null)
-    }
-
-    /** Jumlah token dari "usageMetadata" (kumulatif; baris terakhir yang memuatnya yang benar), atau null. */
-    fun parseUsage(line: String): TokenUsage? {
-        if (!line.startsWith("data:")) return null
-        val obj = MiniJson.parseOrNull(line.substring(5).trim()) as? Map<*, *> ?: return null
-        val meta = MiniJson.get(obj, "usageMetadata") ?: return null
-        val inp = MiniJson.num(meta, "promptTokenCount")?.toLong() ?: 0L
-        val total = MiniJson.num(meta, "totalTokenCount")?.toLong()
-        val out = MiniJson.num(meta, "candidatesTokenCount")?.toLong() ?: 0L
-        if (total == null && inp == 0L && out == 0L) return null
-        val tot = total ?: (inp + out)
-        // Token "berpikir" dihitung juga ke kuota; selisih total terhadap masukan = semua yang dihasilkan.
-        return TokenUsage(inp, (tot - inp).coerceAtLeast(out))
     }
 
     private val BLOCKING = setOf("SAFETY", "RECITATION", "PROHIBITED_CONTENT", "BLOCKLIST", "SPII", "OTHER")

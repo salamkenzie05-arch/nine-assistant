@@ -14,11 +14,6 @@ class Prefs(context: Context) {
         if (!sp.getBoolean("llm_cpu_v33", false)) {
             sp.edit().putString("llm_backend", "cpu").putBoolean("llm_cpu_v33", true).apply()
         }
-        // Versi 2.7: semua alarm pindah ke mesin alarm Nine sekali, agar bisa dimatikan/dihapus lewat suara.
-        // (Alarm di aplikasi Jam tidak bisa diubah oleh aplikasi lain.) Pengguna tetap bisa memilih ulang di Pengaturan.
-        if (!sp.getBoolean("alarm_engine_v27", false)) {
-            sp.edit().putString("alarm_engine", "nine").putBoolean("alarm_engine_v27", true).apply()
-        }
     }
 
     enum class Theme(val nightMode: Int) {
@@ -42,6 +37,11 @@ class Prefs(context: Context) {
     var speakReplies: Boolean
         get() = sp.getBoolean("speak", true)
         set(value) = sp.edit().putBoolean("speak", value).apply()
+
+    /** Suara Nine: "female" (wanita) atau "male" (pria); lihat VoiceGender. */
+    var voiceGender: String
+        get() = sp.getString("voice_gender", "female") ?: "female"
+        set(value) = sp.edit().putString("voice_gender", if (value == "male") "male" else "female").apply()
 
     /** Nine mengingat otomatis hal tentang pengguna yang disebut dalam percakapan ("aku suka …", "nama saya …"). */
     var autoMemory: Boolean
@@ -98,11 +98,6 @@ class Prefs(context: Context) {
     var aiSearch: Boolean
         get() = sp.getBoolean("ai_search", false)
         set(value) = sp.edit().putBoolean("ai_search", value).apply()
-
-    /** Catatan pemakaian Gemini (JSON), lihat UsageLedger. */
-    var aiUsage: String?
-        get() = sp.getString("ai_usage", null)
-        set(value) = sp.edit().apply { if (value == null) remove("ai_usage") else putString("ai_usage", value) }.apply()
 
     var geminiKey: String
         get() = providerKey("gemini")
@@ -255,14 +250,6 @@ class Prefs(context: Context) {
         get() = sp.getInt("heart_count", 0)
         set(value) = sp.edit().putInt("heart_count", value).apply()
 
-    // --- Alarm
-    /** "nine" = alarm milik Nine (bisa dinyalakan/dimatikan/dihapus lewat suara); "clock" = aplikasi Jam bawaan. */
-    var alarmEngine: String
-        get() = sp.getString("alarm_engine", "nine") ?: "nine"
-        set(value) = sp.edit().putString("alarm_engine", value).apply()
-
-    val nineAlarms: Boolean get() = alarmEngine != "clock"
-
     val persona: Persona get() = Persona(honorificId, honorificEn)
 
     companion object {
@@ -278,7 +265,8 @@ class Prefs(context: Context) {
 
         /** Pengaturan milik fitur yang sudah dihapus; dibuang saat aplikasi dibuka. */
         private val RETIRED_KEYS = setOf(
-            "groq_key", "cerebras_key", "openrouter_key", "auto_support", "inbody_ocr", "model_variant"
+            "groq_key", "cerebras_key", "openrouter_key", "auto_support", "inbody_ocr", "model_variant",
+            "alarm_engine", "alarm_engine_v27", "ai_usage"
         )
     }
 }

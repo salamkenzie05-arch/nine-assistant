@@ -10,8 +10,6 @@ import android.os.Build
 import android.os.PowerManager
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
-import id.nine.assistant.alarm.AlarmRingService
-import id.nine.assistant.alarm.AlarmScheduler
 import id.nine.assistant.core.ConversationLog
 import id.nine.assistant.core.Perf
 import id.nine.assistant.core.Prefs
@@ -71,13 +69,6 @@ class NineApp : Application() {
         }
         // Wake word: hidupkan lagi layanan bila sebelumnya aktif (mis. setelah aplikasi dibuka ulang).
         if (prefs.wakeEnabled) id.nine.assistant.wake.WakeWordService.start(this)
-        // Alarm Nine: pastikan semua terjadwal (murah; aman dipanggil berulang).
-        AlarmRingService.createChannel(this)
-        try {
-            AlarmScheduler.rescheduleAll(this)
-        } catch (e: Exception) {
-            // abaikan
-        }
         // Wajah di widget ikut berubah saat HP dicas / baterai lemah (selama proses Nine hidup).
         val power = IntentFilter().apply {
             addAction(Intent.ACTION_POWER_CONNECTED)
@@ -102,6 +93,7 @@ class NineApp : Application() {
         Thread({
             try {
                 for (n in listOf("fit_data.json", "fit_data.json.tmp", "fit_data.bad.json")) java.io.File(filesDir, n).delete()
+                deleteSharedPreferences("nine_alarms") // alarm Nine dihapus: alarm kini milik aplikasi Jam HP
             } catch (e: Exception) {
                 // abaikan
             }

@@ -567,7 +567,11 @@ open class MainActivity : AppCompatActivity(), AssistantController.Ui {
         menuBrain = v.findViewById<TextView>(R.id.menuBrain).also { it.text = brainText() }
         v.findViewById<View>(R.id.menuAlarms).setOnClickListener {
             sheet.dismiss()
-            startActivity(Intent(this, AlarmsActivity::class.java))
+            try {
+                startActivity(Intent(android.provider.AlarmClock.ACTION_SHOW_ALARMS))
+            } catch (e: Exception) {
+                Toast.makeText(this, R.string.alarm_no_clock, Toast.LENGTH_SHORT).show()
+            }
         }
         v.findViewById<View>(R.id.menuTodo).setOnClickListener {
             sheet.dismiss()

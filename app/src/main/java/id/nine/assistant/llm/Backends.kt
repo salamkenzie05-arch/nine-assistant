@@ -4,11 +4,6 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URI
 
-/** Jumlah token satu permintaan: [input] = prompt, [output] = semua yang dihasilkan (termasuk token berpikir). */
-data class TokenUsage(val input: Long, val output: Long) {
-    val total: Long get() = input + output
-}
-
 /** Satu penyedia AI online. Dipanggil dari thread latar (memblokir). */
 interface ChatBackend {
     /** Mengalirkan jawaban lewat [onChunk]. Melempar [ProviderException] bila gagal, [CancelledException] bila di-[abort]. */
@@ -16,9 +11,6 @@ interface ChatBackend {
 
     /** Memutus koneksi yang sedang berjalan. */
     fun abort()
-
-    /** Token yang dipakai [stream] terakhir bila penyedia melaporkannya, kalau tidak null. */
-    val lastUsage: TokenUsage? get() = null
 }
 
 /** Pembantu HTTP untuk panggilan ke penyedia. */
@@ -110,46 +102,51 @@ class GeminiBackend(
     private val search: Boolean,
     private val baseUrl: String = Providers.GEMINI.baseUrl,
     connectMs: Int = 8_000,
-    readMs: Int = 40_000
+    readMs: Int = 25_000
 ) : ChatBackend {
 
     private val http = HttpCall(connectMs, readMs)
 
     override fun abort() = http.abort()
 
-    @Volatile
-    override var lastUsage: TokenUsage? = null
-        private set
-
     override fun stream(model: String, req: ChatRequest, onChunk: (String) -> Unit) {
-        lastUsage = null
+        val id = model.trim().removePrefix("models/")
         var emitted = false
-        try {
-            streamOnce(model, req, search) {
-                emitted = true
-                onChunk(it)
-            }
-        } catch (e: ProviderException) {
-            // Pencarian Google tidak tersedia di semua kunci/model gratis: ulangi tanpa alat pencarian.
-            val m = e.failure.message
-            if (search && !emitted && e.failure.code == 400 && Regex("search|ground|tool", RegexOption.IGNORE_CASE).containsMatchIn(m)) {
-                streamOnce(model, req, false, onChunk)
-            } else {
-                throw e
+        var withSearch = search
+        var withThinking = id !in noThinking
+        var droppedThinking = false
+        while (true) {
+            try {
+                streamOnce(id, req, withSearch, withThinking) {
+                    emitted = true
+                    onChunk(it)
+                }
+                if (droppedThinking) noThinking.add(id)
+                return
+            } catch (e: ProviderException) {
+                // Pencarian Google dan "thinkingLevel" tidak didukung semua kunci/model: ulangi tanpanya (paling banyak sekali per fitur).
+                val f = e.failure
+                if (emitted || f.code != 400) throw e
+                if (withSearch && SEARCH_WORDS.containsMatchIn(f.message)) {
+                    withSearch = false
+                } else if (withThinking && f.kind != FailKind.AUTH) {
+                    withThinking = false
+                    droppedThinking = true
+                } else {
+                    throw e
+                }
             }
         }
     }
 
-    private fun streamOnce(model: String, req: ChatRequest, withSearch: Boolean, onChunk: (String) -> Unit) {
-        val id = model.trim().removePrefix("models/")
+    private fun streamOnce(id: String, req: ChatRequest, withSearch: Boolean, withThinking: Boolean, onChunk: (String) -> Unit) {
         val url = "${baseUrl.trimEnd('/')}/models/$id:streamGenerateContent?alt=sse"
         val headers = mapOf("x-goog-api-key" to key, "Content-Type" to "application/json; charset=utf-8", "Accept-Encoding" to "identity")
-        http.run("POST", url, headers, GeminiWire.body(req, withSearch)) { c ->
+        http.run("POST", url, headers, GeminiWire.body(req, withSearch, withThinking)) { c ->
             val raw = StringBuilder()
             var any = false
             var blocked: String? = null
             readSse(c, raw) { line ->
-                if (line.indexOf("usageMetadata") >= 0) GeminiWire.parseUsage(line)?.let { lastUsage = it }
                 when (val ev = GeminiWire.parseLine(line)) {
                     is SseEvent.Text -> {
                         any = true
@@ -174,5 +171,14 @@ class GeminiBackend(
                 }
             }
         }
+    }
+
+    companion object {
+        private val SEARCH_WORDS = Regex("search|ground|tool", RegexOption.IGNORE_CASE)
+
+        /** Model yang menolak "thinkingLevel" (diingat supaya tidak diulang tiap pertanyaan). */
+        private val noThinking: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
+        internal fun forgetThinkingSupport() = noThinking.clear()
     }
 }

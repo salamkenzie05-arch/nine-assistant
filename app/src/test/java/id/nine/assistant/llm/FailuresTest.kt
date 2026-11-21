@@ -115,32 +115,10 @@ class FailuresTest {
         {"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"20s"}]}}"""
 
     @Test
-    fun dailyRequestLimitIsReadFromQuotaFailure() {
-        assertEquals(250, Failures.dailyRequestLimit(quotaBody))
+    fun dailyQuotaIsClassifiedWithRetryDelay() {
         val f = Failures.fromHttp(429, quotaBody, null)
         assertEquals(FailKind.QUOTA_DAILY, f.kind)
-        assertEquals(250, f.dailyLimit)
-    }
-
-    @Test
-    fun perMinuteLimitIsNotReportedAsDailyLimit() {
-        val body = """{"error":{"code":429,"message":"rate","details":[{"violations":[{"quotaId":"GenerateRequestsPerMinutePerProjectPerModel-FreeTier","quotaValue":"10"}]}]}}"""
-        assertNull(Failures.dailyRequestLimit(body))
-        val tokens = """{"error":{"code":429,"message":"x","details":[{"violations":[{"quotaId":"GenerateContentInputTokensPerModelPerDay-FreeTier","quotaValue":"1000000"}]}]}}"""
-        assertNull(Failures.dailyRequestLimit(tokens)) // batas token, bukan permintaan
-    }
-
-    @Test
-    fun dailyRequestLimitIgnoresGarbage() {
-        assertNull(Failures.dailyRequestLimit("bukan json"))
-        assertNull(Failures.dailyRequestLimit("""{"error":{"details":"x"}}"""))
-        assertNull(Failures.dailyRequestLimit("""{"error":{"details":[{"violations":[{"quotaId":"RequestsPerDay","quotaValue":"abc"}]}]}}"""))
-        assertNull(Failures.dailyRequestLimit("""{"error":{"details":[{"violations":[{"quotaId":"RequestsPerDay","quotaValue":"0"}]}]}}"""))
-    }
-
-    @Test
-    fun nonQuotaErrorsCarryNoDailyLimit() {
-        assertNull(Failures.fromHttp(500, quotaBody, null).dailyLimit)
+        assertEquals(20_000L, f.retryAfterMs)
     }
 
     @Test

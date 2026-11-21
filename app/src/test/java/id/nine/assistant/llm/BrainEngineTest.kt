@@ -14,18 +14,12 @@ class BrainEngineTest {
     private class World {
         val calls = ArrayList<String>()
         val streams = HashMap<String, (String, (String) -> Unit) -> Unit>()
-        val attempts = ArrayList<Triple<String, String, Attempt>>()
         var now = 10_000_000L
         var aborted = 0
         var maxAttempts = 4
-        var usage: TokenUsage? = null
-        var onAttemptThrows = false
 
         val engine by lazy {
-            BrainEngine({ cfg -> backend(cfg) }, { now }, CooldownBook(), maxAttempts, { p, m, a ->
-                attempts.add(Triple(p, m, a))
-                if (onAttemptThrows) throw IllegalStateException("pencatat rusak")
-            })
+            BrainEngine({ cfg -> backend(cfg) }, { now }, CooldownBook(), maxAttempts)
         }
 
         fun backend(cfg: ProviderConfig) = object : ChatBackend {
@@ -37,8 +31,6 @@ class BrainEngineTest {
             override fun abort() {
                 aborted++
             }
-
-            override val lastUsage: TokenUsage? get() = usage
         }
 
         fun ok(text: String): (String, (String) -> Unit) -> Unit = { _, emit -> emit(text) }
@@ -84,7 +76,7 @@ class BrainEngineTest {
     fun geminiQuotaIsPerModelSoLiteStillAnswersWhenFlashIsExhausted() {
         val w = World()
         w.streams["gemini"] = { model, emit ->
-            if (model == "gemini-flash-latest") throw ProviderException(Failure(FailKind.QUOTA_DAILY, 429, "habis", null, 250)) else emit("dari lite")
+            if (model == "gemini-flash-latest") throw ProviderException(Failure(FailKind.QUOTA_DAILY, 429, "habis")) else emit("dari lite")
         }
         val out = w.run(gemini)
         assertEquals(Outcome.Success("dari lite", "Gemini", "gemini-flash-lite-latest"), out)
@@ -260,7 +252,6 @@ class BrainEngineTest {
         val sink = StringBuilder()
         assertEquals(Outcome.Cancelled, w.run(gemini, token = token, sink = sink))
         assertEquals("a", sink.toString())
-        assertTrue("pembatalan tidak dicatat sebagai pemakaian", w.attempts.isEmpty())
     }
 
     @Test
@@ -325,88 +316,6 @@ class BrainEngineTest {
         assertEquals(listOf("gemini/gemini-2.5-pro", "gemini/gemini-flash-latest"), w.calls)
     }
 
-    // ------------------------------------------------------------ pencatatan pemakaian
-
-    @Test
-    fun reportsEachAttemptWithTokensOrFailure() {
-        val w = World()
-        w.usage = TokenUsage(120, 45)
-        var n = 0
-        w.streams["gemini"] = { _, emit ->
-            if (n++ == 0) throw ProviderException(Failure(FailKind.QUOTA_DAILY, 429, "habis", null, 250)) else emit("jawaban")
-        }
-        assertTrue(w.run(gemini) is Outcome.Success)
-        assertEquals(2, w.attempts.size)
-        val (p1, m1, a1) = w.attempts[0]
-        assertEquals("gemini", p1)
-        assertEquals("gemini-flash-latest", m1)
-        assertEquals(FailKind.QUOTA_DAILY, a1.failure!!.kind)
-        assertEquals(250, a1.failure!!.dailyLimit)
-        assertNull(a1.usage)
-        val (_, m2, a2) = w.attempts[1]
-        assertEquals("gemini-flash-lite-latest", m2)
-        assertTrue(a2.ok)
-        assertEquals(TokenUsage(120, 45), a2.usage)
-    }
-
-    @Test
-    fun partialAnswerStillReportsTheFailedAttempt() {
-        val w = World()
-        w.streams["gemini"] = { _, emit ->
-            emit("setengah")
-            throw IOException("reset")
-        }
-        assertTrue(w.run(gemini) is Outcome.Partial)
-        assertEquals(1, w.attempts.size)
-        assertEquals(FailKind.NETWORK, w.attempts[0].third.failure!!.kind)
-    }
-
-    @Test
-    fun brokenRecorderNeverBreaksTheAnswer() {
-        val w = World()
-        w.onAttemptThrows = true
-        w.streams["gemini"] = w.ok("tetap jalan")
-        assertEquals(Outcome.Success("tetap jalan", "Gemini", "gemini-flash-latest"), w.run(gemini))
-    }
-
-    @Test
-    fun skippedCoolingModelsAreNotReported() {
-        val w = World()
-        w.streams["gemini"] = w.fail(FailKind.AUTH, 401)
-        w.run(gemini)
-        w.attempts.clear()
-        w.run(gemini) // istirahat: tidak ada permintaan ke server, jadi tidak ada yang dicatat
-        assertTrue(w.attempts.isEmpty())
-    }
-
-    // ------------------------------------------------------------ status istirahat
-
-    @Test
-    fun coolingListsModelsThatAreResting() {
-        val w = World()
-        assertTrue(w.engine.cooling(gemini).isEmpty())
-        w.streams["gemini"] = { model, emit ->
-            if (model == "gemini-flash-latest") throw ProviderException(Failure(FailKind.QUOTA_DAILY, 429, "habis")) else emit("ok")
-        }
-        w.run(gemini)
-        val c = w.engine.cooling(gemini)
-        assertEquals(listOf("gemini-flash-latest"), c.map { it.model })
-        assertEquals(FailKind.QUOTA_DAILY, c[0].failure.kind)
-        assertEquals(w.now + 30 * 60_000L, c[0].until)
-        w.now += 31 * 60_000L
-        assertTrue(w.engine.cooling(gemini).isEmpty())
-    }
-
-    @Test
-    fun providerWideCoolingShowsEveryModel() {
-        val w = World()
-        w.streams["gemini"] = w.fail(FailKind.AUTH, 401)
-        w.run(gemini)
-        assertEquals(listOf("gemini-flash-latest", "gemini-flash-lite-latest"), w.engine.cooling(gemini).map { it.model })
-        // kunci lain tidak ikut istirahat
-        assertTrue(w.engine.cooling(ProviderConfig(Providers.GEMINI, "kunci-lain", Providers.geminiModels(""))).isEmpty())
-    }
-
     // ------------------------------------------------------------ uji koneksi
 
     @Test
@@ -415,11 +324,9 @@ class BrainEngineTest {
         w.streams["gemini"] = w.fail(FailKind.AUTH, 401)
         w.run(gemini)
         w.streams["gemini"] = w.ok("ready")
-        w.usage = TokenUsage(5, 2)
         val p = w.engine.probe(gemini)
         assertTrue(p.ok)
         assertEquals("gemini-flash-latest", p.model)
-        assertEquals(TokenUsage(5, 2), w.attempts.last().third.usage) // uji juga permintaan sungguhan
         w.calls.clear()
         assertTrue(w.run(gemini) is Outcome.Success) // jeda dihapus setelah uji berhasil
     }

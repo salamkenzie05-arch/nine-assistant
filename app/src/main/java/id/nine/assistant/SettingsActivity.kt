@@ -1,7 +1,6 @@
 package id.nine.assistant
 
 import android.Manifest
-import android.app.NotificationManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -26,11 +25,10 @@ import id.nine.assistant.core.MemoryStore
 import id.nine.assistant.core.Prefs
 import id.nine.assistant.widget.WidgetUpdater
 import id.nine.assistant.databinding.ActivitySettingsBinding
-import id.nine.assistant.llm.ModelManager
 import id.nine.assistant.llm.Providers
-import id.nine.assistant.llm.UsageText
 import id.nine.assistant.skills.CalendarSkill
 import id.nine.assistant.speech.SpeechOutput
+import id.nine.assistant.speech.VoiceGender
 import id.nine.assistant.wake.WakeWordService
 import id.nine.assistant.a11y.NineAccessibilityService
 
@@ -40,8 +38,6 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var nine: NineApp
     private lateinit var prefs: Prefs
     private var voice: SpeechOutput? = null
-
-    private val modelListener = ModelManager.Listener { render(it) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -67,48 +63,9 @@ class SettingsActivity : AppCompatActivity() {
             saveAiFields()
             prefs.internetMode = checked
             renderInternet()
-            renderUsage()
         }
+        binding.btnDashboard.setOnClickListener { openUrl(Providers.DASHBOARD_URL) }
         renderInternet()
-
-        // --- Pemakaian Gemini
-        binding.btnUsageDashboard.setOnClickListener { openUrl(Providers.DASHBOARD_URL) }
-        binding.btnUsageReset.setOnClickListener {
-            nine.gemini.usage.resetToday()
-            renderUsage()
-            Toast.makeText(this, R.string.usage_reset_done, Toast.LENGTH_SHORT).show()
-        }
-        renderUsage()
-
-        // --- Hapus model offline (opsional; unduh dan progres ada di kartu model layar utama)
-        binding.btnDeleteModel.setOnClickListener {
-            AlertDialog.Builder(this)
-                .setMessage(R.string.model_delete_confirm)
-                .setPositiveButton(R.string.model_delete) { _, _ ->
-                    nine.brain.unload()
-                    nine.models.delete()
-                }
-                .setNegativeButton(R.string.act_cancel, null)
-                .show()
-        }
-
-        // --- Alarm
-        binding.groupAlarmEngine.check(if (prefs.nineAlarms) R.id.alarmEngineNine else R.id.alarmEngineClock)
-        binding.groupAlarmEngine.setOnCheckedChangeListener { _, id ->
-            prefs.alarmEngine = if (id == R.id.alarmEngineClock) "clock" else "nine"
-            renderAlarms()
-        }
-        binding.btnManageAlarms.setOnClickListener { startActivity(Intent(this, AlarmsActivity::class.java)) }
-        binding.btnFullScreen.setOnClickListener {
-            if (Build.VERSION.SDK_INT >= 34) {
-                try {
-                    startActivity(Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, Uri.parse("package:$packageName")))
-                } catch (e: Exception) {
-                    // abaikan
-                }
-            }
-        }
-        renderAlarms()
 
         // --- Wake word
         binding.switchWake.isChecked = prefs.wakeEnabled
@@ -205,8 +162,14 @@ class SettingsActivity : AppCompatActivity() {
         // --- Suara
         binding.switchSpeak.isChecked = prefs.speakReplies
         binding.switchSpeak.setOnCheckedChangeListener { _, checked -> prefs.speakReplies = checked }
+        binding.groupVoice.check(if (VoiceGender.of(prefs.voiceGender) == VoiceGender.MALE) R.id.voiceMale else R.id.voiceFemale)
+        binding.groupVoice.setOnCheckedChangeListener { _, id ->
+            prefs.voiceGender = if (id == R.id.voiceMale) VoiceGender.MALE.key else VoiceGender.FEMALE.key
+        }
         voice = SpeechOutput(this, prefs) { Toast.makeText(this, it, Toast.LENGTH_LONG).show() }
+        voice?.onEngine = { Toast.makeText(this, it, Toast.LENGTH_LONG).show() }
         binding.btnPreview.setOnClickListener {
+            saveAiFields() // kunci yang baru diketik ikut dipakai untuk suara Gemini
             val lang = prefs.lang
             val sample = lang.t("Halo${prefs.persona.sfx(lang)}. Semua sistem berjalan normal?", "Hello${prefs.persona.sfx(lang)}. All systems running normally?")
             voice?.speak(sample, lang) {}
@@ -242,7 +205,6 @@ class SettingsActivity : AppCompatActivity() {
             ""
         }
 
-        nine.models.addListener(modelListener)
     }
 
     private fun renderA11y() {
@@ -259,9 +221,7 @@ class SettingsActivity : AppCompatActivity() {
         super.onResume()
         renderA11y()
         renderInternet()
-        renderUsage()
         renderWake()
-        renderAlarms()
         populateCalendars()
     }
 
@@ -304,20 +264,9 @@ class SettingsActivity : AppCompatActivity() {
                 if (!isFinishing && !isDestroyed) {
                     binding.btnTestAi.isEnabled = true
                     renderInternet()
-                    renderUsage()
                 }
             }
         )
-    }
-
-    private fun renderAlarms() {
-        binding.btnManageAlarms.visibility = if (prefs.nineAlarms) View.VISIBLE else View.GONE
-        val canFull = if (Build.VERSION.SDK_INT >= 34) {
-            getSystemService(NotificationManager::class.java).canUseFullScreenIntent()
-        } else true
-        binding.btnFullScreen.visibility = if (prefs.nineAlarms) View.VISIBLE else View.GONE
-        binding.btnFullScreen.isEnabled = !canFull
-        binding.btnFullScreen.setText(if (canFull) R.string.alarm_fullscreen_ok else R.string.alarm_fullscreen)
     }
 
     private val locPermission =
@@ -375,7 +324,6 @@ class SettingsActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        nine.models.removeListener(modelListener)
         voice?.shutdown()
         voice = null
     }
@@ -452,14 +400,6 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
-    /** Kartu pemakaian: tampil bila Mode internet menyala dan ada kunci atau catatan pemakaian. */
-    private fun renderUsage() {
-        val snap = nine.gemini.usage.snapshot()
-        val hasKey = !binding.editGeminiKey.text.isNullOrBlank()
-        binding.usageCard.visibility = if (prefs.internetMode && (hasKey || !snap.isEmpty)) View.VISIBLE else View.GONE
-        binding.txtUsage.text = UsageText.format(snap, nine.gemini.cooling(), prefs.lang, System.currentTimeMillis())
-    }
-
     private val notifPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { _ -> renderWake() }
 
@@ -506,9 +446,5 @@ class SettingsActivity : AppCompatActivity() {
         } else {
             getString(R.string.wake_status_off)
         }
-    }
-
-    private fun render(s: ModelManager.Status) {
-        binding.btnDeleteModel.visibility = if (s == ModelManager.Status.Ready) View.VISIBLE else View.GONE
     }
 }

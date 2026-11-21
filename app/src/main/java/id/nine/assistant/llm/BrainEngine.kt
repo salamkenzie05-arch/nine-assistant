@@ -5,14 +5,6 @@ import id.nine.assistant.core.AppLang
 /** Penyedia yang kuncinya terisi. [models]: model yang dicoba berurutan; [search]: aktifkan pencarian Google (khusus Gemini). */
 class ProviderConfig(val info: ProviderInfo, val key: String, val models: List<String>, val search: Boolean = false)
 
-/** Hasil satu percobaan ke satu model: [failure] null = berhasil. [usage]: token bila dilaporkan penyedia. */
-class Attempt(val failure: Failure?, val usage: TokenUsage?) {
-    val ok: Boolean get() = failure == null
-}
-
-/** Model yang sedang "istirahat" (kuota habis dll.) sampai [until] (ms epoch). */
-class Cooling(val model: String, val until: Long, val failure: Failure)
-
 sealed class Outcome {
     data class Success(val text: String, val provider: String, val model: String) : Outcome()
 
@@ -63,8 +55,8 @@ class CancelToken {
     }
 }
 
-/** Hasil uji koneksi satu penyedia. */
-data class ProbeResult(val ok: Boolean, val model: String?, val millis: Long, val failure: Failure?)
+/** Hasil uji koneksi satu penyedia. [skipped]: model yang gagal lebih dulu sebelum hasil ini (nama model → kegagalannya). */
+data class ProbeResult(val ok: Boolean, val model: String?, val millis: Long, val failure: Failure?, val skipped: List<Pair<String, Failure>> = emptyList())
 
 /**
  * Otak online: mencoba penyedia berurutan (yang kuncinya terisi) dan model-modelnya; yang kena batas kuota/gagal
@@ -75,9 +67,7 @@ class BrainEngine(
     private val backendFor: (ProviderConfig) -> ChatBackend,
     private val clock: () -> Long = { System.currentTimeMillis() },
     val book: CooldownBook = CooldownBook(),
-    private val maxAttempts: Int = 4,
-    /** Dipanggil setiap kali satu model selesai dicoba (berhasil atau gagal; bukan saat dibatalkan). Kegagalan di sini diabaikan. */
-    private val onAttempt: (providerId: String, model: String, Attempt) -> Unit = { _, _, _ -> }
+    private val maxAttempts: Int = 4
 ) {
     /** Lupakan semua catatan istirahat (mis. setelah pengguna mengganti kunci). */
     fun resetCooldowns() = book.clear()
@@ -87,26 +77,6 @@ class BrainEngine(
     private fun providerKey(c: ProviderConfig) = "p:${c.info.id}#${fp(c.key)}"
 
     private fun modelKey(c: ProviderConfig, model: String) = "m:${c.info.id}#${fp(c.key)}/$model"
-
-    private fun report(cfg: ProviderConfig, model: String, attempt: Attempt) {
-        try {
-            onAttempt(cfg.info.id, model, attempt)
-        } catch (e: Exception) {
-            // pencatatan tidak boleh mengganggu jawaban
-        }
-    }
-
-    /** Model [cfg] yang sedang istirahat pada saat ini (untuk ditampilkan). */
-    fun cooling(cfg: ProviderConfig): List<Cooling> {
-        val now = clock()
-        val out = ArrayList<Cooling>()
-        val p = book.active(providerKey(cfg), now)
-        for (m in cfg.models) {
-            val e = book.active(modelKey(cfg, m), now) ?: p
-            if (e != null) out.add(Cooling(m, e.until, e.failure))
-        }
-        return out
-    }
 
     private fun penalize(cfg: ProviderConfig, model: String?, f: Failure) {
         val ms = Failures.cooldownMs(f)
@@ -167,7 +137,6 @@ class BrainEngine(
                     }
                     if (token.cancelled) return Outcome.Cancelled
                     if (sb.isBlank()) throw ProviderException(Failure(FailKind.EMPTY, null, "empty"))
-                    report(cfg, model, Attempt(null, b.lastUsage))
                     return Outcome.Success(sb.toString(), label, model)
                 } catch (e: CancelledException) {
                     return Outcome.Cancelled
@@ -175,7 +144,6 @@ class BrainEngine(
                     if (token.cancelled) return Outcome.Cancelled
                     val f = Failures.fromException(e)
                     penalize(cfg, model, f)
-                    report(cfg, model, Attempt(f, null))
                     if (sb.isNotBlank()) return Outcome.Partial(sb.toString(), label, f)
                     failed[label] = f
                     if (f.kind in retryable) soonest = minOf(soonest, Failures.cooldownMs(f))
@@ -197,6 +165,7 @@ class BrainEngine(
         val started = clock()
         val req = ChatRequest("Reply with one short word.", emptyList(), "Say: ready")
         var last: Failure? = null
+        val skipped = ArrayList<Pair<String, Failure>>()
         val models = cfg.models.take(2)
         if (models.isEmpty()) return ProbeResult(false, null, clock() - started, Failure(FailKind.NOT_FOUND, null, "no model"))
         try {
@@ -209,15 +178,14 @@ class BrainEngine(
                     if (sb.isBlank()) throw ProviderException(Failure(FailKind.EMPTY, null, "empty"))
                     book.forget(providerKey(cfg))
                     book.forget(modelKey(cfg, model))
-                    report(cfg, model, Attempt(null, b.lastUsage))
-                    return ProbeResult(true, model, clock() - started, null)
+                    return ProbeResult(true, model, clock() - started, null, skipped)
                 } catch (e: CancelledException) {
                     throw e
                 } catch (e: Exception) {
                     val f = Failures.fromException(e)
                     last = f
+                    skipped.add(model to f)
                     penalize(cfg, model, f)
-                    report(cfg, model, Attempt(f, null))
                     if (Failures.providerWide(f)) break
                 } finally {
                     token.attach(null)
@@ -226,7 +194,7 @@ class BrainEngine(
         } catch (e: CancelledException) {
             return ProbeResult(false, null, clock() - started, Failure(FailKind.OTHER, null, "cancelled"))
         }
-        return ProbeResult(false, null, clock() - started, last ?: Failure(FailKind.OTHER, null, "unknown"))
+        return ProbeResult(false, null, clock() - started, last ?: Failure(FailKind.OTHER, null, "unknown"), skipped)
     }
 
 }

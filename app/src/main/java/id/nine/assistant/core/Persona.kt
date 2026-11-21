@@ -113,11 +113,29 @@ class Persona(private val honorificId: String, private val honorificEn: String) 
     }
 
     /**
+     * Ingatan otomatis: AI menandai hal tetap tentang pengguna dengan "[ingat: ...]" di awal jawaban, tepat setelah tag
+     * ekspresi. Nine menyimpannya ke Memori dan membuang tag itu dari teks (lihat [id.nine.assistant.llm.ExpressionTag]).
+     */
+    fun memoryRule(lang: AppLang): String = lang.t(
+        "INGATAN OTOMATIS: bila pengguna BARU SAJA menyebut hal tetap tentang dirinya (nama atau panggilan, keluarga, tempat tinggal atau kerja, " +
+            "kesukaan, kebiasaan, alergi, hewan peliharaan, ulang tahun), tambahkan satu tag tepat setelah tag ekspresi, seperti [ingat: Nama pengguna Budi]. " +
+            "Isinya satu fakta singkat dalam kalimat biasa, maksimal 3 tag. Jangan menandai: hal sementara (hari ini, besok, sedang), pertanyaan, " +
+            "kata sandi, nomor kartu atau identitas, hal yang sudah kamu ketahui, atau apa pun yang tidak dikatakan pengguna sendiri. " +
+            "Hampir semua jawaban TIDAK memerlukan tag ini; tag ini tidak tampil dan tidak diucapkan.",
+        "AUTOMATIC MEMORY: when the user JUST stated a lasting fact about themselves (name or nickname, family, where they live or work, " +
+            "likes, habits, allergies, pets, birthday), add one tag right after the expression tag, like [remember: User's name is Budi]. " +
+            "It holds one short fact in plain words, at most 3 tags. Do not tag: temporary things (today, tomorrow, right now), questions, " +
+            "passwords, card or ID numbers, things you already know, or anything the user did not say themselves. " +
+            "Almost every reply needs NO such tag; the tag is never shown or spoken."
+    )
+
+    /**
      * Instruksi sistem untuk AI online (Gemini). [search]: nama alat pencarian bila model punya
      * (mis. "Google Search"), null bila tidak: model lalu diminta jujur bahwa ia tak bisa memeriksa info terkini.
      */
-    fun onlinePrompt(lang: AppLang, now: LocalDateTime, city: String, search: String? = null): String =
-        baseOnlinePrompt(lang, now, city, search) + "\n\n" + expressionRule(lang) + "\n\n" + languageRule(lang)
+    fun onlinePrompt(lang: AppLang, now: LocalDateTime, city: String, search: String? = null, autoMemory: Boolean = true): String =
+        baseOnlinePrompt(lang, now, city, search) + "\n\n" + expressionRule(lang) +
+            (if (autoMemory) "\n\n" + memoryRule(lang) else "") + "\n\n" + languageRule(lang)
 
     private fun baseOnlinePrompt(lang: AppLang, now: LocalDateTime, city: String, search: String?): String {
         val date = now.format(DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy, HH:mm", lang.locale))
@@ -178,10 +196,11 @@ class Persona(private val honorificId: String, private val honorificEn: String) 
      * Instruksi sistem untuk Gemma. Jawaban akan dibaca di layar dan dibunyikan sebagai suara droid, jadi singkat
      * dan tanpa markdown. [memory]: blok ingatan tentang pengguna dari [MemoryStore.promptBlock] (boleh kosong).
      */
-    fun systemPrompt(lang: AppLang, now: LocalDateTime, memory: String = ""): String {
+    fun systemPrompt(lang: AppLang, now: LocalDateTime, memory: String = "", autoMemory: Boolean = true): String {
         val sb = StringBuilder(baseSystemPrompt(lang, now))
         if (memory.isNotBlank()) sb.append("\n\n").append(memory.trim())
         sb.append("\n\n").append(expressionRule(lang))
+        if (autoMemory) sb.append("\n\n").append(memoryRule(lang))
         sb.append("\n\n").append(languageRule(lang))
         return sb.toString()
     }

@@ -8,19 +8,10 @@ import id.nine.assistant.core.Prefs
 import java.time.LocalDateTime
 import java.util.concurrent.Executors
 
-/** Catatan pemakaian disimpan di pengaturan (bukan rahasia, jadi tanpa enkripsi). */
-private class PrefsUsageStore(private val prefs: Prefs) : UsageStore {
-    override fun load(): String? = prefs.aiUsage
-
-    override fun save(json: String) {
-        prefs.aiUsage = json
-    }
-}
-
 /**
  * Otak online Nine: Gemini (Google AI Studio, tingkat gratis). Pengguna mengisi kunci gratisnya sendiri. Bila satu model
  * kena batas kuota, Nine pindah ke model Gemini cadangan (kuota gratis dihitung per model); kalau semuanya gagal, Gemma
- * offline mengambil alih. Setiap permintaan dicatat di [usage] supaya pemakaian bisa dilihat di Pengaturan.
+ * offline mengambil alih. Pemakaian kuota dilihat lewat dasbor Google (tombol di Pengaturan), bukan dicatat di sini.
  */
 class GeminiBrain(context: Context, private val prefs: Prefs) : OnlineBrain {
 
@@ -30,12 +21,7 @@ class GeminiBrain(context: Context, private val prefs: Prefs) : OnlineBrain {
     // Pool biasa (bukan satu thread): koneksi lama yang macet tidak boleh menahan pertanyaan berikutnya.
     private val exec = Executors.newCachedThreadPool { r -> Thread(r, "nine-ai").apply { isDaemon = true } }
 
-    val usage = UsageLedger(PrefsUsageStore(prefs))
-
-    private val engine = BrainEngine(
-        backendFor = { cfg -> GeminiBackend(cfg.key, cfg.search) },
-        onAttempt = { _, model, attempt -> usage.record(model, attempt) }
-    )
+    private val engine = BrainEngine(backendFor = { cfg -> GeminiBackend(cfg.key, cfg.search) })
 
     @Volatile
     private var generation = 0
@@ -49,9 +35,6 @@ class GeminiBrain(context: Context, private val prefs: Prefs) : OnlineBrain {
         if (key.isBlank()) return emptyList()
         return listOf(ProviderConfig(Providers.GEMINI, key, Providers.geminiModels(prefs.geminiModel), prefs.aiSearch))
     }
-
-    /** Model yang sedang istirahat (kuota habis dll.) beserta waktunya, untuk layar Pengaturan. */
-    fun cooling(): List<Cooling> = configs().flatMap { engine.cooling(it) }
 
     override val displayName: String get() = Providers.GEMINI.label
 
@@ -74,7 +57,7 @@ class GeminiBrain(context: Context, private val prefs: Prefs) : OnlineBrain {
         token = tk
         val cfgs = configs()
         val search = cfgs.any { it.search }
-        val system = prefs.persona.onlinePrompt(lang, LocalDateTime.now(), prefs.city, if (search) "Google Search" else null) +
+        val system = prefs.persona.onlinePrompt(lang, LocalDateTime.now(), prefs.city, if (search) "Google Search" else null, prefs.autoMemory) +
             (if (context.isBlank()) "" else "\n\n" + context)
         val req = ChatRequest(system, history, text)
         exec.execute {
@@ -117,11 +100,13 @@ class GeminiBrain(context: Context, private val prefs: Prefs) : OnlineBrain {
                     ProbeResult(false, null, 0, Failure(FailKind.OTHER, null, e.message ?: "error"))
                 }
                 val secs = String.format(java.util.Locale.US, "%.1f", r.millis / 1000.0)
-                val line = if (r.ok) {
+                val head = if (r.ok) {
                     "${cfg.info.label}: " + lang.t("berhasil", "OK") + " · ${r.model} · $secs " + lang.t("dtk", "s")
                 } else {
                     "${cfg.info.label}: " + lang.t("gagal", "failed") + " · " + (r.failure?.let { Failures.describe(it, lang) } ?: "?")
                 }
+                // Model yang gagal lebih dulu ditampilkan juga, supaya jelas kenapa uji terasa lambat.
+                val line = head + (if (r.ok) r.skipped else r.skipped.dropLast(1)).joinToString("") { (m, f) -> "\n· $m: " + Failures.describe(f, lang) }
                 main.post { onLine(line) }
             }
             main.post { onDone() }

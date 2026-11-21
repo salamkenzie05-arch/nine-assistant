@@ -106,4 +106,59 @@ class ExpressionTagTest {
         assertEquals(Mood.NEUTRAL, ExpressionTag.guess("Ibu kota Prancis adalah Paris."))
         assertEquals(Mood.SLEEPY, ExpressionTag.guess("Selamat tidur, Tuan."))
     }
+
+    // ------------------------------------------------------------ tag ingatan
+
+    @Test
+    fun memoryTagsAreCollectedAndStripped() {
+        val p = ExpressionTag.parse("[happy] [ingat: Nama pengguna Budi] [ingat: Suka nasi goreng] Halo Budi!")
+        assertEquals(Mood.HAPPY, p.mood)
+        assertEquals(listOf("Nama pengguna Budi", "Suka nasi goreng"), p.facts)
+        assertEquals("Halo Budi!", p.text)
+    }
+
+    @Test
+    fun memoryTagWorksInAnyOrderAndWithoutMoodTag() {
+        val a = ExpressionTag.parse("[ingat: Punya kucing bernama Mimi][sad] Wah, Mimi sakit?")
+        assertEquals(Mood.SAD, a.mood)
+        assertEquals(listOf("Punya kucing bernama Mimi"), a.facts)
+        assertEquals("Wah, Mimi sakit?", a.text)
+        val b = ExpressionTag.parse("[remember: Lives in Bandung] Nice city.")
+        assertNull(b.mood)
+        assertEquals(listOf("Lives in Bandung"), b.facts)
+        assertEquals("Nice city.", b.text)
+    }
+
+    @Test
+    fun atMostThreeDistinctFactsAreTaken() {
+        val p = ExpressionTag.parse("[ingat: aaa1][ingat: bbb2][ingat: bbb2][ingat: ccc3][ingat: ddd4] x")
+        assertEquals(listOf("aaa1", "bbb2", "ccc3"), p.facts)
+        assertEquals("x", p.text)
+    }
+
+    @Test
+    fun partialMemoryTagIsHeldBackUntilItCloses() {
+        assertTrue(ExpressionTag.maybePartial("[ing"))
+        assertTrue(ExpressionTag.maybePartial("[ingat: Nama pengguna adalah Budi Santoso dan dia tinggal di"))
+        assertTrue(ExpressionTag.maybePartial("[happy] [ingat: Nama pengguna adalah Budi Santoso dan dia tinggal di"))
+        assertFalse(ExpressionTag.maybePartial("[happy] [ingat: Nama Budi] Halo"))
+        assertEquals("", ExpressionTag.visible("[happy] [ingat: Nama pengguna adalah Budi Santoso dan dia tinggal di"))
+        assertEquals("Halo Budi", ExpressionTag.visible("[happy] [ingat: Nama Budi] Halo Budi"))
+        // bracket panjang yang bukan tag ingatan tidak ditahan selamanya
+        assertFalse(ExpressionTag.maybePartial("[Catatan penting dari saya untuk Anda semua tentang ini"))
+    }
+
+    @Test
+    fun memoryTagsAnywhereAreStrippedFromShownText() {
+        assertEquals("Halo  Budi", ExpressionTag.strip("Halo [ingat: Nama Budi] Budi"))
+        assertEquals("Halo", ExpressionTag.strip("[happy][ingat: Nama Budi]Halo"))
+        // bracket biasa tetap
+        assertEquals("Lihat [1] ya", ExpressionTag.strip("Lihat [1] ya"))
+    }
+
+    @Test
+    fun tooShortOrMultilineMemoryTagsAreNotTags() {
+        assertTrue(ExpressionTag.parse("[ingat: a] x").facts.isEmpty())
+        assertTrue(ExpressionTag.parse("[ingat: baris satu\nbaris dua] x").facts.isEmpty())
+    }
 }

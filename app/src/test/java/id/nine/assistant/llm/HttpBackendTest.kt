@@ -1,6 +1,7 @@
 package id.nine.assistant.llm
 
 import org.junit.After
+import org.junit.Before
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -64,6 +65,9 @@ class HttpBackendTest {
     }
 
     private val servers = ArrayList<ServerSocket>()
+
+    @Before
+    fun resetThinkingMemory() = GeminiBackend.forgetThinkingSupport()
 
     @After
     fun stop() {
@@ -211,31 +215,51 @@ class HttpBackendTest {
 
 
     @Test
-    fun geminiReportsTokenUsageFromTheLastChunk() {
-        val usage = """data: {"candidates":[{"content":{"parts":[{"text":"!"}]}}],"usageMetadata":{"promptTokenCount":50,"candidatesTokenCount":4,"totalTokenCount":70}}"""
-        val (base, _) = serve { ex, _ -> ex.sse(gchunk("Halo"), usage) }
-        val b = GeminiBackend("k", search = false, baseUrl = base)
-        assertNull(b.lastUsage)
-        assertEquals("Halo!", collect(b, "gemini-x"))
-        assertEquals(TokenUsage(50, 20), b.lastUsage)
-        // permintaan berikutnya dimulai dari nol, tidak mewarisi angka lama
-        val (base2, _) = serve { ex, _ -> ex.sse(gchunk("tanpa angka")) }
-        val b2 = GeminiBackend("k", search = false, baseUrl = base2)
-        collect(b2, "gemini-x")
-        assertNull(b2.lastUsage)
+    fun geminiAsksForMinimalThinkingByDefault() {
+        val (base, seen) = serve { ex, _ -> ex.sse(gchunk("ok")) }
+        collect(GeminiBackend("k", search = false, baseUrl = base), "gemini-flash-latest")
+        val level = MiniJson.str(MiniJson.parse(seen.single().body), "generationConfig", "thinkingConfig", "thinkingLevel")
+        assertEquals("MINIMAL", level)
     }
 
     @Test
-    fun geminiDailyQuotaCarriesTheLimit() {
-        val (base, _) = serve { ex, _ ->
-            ex.json(429, """{"error":{"code":429,"message":"You exceeded your current quota","status":"RESOURCE_EXHAUSTED","details":[{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaValue":"250"}]}]}}""")
+    fun geminiRetriesWithoutThinkingWhenModelRejectsItAndRemembers() {
+        val (base, seen) = serve { ex, s ->
+            if (s.body.contains("thinkingConfig")) ex.json(400, """{"error":{"code":400,"message":"Thinking level MINIMAL is not supported for this model"}}""")
+            else ex.sse(gchunk("tanpa berpikir"))
         }
+        assertEquals("tanpa berpikir", collect(GeminiBackend("k", search = false, baseUrl = base), "gemini-lama"))
+        assertEquals(2, seen.size)
+        assertTrue(seen[0].body.contains("thinkingConfig"))
+        assertFalse(seen[1].body.contains("thinkingConfig"))
+        // pertanyaan berikutnya ke model yang sama langsung tanpa thinkingConfig (tidak menebak ulang)
+        assertEquals("tanpa berpikir", collect(GeminiBackend("k", search = false, baseUrl = base), "gemini-lama"))
+        assertEquals(3, seen.size)
+        assertFalse(seen[2].body.contains("thinkingConfig"))
+    }
+
+    @Test
+    fun geminiDropsSearchAndThinkingOneAtATime() {
+        val (base, seen) = serve { ex, s ->
+            when {
+                s.body.contains("google_search") -> ex.json(400, """{"error":{"code":400,"message":"Search Grounding is not supported"}}""")
+                s.body.contains("thinkingConfig") -> ex.json(400, """{"error":{"code":400,"message":"Unknown name thinkingLevel"}}""")
+                else -> ex.sse(gchunk("polos"))
+            }
+        }
+        assertEquals("polos", collect(GeminiBackend("k", search = true, baseUrl = base), "gemini-polos"))
+        assertEquals(3, seen.size)
+    }
+
+    @Test
+    fun geminiNotFoundModelIsNotRetriedForever() {
+        val (base, seen) = serve { ex, _ -> ex.json(404, """{"error":{"code":404,"message":"models/gemini-x is not found"}}""") }
         try {
             collect(GeminiBackend("k", search = false, baseUrl = base), "gemini-x")
             fail()
         } catch (e: ProviderException) {
-            assertEquals(FailKind.QUOTA_DAILY, e.failure.kind)
-            assertEquals(250, e.failure.dailyLimit)
+            assertEquals(FailKind.NOT_FOUND, e.failure.kind)
+            assertEquals(1, seen.size) // 404 bukan 400: tidak diulang
         }
     }
 
@@ -302,34 +326,37 @@ class HttpBackendTest {
         assertEquals("awal", got.toString())
     }
 
-    // ------------------------------------------------------------ mesin + klien nyata + buku pemakaian
+    // ------------------------------------------------------------ mesin + klien nyata
 
     @Test
-    fun exhaustedFlashFallsBackToLiteAndEverythingIsRecorded() {
-        val usage = """data: {"candidates":[{"content":{"parts":[{"text":"."}]}}],"usageMetadata":{"promptTokenCount":30,"totalTokenCount":42}}"""
+    fun exhaustedFlashFallsBackToLite() {
         val (base, seen) = serve { ex, s ->
             if (s.path.contains("gemini-flash-latest")) {
                 ex.json(429, """{"error":{"code":429,"message":"quota","details":[{"violations":[{"quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaValue":"20"}]}]}}""")
             } else {
-                ex.sse(gchunk("Halo dari lite"), usage)
+                ex.sse(gchunk("Halo dari lite"), gchunk("."))
             }
         }
-        val ledger = UsageLedger(MemoryUsageStore()) { 1_700_000_000_000L }
-        val engine = BrainEngine({ GeminiBackend(it.key, it.search, base) }, onAttempt = { _, model, a -> ledger.record(model, a) })
+        val engine = BrainEngine({ GeminiBackend(it.key, it.search, base) })
         val cfg = ProviderConfig(Providers.GEMINI, "k", Providers.geminiModels(""))
         val out = engine.run(listOf(cfg), req, { })
         assertEquals(Outcome.Success("Halo dari lite.", "Gemini", "gemini-flash-lite-latest"), out)
         assertEquals(2, seen.size)
-        val snap = ledger.snapshot()
-        val flash = snap.models.first { it.model == "gemini-flash-latest" }
-        val lite = snap.models.first { it.model == "gemini-flash-lite-latest" }
-        assertEquals(1, flash.limited)
-        assertEquals(20, flash.dailyLimit)
-        assertEquals(1, lite.ok)
-        assertEquals(42L, lite.tokens)
         // pertanyaan kedua: flash istirahat, langsung ke lite
         engine.run(listOf(cfg), req, { })
         assertEquals(3, seen.size)
-        assertEquals(2, ledger.snapshot().models.first { it.model == "gemini-flash-lite-latest" }.ok)
+    }
+
+    @Test
+    fun probeShowsWhichModelFailedFirst() {
+        val (base, _) = serve { ex, s ->
+            if (s.path.contains("gemini-flash-latest")) ex.json(503, """{"error":{"code":503,"message":"overloaded"}}""") else ex.sse(gchunk("ready"))
+        }
+        val engine = BrainEngine({ GeminiBackend(it.key, it.search, base) })
+        val r = engine.probe(ProviderConfig(Providers.GEMINI, "k", Providers.geminiModels("")))
+        assertTrue(r.ok)
+        assertEquals("gemini-flash-lite-latest", r.model)
+        assertEquals(listOf("gemini-flash-latest"), r.skipped.map { it.first })
+        assertEquals(FailKind.SERVER, r.skipped[0].second.kind)
     }
 }

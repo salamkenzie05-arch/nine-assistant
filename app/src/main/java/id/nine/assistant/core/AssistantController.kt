@@ -215,8 +215,8 @@ class AssistantController(context: Context, private val ui: Ui) {
             ui.onMood(Mood.CONFUSED)
             reply(
                 l.t(
-                    "Untuk membaca gambar saya butuh otak AI offline${sfx}. Unduh dulu modelnya di Pengaturan.",
-                    "To read images I need the offline AI brain${sfx}. Please download the model in Settings first."
+                    "Untuk membaca gambar saya butuh otak AI offline${sfx}. Pasang dulu modelnya lewat kartu di layar utama.",
+                    "To read images I need the offline AI brain${sfx}. Please install the model from the card on the main screen first."
                 ),
                 listenAfter = false
             )
@@ -256,7 +256,7 @@ class AssistantController(context: Context, private val ui: Ui) {
                 log.update(index, cleaned)
                 ui.onMood(tagged.mood ?: ExpressionTag.guess(cleaned))
                 if (prefs.speakReplies) {
-                    output.speak(TextClean.speech(tagged.text), l, onStart = { setState(State.SPEAKING) }) { setState(State.IDLE) }
+                    output.speak(TextClean.speech(tagged.text), l, onStart = { setState(State.SPEAKING) }, mood = tagged.mood ?: ExpressionTag.guess(cleaned)) { setState(State.IDLE) }
                 } else {
                     setState(State.IDLE)
                 }
@@ -532,8 +532,18 @@ class AssistantController(context: Context, private val ui: Ui) {
     /** Simpan otomatis kalimat berisi fakta tentang pengguna ke ingatan jangka panjang. */
     private fun autoRemember(text: String) {
         if (!prefs.autoMemory) return
+        save(try { FactExtractor.extract(text) } catch (e: Exception) { emptyList() })
+    }
+
+    /** Hal yang ditandai AI lewat "[ingat: ...]" di awal jawabannya (lihat [ExpressionTag]). */
+    private fun rememberFacts(facts: List<String>) {
+        if (!prefs.autoMemory || facts.isEmpty()) return
+        save(facts.take(ExpressionTag.MAX_FACTS))
+    }
+
+    private fun save(candidates: List<String>) {
         val saved = try {
-            FactExtractor.extract(text).filter { memory.add(it) }
+            candidates.filter { !FactExtractor.looksSensitive(it) && memory.add(it) }
         } catch (e: Exception) {
             emptyList()
         }
@@ -925,7 +935,7 @@ class AssistantController(context: Context, private val ui: Ui) {
             ui.onMood(mood)
             log.update(index, text)
             if (speak) {
-                output.speak(text, l, onStart = { setState(State.SPEAKING) }) { setState(State.IDLE) }
+                output.speak(text, l, onStart = { setState(State.SPEAKING) }, mood = mood) { setState(State.IDLE) }
             } else {
                 setState(State.IDLE)
             }
@@ -945,6 +955,7 @@ class AssistantController(context: Context, private val ui: Ui) {
                     tagged.mood?.let {
                         tagMood = it
                         ui.onMoodHold(it, 3200)
+                        if (speak) output.setMood(it)
                     }
                     log.update(index, TextClean.clean(tagged.text))
                     if (speak) for (sentence in splitter.push(tagged.text)) output.enqueue(TextClean.speech(sentence))
@@ -963,6 +974,7 @@ class AssistantController(context: Context, private val ui: Ui) {
                 aiSeenUpTo = log.entries.size
                 ui.onPartial("")
                 val tagged = ExpressionTag.parse(fullText)
+                rememberFacts(tagged.facts)
                 val body = tagged.text
                 val action = cmdOf(body)
                 if (action != null) {
@@ -984,6 +996,7 @@ class AssistantController(context: Context, private val ui: Ui) {
                 if (speak) {
                     if (holding) {
                         // seluruh jawaban pendek tertahan: bunyikan sekarang
+                        output.setMood(tagMood ?: tagged.mood)
                         for (sentence in splitter.push(body)) output.enqueue(TextClean.speech(sentence))
                     }
                     splitter.flush()?.let { output.enqueue(TextClean.speech(it)) }
