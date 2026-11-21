@@ -16,8 +16,6 @@ import kotlin.math.max
  */
 object ImagePrep {
     const val MAX_SIDE = 1024
-    /** Sisi terpanjang untuk membaca teks (lembar InBody): lebih besar agar angka kecil tetap terbaca. */
-    const val OCR_SIDE = 2000
     private const val MAX_AGE_MS = 60L * 60_000L
 
     /** Hasil berupa berkas JPEG baru, atau null bila gambar tidak bisa dibaca. Jangan panggil di thread utama. */

@@ -44,24 +44,6 @@ class HelpExamplesTest {
     }
 
     @Test
-    fun temanCurhat() {
-        expect("Support", "Aku mau curhat", "Latihan napas", "I need to vent", "Breathing exercise")
-        done()
-    }
-
-    @Test
-    fun pelatihFitnessDanGizi() {
-        expect(
-            "Health",
-            "Habis bench press 60 kg 3x8", "Tadi makan nasi goreng dan telur", "Menu hari ini", "Progres bench press",
-            "Berapa protein yang aku butuhkan?", "Analisis InBody", "inbody berat 70 otot 32 lemak 14",
-            "Just did bench press 60 kg 3x8", "I ate fried rice and eggs", "Today's meals", "Bench press progress",
-            "How much protein do I need?", "Analyse my InBody", "inbody weight 70 muscle 32 fat 14"
-        )
-        done()
-    }
-
-    @Test
     fun mentorBahasaInggris() {
         expect("EnglishCoach", "Jadi mentor bahasa Inggris saya", "Be my English mentor")
         expect("CorrectEnglish", "Koreksi kalimat saya: i goes to school", "Correct my sentence: i goes to school")

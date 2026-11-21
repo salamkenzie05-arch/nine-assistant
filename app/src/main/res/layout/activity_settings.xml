@@ -58,194 +58,162 @@
                     android:textColor="@color/nine_on_bg"
                     android:textSize="15sp" />
 
+                <TextView
+                    android:id="@+id/txtInternetStatus"
+                    style="@style/Nine.Status"
+                    android:layout_marginTop="0dp" />
+
                 <LinearLayout
                     android:id="@+id/aiFields"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical">
 
+                    <View style="@style/Nine.Divider" />
+
                     <TextView
                         android:id="@+id/txtAiIntro"
                         style="@style/Nine.Status"
-                        android:layout_marginTop="4dp"
+                        android:layout_marginTop="0dp"
                         android:text="@string/ai_intro" />
-
-                    <LinearLayout
-                        android:id="@+id/aiKeyList"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical" />
 
                     <com.google.android.material.textfield.TextInputLayout
                         style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:hint="@string/gemini_model_hint">
+                        android:hint="@string/ai_key_hint"
+                        app:endIconMode="password_toggle">
 
                         <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/editGeminiModel"
+                            android:id="@+id/editGeminiKey"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:importantForAutofill="no"
-                            android:inputType="text"
+                            android:inputType="textPassword"
                             android:maxLines="1"
                             android:textSize="15sp" />
                     </com.google.android.material.textfield.TextInputLayout>
 
-                    <com.google.android.material.materialswitch.MaterialSwitch
-                        android:id="@+id/switchAiSearch"
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:minHeight="48dp"
-                        android:text="@string/ai_search_switch"
-                        android:textColor="@color/nine_on_bg"
-                        android:textSize="14sp" />
+                        android:orientation="horizontal">
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnTestAi"
-                        style="@style/Widget.Material3.Button.TextButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/ai_test"
-                        android:textColor="@color/nine_gold" />
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnGetKey"
+                            style="@style/Widget.Material3.Button.TextButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/ai_get_key"
+                            android:textColor="@color/nine_gold" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnTestAi"
+                            style="@style/Widget.Material3.Button.TonalButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="@string/ai_test" />
+                    </LinearLayout>
 
                     <TextView
                         android:id="@+id/txtAiTest"
                         style="@style/Nine.Status"
+                        android:layout_marginTop="0dp"
                         android:visibility="gone" />
-                </LinearLayout>
 
-                <com.google.android.material.textfield.TextInputLayout
-                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:hint="@string/city_hint">
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnAdvanced"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/ai_advanced_show"
+                        android:textColor="@color/nine_on_bg" />
 
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/editCity"
+                    <LinearLayout
+                        android:id="@+id/advancedBox"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:importantForAutofill="no"
-                        android:inputType="textCapWords"
-                        android:maxLines="1"
-                        android:textSize="15sp" />
-                </com.google.android.material.textfield.TextInputLayout>
+                        android:orientation="vertical"
+                        android:visibility="gone">
 
-                <TextView
-                    android:id="@+id/txtInternetStatus"
-                    style="@style/Nine.Status"
-                    android:layout_marginTop="8dp" />
+                        <com.google.android.material.textfield.TextInputLayout
+                            style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:hint="@string/gemini_model_hint">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/editGeminiModel"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:importantForAutofill="no"
+                                android:inputType="text"
+                                android:maxLines="1"
+                                android:textSize="15sp" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.materialswitch.MaterialSwitch
+                            android:id="@+id/switchAiSearch"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:minHeight="48dp"
+                            android:text="@string/ai_search_switch"
+                            android:textColor="@color/nine_on_bg"
+                            android:textSize="14sp" />
+                    </LinearLayout>
+                </LinearLayout>
             </LinearLayout>
 
             <Space android:layout_width="match_parent" android:layout_height="12dp" />
 
-            <LinearLayout style="@style/Nine.Card">
+            <LinearLayout
+                android:id="@+id/usageCard"
+                style="@style/Nine.Card">
 
                 <TextView
-                    android:id="@+id/brainStatus"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:text="@string/usage_title"
                     android:textColor="@color/nine_on_bg"
                     android:textSize="16sp"
                     android:textStyle="bold" />
 
                 <TextView
-                    android:id="@+id/brainDetail"
+                    android:id="@+id/txtUsage"
                     style="@style/Nine.Status"
-                    android:visibility="gone" />
+                    android:layout_marginTop="6dp"
+                    android:textColor="@color/nine_on_bg"
+                    android:textSize="14sp" />
 
-                <RadioGroup
-                    android:id="@+id/groupVariant"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content">
-                    <RadioButton
-                        android:id="@+id/variantE2b"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:minHeight="44dp"
-                        android:text="@string/variant_e2b"
-                        android:textColor="@color/nine_on_bg"
-                        android:textSize="15sp" />
-                    <RadioButton
-                        android:id="@+id/variantE4b"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:minHeight="44dp"
-                        android:text="@string/variant_e4b"
-                        android:textColor="@color/nine_on_bg"
-                        android:textSize="15sp" />
-                </RadioGroup>
-
-                <com.google.android.material.progressindicator.LinearProgressIndicator
-                    android:id="@+id/brainProgress"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:visibility="gone"
-                    app:trackCornerRadius="4dp" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnDownload"
-                    style="@style/Widget.Material3.Button"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="@string/model_download" />
+                <TextView
+                    style="@style/Nine.Status"
+                    android:text="@string/usage_note" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal">
+
                     <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnImport"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
-                        android:layout_width="0dp"
+                        android:id="@+id/btnUsageDashboard"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:layout_marginEnd="8dp"
-                        android:layout_weight="1"
-                        android:text="@string/model_import_short" />
+                        android:text="@string/usage_dashboard" />
+
                     <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnDelete"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
-                        android:layout_width="0dp"
+                        android:id="@+id/btnUsageReset"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:layout_weight="1"
-                        android:text="@string/model_delete" />
+                        android:layout_marginStart="8dp"
+                        android:text="@string/usage_reset" />
                 </LinearLayout>
-
-                <View style="@style/Nine.Divider" />
-
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/switchGpu"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:minHeight="48dp"
-                    android:text="@string/gpu_switch"
-                    android:textColor="@color/nine_on_bg"
-                    android:textSize="15sp" />
-
-                <com.google.android.material.textfield.TextInputLayout
-                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:hint="@string/hf_token_hint"
-                    app:endIconMode="password_toggle">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/editToken"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:importantForAutofill="no"
-                        android:inputType="textPassword"
-                        android:maxLines="1"
-                        android:textSize="15sp" />
-                </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
+
 
             <TextView style="@style/Nine.SectionTitle" android:text="@string/sec_voice_group" />
 
@@ -317,23 +285,7 @@
                     android:textColor="@color/nine_on_bg"
                     android:textSize="15sp" />
 
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/switchAutoSupport"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:minHeight="48dp"
-                    android:text="@string/support_auto"
-                    android:textColor="@color/nine_on_bg"
-                    android:textSize="15sp" />
 
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/switchInbodyOcr"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:minHeight="48dp"
-                    android:text="@string/inbody_ocr"
-                    android:textColor="@color/nine_on_bg"
-                    android:textSize="15sp" />
 
                 <TextView
                     android:id="@+id/txtMemoryCount"
@@ -430,6 +382,23 @@
                     android:id="@+id/txtLocationStatus"
                     style="@style/Nine.Status"
                     android:textColor="@color/nine_gold" />
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:hint="@string/city_hint">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/editCity"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:importantForAutofill="no"
+                        android:inputType="textCapWords"
+                        android:maxLines="1"
+                        android:textSize="15sp" />
+                </com.google.android.material.textfield.TextInputLayout>
 
                 <View style="@style/Nine.Divider" />
 
@@ -598,6 +567,15 @@
                     style="@style/Nine.Body"
                     android:textSize="13sp"
                     android:text="@string/privacy_text" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnDeleteModel"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/model_delete_free"
+                    android:visibility="gone" />
 
                 <TextView
                     android:id="@+id/txtVersion"

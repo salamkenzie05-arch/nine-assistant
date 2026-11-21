@@ -17,7 +17,7 @@ import id.nine.assistant.core.Perf
 import id.nine.assistant.core.Prefs
 import id.nine.assistant.llm.LlmBrain
 import id.nine.assistant.llm.ModelManager
-import id.nine.assistant.llm.MultiBrain
+import id.nine.assistant.llm.GeminiBrain
 import id.nine.assistant.llm.OnlineBrain
 import id.nine.assistant.widget.WidgetUpdater
 
@@ -30,10 +30,10 @@ class NineApp : Application() {
         private set
     lateinit var brain: LlmBrain
         private set
-    lateinit var multi: MultiBrain
+    lateinit var gemini: GeminiBrain
         private set
-    /** Otak online: beberapa penyedia AI gratis dengan cadangan otomatis. */
-    val online: OnlineBrain get() = multi
+    /** Otak online: Gemini (tingkat gratis). */
+    val online: OnlineBrain get() = gemini
     val log = ConversationLog()
     /** Ruang obrolan khusus (tersimpan) dan penukar isi log antara obrolan utama dan ruang. */
     lateinit var spaces: id.nine.assistant.core.SpaceStore
@@ -49,6 +49,7 @@ class NineApp : Application() {
         super.onCreate()
         prefs = Prefs(this)
         prefs.migrateSecrets()
+        purgeRetiredData()
         location = id.nine.assistant.core.LocationHelper(this, prefs)
         affinity = id.nine.assistant.core.Affinity(this)
         spaces = id.nine.assistant.core.SpaceStore(this)
@@ -61,7 +62,7 @@ class NineApp : Application() {
         // Model Gemma (±2,5 GB) TIDAK dimuat saat proses mulai; ia dimuat saat ada pertanyaan yang butuh AI
         // dan otomatis dilepas bila tak dipakai (2 menit di layar, 30 detik di latar belakang).
         brain.isForeground = { MainActivity.visible }
-        multi = MultiBrain(this, prefs)
+        gemini = GeminiBrain(this, prefs)
         models.addListener { status ->
             when (status) {
                 ModelManager.Status.Missing -> brain.unload()
@@ -94,6 +95,17 @@ class NineApp : Application() {
             }
         }, power, ContextCompat.RECEIVER_NOT_EXPORTED)
         watchHeat()
+    }
+
+    /** Data pelatih fitness (fitur sudah dihapus) tidak punya layar lagi: hapus berkasnya dari penyimpanan aplikasi. */
+    private fun purgeRetiredData() {
+        Thread({
+            try {
+                for (n in listOf("fit_data.json", "fit_data.json.tmp", "fit_data.bad.json")) java.io.File(filesDir, n).delete()
+            } catch (e: Exception) {
+                // abaikan
+            }
+        }, "nine-purge").start()
     }
 
     /**

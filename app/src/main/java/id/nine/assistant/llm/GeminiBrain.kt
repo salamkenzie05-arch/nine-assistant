@@ -8,29 +8,21 @@ import id.nine.assistant.core.Prefs
 import java.time.LocalDateTime
 import java.util.concurrent.Executors
 
-/** Daftar model hasil penemuan disimpan di pengaturan (bukan rahasia, jadi tanpa enkripsi). */
-private class PrefsModelStore(private val prefs: Prefs) : ModelStore {
-    override fun load(providerId: String): StoredModels? {
-        val v = MiniJson.parseOrNull(prefs.modelCache(providerId) ?: return null)
-        val at = MiniJson.num(v, "at") ?: return null
-        val ids = MiniJson.arr(v, "ids")?.filterIsInstance<String>() ?: return null
-        return StoredModels(at, ids)
-    }
+/** Catatan pemakaian disimpan di pengaturan (bukan rahasia, jadi tanpa enkripsi). */
+private class PrefsUsageStore(private val prefs: Prefs) : UsageStore {
+    override fun load(): String? = prefs.aiUsage
 
-    override fun save(providerId: String, models: StoredModels) {
-        prefs.setModelCache(providerId, MiniJson.write(mapOf("at" to models.at, "ids" to models.ids)))
-    }
-
-    override fun forget(providerId: String) {
-        prefs.setModelCache(providerId, null)
+    override fun save(json: String) {
+        prefs.aiUsage = json
     }
 }
 
 /**
- * Otak online Nine: beberapa penyedia AI gratis (Gemini, Groq, Cerebras, OpenRouter) dengan cadangan otomatis.
- * Pengguna mengisi kunci gratis sendiri; hanya penyedia yang kuncinya terisi yang dipakai.
+ * Otak online Nine: Gemini (Google AI Studio, tingkat gratis). Pengguna mengisi kunci gratisnya sendiri. Bila satu model
+ * kena batas kuota, Nine pindah ke model Gemini cadangan (kuota gratis dihitung per model); kalau semuanya gagal, Gemma
+ * offline mengambil alih. Setiap permintaan dicatat di [usage] supaya pemakaian bisa dilihat di Pengaturan.
  */
-class MultiBrain(context: Context, private val prefs: Prefs) : OnlineBrain {
+class GeminiBrain(context: Context, private val prefs: Prefs) : OnlineBrain {
 
     private val app = context.applicationContext
     private val main = Handler(Looper.getMainLooper())
@@ -38,11 +30,11 @@ class MultiBrain(context: Context, private val prefs: Prefs) : OnlineBrain {
     // Pool biasa (bukan satu thread): koneksi lama yang macet tidak boleh menahan pertanyaan berikutnya.
     private val exec = Executors.newCachedThreadPool { r -> Thread(r, "nine-ai").apply { isDaemon = true } }
 
+    val usage = UsageLedger(PrefsUsageStore(prefs))
+
     private val engine = BrainEngine(
-        backendFor = { cfg ->
-            if (cfg.info.native) GeminiBackend(cfg.key, cfg.search) else OpenAiBackend(cfg.info, cfg.key)
-        },
-        store = PrefsModelStore(prefs)
+        backendFor = { cfg -> GeminiBackend(cfg.key, cfg.search) },
+        onAttempt = { _, model, attempt -> usage.record(model, attempt) }
     )
 
     @Volatile
@@ -51,15 +43,17 @@ class MultiBrain(context: Context, private val prefs: Prefs) : OnlineBrain {
     @Volatile
     private var token: CancelToken? = null
 
-    /** Penyedia yang kuncinya terisi, urut prioritas. */
-    fun configs(): List<ProviderConfig> = Providers.all.mapNotNull { p ->
-        val key = prefs.providerKey(p.id)
-        if (key.isBlank()) null
-        else ProviderConfig(p, key, if (p.native) prefs.geminiModel else "", p.native && prefs.aiSearch)
+    /** Gemini bila kuncinya terisi, kalau tidak kosong. */
+    fun configs(): List<ProviderConfig> {
+        val key = prefs.geminiKey
+        if (key.isBlank()) return emptyList()
+        return listOf(ProviderConfig(Providers.GEMINI, key, Providers.geminiModels(prefs.geminiModel), prefs.aiSearch))
     }
 
-    override val displayName: String
-        get() = configs().joinToString(" + ") { it.info.label }.ifEmpty { "AI" }
+    /** Model yang sedang istirahat (kuota habis dll.) beserta waktunya, untuk layar Pengaturan. */
+    fun cooling(): List<Cooling> = configs().flatMap { engine.cooling(it) }
+
+    override val displayName: String get() = Providers.GEMINI.label
 
     override fun isConfigured(): Boolean = prefs.internetMode && configs().isNotEmpty()
 
@@ -110,8 +104,8 @@ class MultiBrain(context: Context, private val prefs: Prefs) : OnlineBrain {
     }
 
     /**
-     * Uji koneksi setiap penyedia yang kuncinya terisi. [onLine] dipanggil (di thread utama) per penyedia dengan hasilnya,
-     * lalu [onDone] sekali. Menghapus catatan "istirahat" bila ujinya berhasil.
+     * Uji koneksi Gemini. [onLine] dipanggil (di thread utama) dengan hasilnya, lalu [onDone] sekali. Menghapus catatan
+     * "istirahat" bila ujinya berhasil. Uji ini juga satu permintaan sungguhan, jadi ikut tercatat di pemakaian.
      */
     fun test(lang: AppLang, onLine: (String) -> Unit, onDone: () -> Unit) {
         val cfgs = configs()

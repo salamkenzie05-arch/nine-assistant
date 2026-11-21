@@ -48,16 +48,6 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("auto_memory", true)
         set(value) = sp.edit().putBoolean("auto_memory", value).apply()
 
-    /** Nine masuk mode teman curhat sendiri saat pengguna bercerita tentang perasaannya (tanpa kata "aku mau curhat"). */
-    var autoSupport: Boolean
-        get() = sp.getBoolean("auto_support", true)
-        set(value) = sp.edit().putBoolean("auto_support", value).apply()
-
-    /** Foto lembar InBody boleh dibaca (OCR ML Kit di perangkat). Dimatikan = InBody hanya lewat ketikan angka. */
-    var inbodyOcr: Boolean
-        get() = sp.getBoolean("inbody_ocr", true)
-        set(value) = sp.edit().putBoolean("inbody_ocr", value).apply()
-
     var honorificId: String
         get() = sp.getString("hon_id", "Tuan") ?: "Tuan"
         set(value) = sp.edit().putString("hon_id", cleanName(value)).apply()
@@ -89,7 +79,7 @@ class Prefs(context: Context) {
     /** Cadangan hasil dekripsi, dikunci oleh teks terenkripsinya (selalu berbeda tiap simpan), agar Keystore tak dipanggil berulang. */
     private val keyCache = HashMap<String, String>()
 
-    /** API key penyedia AI online ([id]: "gemini", "groq", "cerebras", "openrouter"), disimpan terenkripsi (Android Keystore). */
+    /** API key penyedia AI online ([id]: "gemini"), disimpan terenkripsi (Android Keystore). */
     fun providerKey(id: String): String {
         val stored = sp.getString("${id}_key", "") ?: ""
         if (stored.isEmpty()) return ""
@@ -109,12 +99,10 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("ai_search", false)
         set(value) = sp.edit().putBoolean("ai_search", value).apply()
 
-    /** Daftar model hasil penemuan per penyedia (JSON), agar tak ditanyakan tiap pertanyaan. */
-    fun modelCache(id: String): String? = sp.getString("ai_models_$id", null)
-
-    fun setModelCache(id: String, json: String?) {
-        sp.edit().apply { if (json == null) remove("ai_models_$id") else putString("ai_models_$id", json) }.apply()
-    }
+    /** Catatan pemakaian Gemini (JSON), lihat UsageLedger. */
+    var aiUsage: String?
+        get() = sp.getString("ai_usage", null)
+        set(value) = sp.edit().apply { if (value == null) remove("ai_usage") else putString("ai_usage", value) }.apply()
 
     var geminiKey: String
         get() = providerKey("gemini")
@@ -122,10 +110,16 @@ class Prefs(context: Context) {
 
     /** Enkripsi ulang rahasia yang masih tersimpan polos dari versi lama. */
     fun migrateSecrets() {
-        for (k in listOf("gemini_key", "groq_key", "cerebras_key", "openrouter_key", "hf_token")) {
+        for (k in listOf("gemini_key", "hf_token")) {
             val v = sp.getString(k, "") ?: ""
             if (v.isNotEmpty() && !SecureStore.isEncrypted(v)) sp.edit().putString(k, SecureStore.encrypt(v)).apply()
         }
+        // Fitur yang sudah dihapus (penyedia AI lain, curhat, InBody, pilihan model Gemma): buang sisa pengaturannya,
+        // termasuk kunci API yang pernah diisi, supaya tidak tertinggal di HP.
+        val retired = sp.all.keys.filter {
+            it in RETIRED_KEYS || it.startsWith("ai_models_")
+        }
+        if (retired.isNotEmpty()) sp.edit().apply { retired.forEach { remove(it) } }.apply()
         // Integrasi Claude dihapus: buang key & pengaturannya bila pernah diisi di versi 2.4.
         if (sp.contains("claude_key") || sp.contains("online_provider") || sp.contains("claude_model")) {
             sp.edit().remove("claude_key").remove("online_provider").remove("claude_model").apply()
@@ -157,11 +151,6 @@ class Prefs(context: Context) {
     var city: String
         get() = sp.getString("city", "") ?: ""
         set(value) = sp.edit().putString("city", value.trim()).apply()
-
-    // --- Model Gemma offline
-    var modelVariant: String
-        get() = sp.getString("model_variant", "e2b") ?: "e2b"
-        set(value) = sp.edit().putString("model_variant", value).apply()
 
     // --- Wake word
     var wakeEnabled: Boolean
@@ -286,5 +275,10 @@ class Prefs(context: Context) {
                 .replace(Regex("\\s+"), " ").trim().take(max).trim()
 
         const val DEFAULT_GEMINI_MODEL = "gemini-flash-latest"
+
+        /** Pengaturan milik fitur yang sudah dihapus; dibuang saat aplikasi dibuka. */
+        private val RETIRED_KEYS = setOf(
+            "groq_key", "cerebras_key", "openrouter_key", "auto_support", "inbody_ocr", "model_variant"
+        )
     }
 }

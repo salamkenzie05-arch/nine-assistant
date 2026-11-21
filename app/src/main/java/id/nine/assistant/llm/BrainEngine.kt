@@ -2,34 +2,16 @@ package id.nine.assistant.llm
 
 import id.nine.assistant.core.AppLang
 
-/** Penyedia yang kuncinya terisi. [userModel]: model pilihan pengguna (khusus Gemini, kosong = otomatis). */
-class ProviderConfig(val info: ProviderInfo, val key: String, val userModel: String = "", val search: Boolean = false)
+/** Penyedia yang kuncinya terisi. [models]: model yang dicoba berurutan; [search]: aktifkan pencarian Google (khusus Gemini). */
+class ProviderConfig(val info: ProviderInfo, val key: String, val models: List<String>, val search: Boolean = false)
 
-class StoredModels(val at: Long, val ids: List<String>)
-
-/** Tempat menyimpan daftar model hasil penemuan (agar tidak menanya penyedia tiap pertanyaan). */
-interface ModelStore {
-    fun load(providerId: String): StoredModels?
-    fun save(providerId: String, models: StoredModels)
-    fun forget(providerId: String)
+/** Hasil satu percobaan ke satu model: [failure] null = berhasil. [usage]: token bila dilaporkan penyedia. */
+class Attempt(val failure: Failure?, val usage: TokenUsage?) {
+    val ok: Boolean get() = failure == null
 }
 
-class MemoryModelStore : ModelStore {
-    private val map = HashMap<String, StoredModels>()
-
-    @Synchronized
-    override fun load(providerId: String) = map[providerId]
-
-    @Synchronized
-    override fun save(providerId: String, models: StoredModels) {
-        map[providerId] = models
-    }
-
-    @Synchronized
-    override fun forget(providerId: String) {
-        map.remove(providerId)
-    }
-}
+/** Model yang sedang "istirahat" (kuota habis dll.) sampai [until] (ms epoch). */
+class Cooling(val model: String, val until: Long, val failure: Failure)
 
 sealed class Outcome {
     data class Success(val text: String, val provider: String, val model: String) : Outcome()
@@ -85,16 +67,17 @@ class CancelToken {
 data class ProbeResult(val ok: Boolean, val model: String?, val millis: Long, val failure: Failure?)
 
 /**
- * Otak online: mencoba penyedia berurutan (Gemini → Groq → Cerebras → OpenRouter, yang kuncinya terisi) dan beberapa
- * model terbaik tiap penyedia; yang kena batas kuota/gagal diistirahatkan sementara dan pertanyaan beralih otomatis.
+ * Otak online: mencoba penyedia berurutan (yang kuncinya terisi) dan model-modelnya; yang kena batas kuota/gagal
+ * diistirahatkan sementara dan pertanyaan beralih otomatis ke model berikutnya (kuota Gemini gratis dihitung per model).
  * Tanpa Android, supaya logikanya bisa diuji di JVM.
  */
 class BrainEngine(
     private val backendFor: (ProviderConfig) -> ChatBackend,
-    private val store: ModelStore,
     private val clock: () -> Long = { System.currentTimeMillis() },
     val book: CooldownBook = CooldownBook(),
-    private val maxAttempts: Int = 4
+    private val maxAttempts: Int = 4,
+    /** Dipanggil setiap kali satu model selesai dicoba (berhasil atau gagal; bukan saat dibatalkan). Kegagalan di sini diabaikan. */
+    private val onAttempt: (providerId: String, model: String, Attempt) -> Unit = { _, _, _ -> }
 ) {
     /** Lupakan semua catatan istirahat (mis. setelah pengguna mengganti kunci). */
     fun resetCooldowns() = book.clear()
@@ -105,46 +88,33 @@ class BrainEngine(
 
     private fun modelKey(c: ProviderConfig, model: String) = "m:${c.info.id}#${fp(c.key)}/$model"
 
-    private fun limitFor(info: ProviderInfo) = if (info.id == Providers.OPENROUTER.id) 3 else 2
+    private fun report(cfg: ProviderConfig, model: String, attempt: Attempt) {
+        try {
+            onAttempt(cfg.info.id, model, attempt)
+        } catch (e: Exception) {
+            // pencatatan tidak boleh mengganggu jawaban
+        }
+    }
 
-    /** Model yang akan dicoba untuk [cfg], terbaik dulu. */
-    fun modelsFor(cfg: ProviderConfig, backend: ChatBackend, forceRefresh: Boolean = false): List<String> {
-        if (cfg.info.native) {
-            val primary = cfg.userModel.trim().removePrefix("models/").ifBlank { Providers.DEFAULT_GEMINI_MODEL }
-            return listOf(primary, Providers.DEFAULT_GEMINI_MODEL, Providers.FALLBACK_GEMINI_MODEL).distinct().take(limitFor(cfg.info))
-        }
+    /** Model [cfg] yang sedang istirahat pada saat ini (untuk ditampilkan). */
+    fun cooling(cfg: ProviderConfig): List<Cooling> {
         val now = clock()
-        val stored = store.load(cfg.info.id)
-        var ids = stored?.ids.orEmpty()
-        val fresh = stored != null && ids.isNotEmpty() && now - stored.at < MODEL_TTL_MS
-        if (forceRefresh || !fresh) {
-            try {
-                val listed = backend.listModels()
-                if (listed.isNotEmpty()) {
-                    ids = listed
-                    store.save(cfg.info.id, StoredModels(now, listed))
-                }
-            } catch (e: ProviderException) {
-                if (e.failure.kind == FailKind.AUTH) throw e
-                // gagal lain: pakai daftar lama atau bawaan
-            } catch (e: CancelledException) {
-                throw e
-            } catch (e: Exception) {
-                // gagal ambil daftar: pakai daftar lama atau bawaan
-            }
+        val out = ArrayList<Cooling>()
+        val p = book.active(providerKey(cfg), now)
+        for (m in cfg.models) {
+            val e = book.active(modelKey(cfg, m), now) ?: p
+            if (e != null) out.add(Cooling(m, e.until, e.failure))
         }
-        val picked = ModelPicker.pick(cfg.info.id, ids, limitFor(cfg.info))
-        return picked.ifEmpty { ModelPicker.defaults(cfg.info.id).take(limitFor(cfg.info)) }
+        return out
     }
 
     private fun penalize(cfg: ProviderConfig, model: String?, f: Failure) {
         val ms = Failures.cooldownMs(f)
         if (ms > 0) {
             val until = clock() + ms
-            if (model == null || Failures.providerWide(f, cfg.info.id)) book.mark(providerKey(cfg), until, f)
+            if (model == null || Failures.providerWide(f)) book.mark(providerKey(cfg), until, f)
             else book.mark(modelKey(cfg, model), until, f)
         }
-        if (f.kind == FailKind.NOT_FOUND) store.forget(cfg.info.id)
     }
 
     private val retryable = setOf(FailKind.RATE_LIMIT, FailKind.QUOTA_DAILY, FailKind.SERVER, FailKind.TIMEOUT, FailKind.EMPTY)
@@ -174,21 +144,7 @@ class BrainEngine(
                 note(label, pCool, now0)
                 continue
             }
-            val backend = backendFor(cfg)
-            val models = try {
-                token.attach(backend)
-                modelsFor(cfg, backend)
-            } catch (e: CancelledException) {
-                return Outcome.Cancelled
-            } catch (e: Exception) {
-                if (token.cancelled) return Outcome.Cancelled
-                val f = Failures.fromException(e)
-                penalize(cfg, null, f)
-                failed[label] = f
-                continue
-            } finally {
-                token.attach(null)
-            }
+            val models = cfg.models
 
             for (model in models) {
                 if (token.cancelled) return Outcome.Cancelled
@@ -211,6 +167,7 @@ class BrainEngine(
                     }
                     if (token.cancelled) return Outcome.Cancelled
                     if (sb.isBlank()) throw ProviderException(Failure(FailKind.EMPTY, null, "empty"))
+                    report(cfg, model, Attempt(null, b.lastUsage))
                     return Outcome.Success(sb.toString(), label, model)
                 } catch (e: CancelledException) {
                     return Outcome.Cancelled
@@ -218,6 +175,7 @@ class BrainEngine(
                     if (token.cancelled) return Outcome.Cancelled
                     val f = Failures.fromException(e)
                     penalize(cfg, model, f)
+                    report(cfg, model, Attempt(f, null))
                     if (sb.isNotBlank()) return Outcome.Partial(sb.toString(), label, f)
                     failed[label] = f
                     if (f.kind in retryable) soonest = minOf(soonest, Failures.cooldownMs(f))
@@ -225,7 +183,7 @@ class BrainEngine(
                         netFails++
                         if (netFails >= 2) return failedResult()
                     }
-                    if (Failures.providerWide(f, cfg.info.id)) continue@outer
+                    if (Failures.providerWide(f)) continue@outer
                 } finally {
                     token.attach(null)
                 }
@@ -237,14 +195,13 @@ class BrainEngine(
     /** Uji satu penyedia dengan pertanyaan kecil. Mengabaikan catatan istirahat; hasilnya memperbarui catatan itu. */
     fun probe(cfg: ProviderConfig, token: CancelToken = CancelToken()): ProbeResult {
         val started = clock()
-        val backend = backendFor(cfg)
         val req = ChatRequest("Reply with one short word.", emptyList(), "Say: ready")
         var last: Failure? = null
+        val models = cfg.models.take(2)
+        if (models.isEmpty()) return ProbeResult(false, null, clock() - started, Failure(FailKind.NOT_FOUND, null, "no model"))
         try {
-            val models = modelsFor(cfg, backend, forceRefresh = true)
-            if (models.isEmpty()) return ProbeResult(false, null, clock() - started, Failure(FailKind.NOT_FOUND, null, "no model"))
-            for ((i, model) in models.take(2).withIndex()) {
-                val b = if (i == 0) backend else backendFor(cfg)
+            for (model in models) {
+                val b = backendFor(cfg)
                 token.attach(b)
                 val sb = StringBuilder()
                 try {
@@ -252,6 +209,7 @@ class BrainEngine(
                     if (sb.isBlank()) throw ProviderException(Failure(FailKind.EMPTY, null, "empty"))
                     book.forget(providerKey(cfg))
                     book.forget(modelKey(cfg, model))
+                    report(cfg, model, Attempt(null, b.lastUsage))
                     return ProbeResult(true, model, clock() - started, null)
                 } catch (e: CancelledException) {
                     throw e
@@ -259,22 +217,16 @@ class BrainEngine(
                     val f = Failures.fromException(e)
                     last = f
                     penalize(cfg, model, f)
-                    if (Failures.providerWide(f, cfg.info.id)) break
+                    report(cfg, model, Attempt(f, null))
+                    if (Failures.providerWide(f)) break
                 } finally {
                     token.attach(null)
                 }
             }
         } catch (e: CancelledException) {
             return ProbeResult(false, null, clock() - started, Failure(FailKind.OTHER, null, "cancelled"))
-        } catch (e: Exception) {
-            val f = Failures.fromException(e)
-            penalize(cfg, null, f)
-            return ProbeResult(false, null, clock() - started, f)
         }
         return ProbeResult(false, null, clock() - started, last ?: Failure(FailKind.OTHER, null, "unknown"))
     }
 
-    companion object {
-        const val MODEL_TTL_MS = 12L * 60 * 60 * 1000
-    }
 }

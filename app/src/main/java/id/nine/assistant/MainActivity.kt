@@ -638,17 +638,15 @@ open class MainActivity : AppCompatActivity(), AssistantController.Ui {
         hideKeyboard()
         binding.inputText.clearFocus()
         val app = applicationContext
-        // Lembar InBody dibaca OCR di perangkat: butuh gambar lebih besar supaya angka kecil tetap terbaca.
-        val inbody = controller.wantsInBodyImage(caption)
         Thread({
-            val file = ImagePrep.prepare(app, uri, if (inbody) ImagePrep.OCR_SIDE else ImagePrep.MAX_SIDE)
+            val file = ImagePrep.prepare(app, uri, ImagePrep.MAX_SIDE)
             runOnUiThread {
                 if (isFinishing || isDestroyed) {
                     file?.delete()
                 } else if (file == null) {
                     Toast.makeText(this, R.string.image_failed, Toast.LENGTH_SHORT).show()
                 } else {
-                    controller.submitImage(file.absolutePath, caption, inbody)
+                    controller.submitImage(file.absolutePath, caption)
                 }
             }
         }, "nine-image").start()
@@ -725,13 +723,37 @@ open class MainActivity : AppCompatActivity(), AssistantController.Ui {
             ModelManager.Status.Missing -> nine.models.startDownload()
             is ModelManager.Status.Failed ->
                 if (s.reason == ModelManager.Reason.NEED_TOKEN) {
-                    startActivity(Intent(this, SettingsActivity::class.java))
+                    askModelToken()
                 } else {
                     nine.models.startDownload()
                 }
             is ModelManager.Status.Downloading -> nine.models.cancelDownload()
             else -> dismissModelCard()
         }
+    }
+
+    /** Server model meminta login Hugging Face: minta token "Read" (disimpan terenkripsi) lalu coba unduh lagi. */
+    private fun askModelToken() {
+        val edit = android.widget.EditText(this).apply {
+            hint = getString(R.string.hf_token_hint)
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+            setSingleLine()
+            setText(nine.prefs.hfToken)
+        }
+        val pad = (20 * resources.displayMetrics.density).toInt()
+        val box = android.widget.FrameLayout(this).apply {
+            setPadding(pad, pad / 2, pad, 0)
+            addView(edit)
+        }
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setMessage(R.string.model_fail_token)
+            .setView(box)
+            .setPositiveButton(R.string.model_token_retry) { _, _ ->
+                nine.prefs.hfToken = edit.text.toString()
+                nine.models.startDownload()
+            }
+            .setNegativeButton(R.string.act_cancel, null)
+            .show()
     }
 
     private fun onModelSecondary() {

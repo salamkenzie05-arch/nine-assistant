@@ -1,31 +1,31 @@
 package id.nine.assistant.llm
 
-/** Satu penyedia AI online gratis. [native]: Gemini memakai format API sendiri; lainnya format OpenAI. */
+/** Satu penyedia AI online. Nine hanya memakai Gemini (Google AI Studio, tingkat gratis). */
 data class ProviderInfo(
     val id: String,
     val label: String,
     val baseUrl: String,
-    val keyUrl: String,
-    val native: Boolean = false
+    val keyUrl: String
 ) {
     /** Nama kunci tersimpan di Prefs (terenkripsi). */
     val prefKey: String get() = "${id}_key"
 }
 
 object Providers {
-    val GEMINI = ProviderInfo("gemini", "Gemini", "https://generativelanguage.googleapis.com/v1beta", "https://aistudio.google.com/apikey", native = true)
-    val GROQ = ProviderInfo("groq", "Groq", "https://api.groq.com/openai/v1", "https://console.groq.com/keys")
-    val CEREBRAS = ProviderInfo("cerebras", "Cerebras", "https://api.cerebras.ai/v1", "https://cloud.cerebras.ai")
-    val OPENROUTER = ProviderInfo("openrouter", "OpenRouter", "https://openrouter.ai/api/v1", "https://openrouter.ai/keys")
-
-    /** Urutan prioritas: yang pertama dicoba lebih dulu, sisanya jadi cadangan otomatis. */
-    val all: List<ProviderInfo> = listOf(GEMINI, GROQ, CEREBRAS, OPENROUTER)
-
-    fun byId(id: String): ProviderInfo? = all.firstOrNull { it.id == id }
+    val GEMINI = ProviderInfo("gemini", "Gemini", "https://generativelanguage.googleapis.com/v1beta", "https://aistudio.google.com/apikey")
 
     /** Model Gemini bawaan (alias yang selalu menunjuk Flash terbaru) dan cadangannya yang lebih ringan. */
     const val DEFAULT_GEMINI_MODEL = "gemini-flash-latest"
     const val FALLBACK_GEMINI_MODEL = "gemini-flash-lite-latest"
+
+    /** Dua model yang dicoba berurutan: pilihan pengguna (bila ada) atau bawaan, lalu cadangan. Kuota gratis dihitung per model. */
+    fun geminiModels(userModel: String): List<String> {
+        val primary = userModel.trim().removePrefix("models/").ifBlank { DEFAULT_GEMINI_MODEL }
+        return listOf(primary, DEFAULT_GEMINI_MODEL, FALLBACK_GEMINI_MODEL).distinct().take(2)
+    }
+
+    /** Halaman resmi Google untuk melihat batas dan pemakaian kunci. */
+    const val DASHBOARD_URL = "https://aistudio.google.com/rate-limit"
 }
 
 /** Isi permintaan ke AI online. [history]: pasangan (role "user"/"model", teks), sudah urut. */

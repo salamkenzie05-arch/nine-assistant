@@ -9,12 +9,10 @@ import android.os.Build
 import android.content.res.Configuration
 import android.os.Bundle
 import android.provider.Settings
-import android.text.format.Formatter
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Toast
-import com.google.android.material.textfield.TextInputEditText
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -28,9 +26,9 @@ import id.nine.assistant.core.MemoryStore
 import id.nine.assistant.core.Prefs
 import id.nine.assistant.widget.WidgetUpdater
 import id.nine.assistant.databinding.ActivitySettingsBinding
-import id.nine.assistant.databinding.ItemAiKeyBinding
-import id.nine.assistant.llm.Providers
 import id.nine.assistant.llm.ModelManager
+import id.nine.assistant.llm.Providers
+import id.nine.assistant.llm.UsageText
 import id.nine.assistant.skills.CalendarSkill
 import id.nine.assistant.speech.SpeechOutput
 import id.nine.assistant.wake.WakeWordService
@@ -42,11 +40,6 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var nine: NineApp
     private lateinit var prefs: Prefs
     private var voice: SpeechOutput? = null
-
-    private val importLauncher =
-        registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-            if (uri != null) nine.models.importFrom(uri)
-        }
 
     private val modelListener = ModelManager.Listener { render(it) }
 
@@ -60,17 +53,35 @@ class SettingsActivity : AppCompatActivity() {
 
         binding.btnBack.setOnClickListener { finish() }
 
-        // --- Otak AI
-        binding.editToken.setText(prefs.hfToken)
-        binding.btnDownload.setOnClickListener {
-            prefs.hfToken = binding.editToken.text.toString()
-            when (nine.models.status) {
-                is ModelManager.Status.Downloading -> nine.models.cancelDownload()
-                else -> nine.models.startDownload()
-            }
+        // --- Otak AI (Gemini)
+        binding.editGeminiKey.setText(prefs.geminiKey)
+        binding.editGeminiModel.setText(if (prefs.geminiModel == Prefs.DEFAULT_GEMINI_MODEL) "" else prefs.geminiModel)
+        binding.switchAiSearch.isChecked = prefs.aiSearch
+        binding.switchAiSearch.setOnCheckedChangeListener { _, checked -> prefs.aiSearch = checked }
+        setAdvanced(prefs.aiSearch || prefs.geminiModel != Prefs.DEFAULT_GEMINI_MODEL)
+        binding.btnAdvanced.setOnClickListener { setAdvanced(binding.advancedBox.visibility != View.VISIBLE) }
+        binding.btnGetKey.setOnClickListener { openUrl(Providers.GEMINI.keyUrl) }
+        binding.btnTestAi.setOnClickListener { testAi() }
+        binding.switchInternet.isChecked = prefs.internetMode
+        binding.switchInternet.setOnCheckedChangeListener { _, checked ->
+            saveAiFields()
+            prefs.internetMode = checked
+            renderInternet()
+            renderUsage()
         }
-        binding.btnImport.setOnClickListener { importLauncher.launch(arrayOf("*/*")) }
-        binding.btnDelete.setOnClickListener {
+        renderInternet()
+
+        // --- Pemakaian Gemini
+        binding.btnUsageDashboard.setOnClickListener { openUrl(Providers.DASHBOARD_URL) }
+        binding.btnUsageReset.setOnClickListener {
+            nine.gemini.usage.resetToday()
+            renderUsage()
+            Toast.makeText(this, R.string.usage_reset_done, Toast.LENGTH_SHORT).show()
+        }
+        renderUsage()
+
+        // --- Hapus model offline (opsional; unduh dan progres ada di kartu model layar utama)
+        binding.btnDeleteModel.setOnClickListener {
             AlertDialog.Builder(this)
                 .setMessage(R.string.model_delete_confirm)
                 .setPositiveButton(R.string.model_delete) { _, _ ->
@@ -80,31 +91,6 @@ class SettingsActivity : AppCompatActivity() {
                 .setNegativeButton(R.string.act_cancel, null)
                 .show()
         }
-
-        // --- Pilihan model Gemma
-        binding.groupVariant.check(if (nine.models.variant == ModelManager.Variant.E4B) R.id.variantE4b else R.id.variantE2b)
-        binding.groupVariant.setOnCheckedChangeListener { _, id ->
-            val v = if (id == R.id.variantE4b) ModelManager.Variant.E4B else ModelManager.Variant.E2B
-            if (v != nine.models.variant) {
-                nine.brain.unload()
-                nine.models.setVariant(v)
-            }
-        }
-
-        // --- Mode internet
-        binding.switchInternet.isChecked = prefs.internetMode
-        buildAiKeyFields()
-        binding.editGeminiModel.setText(if (prefs.geminiModel == Prefs.DEFAULT_GEMINI_MODEL) "" else prefs.geminiModel)
-        binding.switchAiSearch.isChecked = prefs.aiSearch
-        binding.switchAiSearch.setOnCheckedChangeListener { _, checked -> prefs.aiSearch = checked }
-        binding.btnTestAi.setOnClickListener { testAi() }
-        binding.editCity.setText(prefs.city)
-        binding.switchInternet.setOnCheckedChangeListener { _, checked ->
-            saveKeys()
-            prefs.internetMode = checked
-            renderInternet()
-        }
-        renderInternet()
 
         // --- Alarm
         binding.groupAlarmEngine.check(if (prefs.nineAlarms) R.id.alarmEngineNine else R.id.alarmEngineClock)
@@ -138,8 +124,6 @@ class SettingsActivity : AppCompatActivity() {
         renderWake()
 
         // --- Reaksi musik, layanan aksesibilitas
-        binding.switchGpu.isChecked = prefs.llmBackend == "gpu"
-        binding.switchGpu.setOnCheckedChangeListener { _, checked -> nine.brain.useBackend(if (checked) "gpu" else "cpu") }
         binding.switchMusic.isChecked = prefs.musicReact
         binding.switchMusic.setOnCheckedChangeListener { _, checked -> prefs.musicReact = checked }
         binding.btnA11y.setOnClickListener {
@@ -159,6 +143,7 @@ class SettingsActivity : AppCompatActivity() {
         renderA11y()
 
         // --- Lokasi
+        binding.editCity.setText(prefs.city)
         binding.switchLocation.isChecked = prefs.useLocation && nine.location.hasPermission()
         binding.switchLocation.setOnCheckedChangeListener { _, checked ->
             if (checked && !nine.location.hasPermission()) {
@@ -230,10 +215,6 @@ class SettingsActivity : AppCompatActivity() {
         // --- Memori
         binding.switchMemory.isChecked = prefs.autoMemory
         binding.switchMemory.setOnCheckedChangeListener { _, checked -> prefs.autoMemory = checked }
-        binding.switchAutoSupport.isChecked = prefs.autoSupport
-        binding.switchAutoSupport.setOnCheckedChangeListener { _, checked -> prefs.autoSupport = checked }
-        binding.switchInbodyOcr.isChecked = prefs.inbodyOcr
-        binding.switchInbodyOcr.setOnCheckedChangeListener { _, checked -> prefs.inbodyOcr = checked }
         binding.btnMemoryManage.setOnClickListener { showMemoryDialog() }
         binding.btnMemoryClear.setOnClickListener { confirmClearMemory() }
         renderMemory()
@@ -264,11 +245,6 @@ class SettingsActivity : AppCompatActivity() {
         nine.models.addListener(modelListener)
     }
 
-    private fun showBrainDetail(text: String) {
-        binding.brainDetail.text = text
-        binding.brainDetail.visibility = View.VISIBLE
-    }
-
     private fun renderA11y() {
         if (!NineAccessibilityService.AVAILABLE) {
             // Edisi ringan (Nine.apk): tanpa aksesibilitas supaya lolos Play Protect.
@@ -283,50 +259,42 @@ class SettingsActivity : AppCompatActivity() {
         super.onResume()
         renderA11y()
         renderInternet()
+        renderUsage()
         renderWake()
         renderAlarms()
         populateCalendars()
     }
 
-    private val aiKeyEdits = LinkedHashMap<String, TextInputEditText>()
-
-    /** Satu kolom kunci + tombol "Dapatkan kunci" untuk tiap penyedia AI online. */
-    private fun buildAiKeyFields() {
-        binding.aiKeyList.removeAllViews()
-        aiKeyEdits.clear()
-        for (p in Providers.all) {
-            val item = ItemAiKeyBinding.inflate(layoutInflater, binding.aiKeyList, true)
-            item.keyLayout.hint = getString(R.string.ai_key_hint, p.label)
-            item.editKey.setText(prefs.providerKey(p.id))
-            item.btnGetKey.text = getString(R.string.ai_get_key, p.label)
-            item.btnGetKey.setOnClickListener {
-                try {
-                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(p.keyUrl)))
-                } catch (e: Exception) {
-                    // tidak ada browser
-                }
-            }
-            aiKeyEdits[p.id] = item.editKey
+    private fun openUrl(url: String) {
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+        } catch (e: Exception) {
+            // tidak ada browser
         }
     }
 
-    private fun saveKeys() {
-        for ((id, edit) in aiKeyEdits) prefs.setProviderKey(id, edit.text?.toString() ?: "")
+    private fun setAdvanced(show: Boolean) {
+        binding.advancedBox.visibility = if (show) View.VISIBLE else View.GONE
+        binding.btnAdvanced.setText(if (show) R.string.ai_advanced_hide else R.string.ai_advanced_show)
     }
 
-    /** Uji tiap penyedia yang kuncinya terisi dan tampilkan model yang dipilih Nine atau penyebab gagalnya. */
+    private fun saveAiFields() {
+        prefs.geminiKey = binding.editGeminiKey.text?.toString().orEmpty()
+        prefs.geminiModel = binding.editGeminiModel.text?.toString().orEmpty()
+    }
+
+    /** Uji kunci Gemini dan tampilkan model yang dipakai atau penyebab gagalnya. */
     private fun testAi() {
-        saveKeys()
-        prefs.geminiModel = binding.editGeminiModel.text.toString()
+        saveAiFields()
         binding.txtAiTest.visibility = View.VISIBLE
-        if (nine.multi.configs().isEmpty()) {
+        if (nine.gemini.configs().isEmpty()) {
             binding.txtAiTest.setText(R.string.ai_test_nokey)
             return
         }
         binding.btnTestAi.isEnabled = false
         binding.txtAiTest.setText(R.string.ai_testing)
         val lines = ArrayList<String>()
-        nine.multi.test(
+        nine.gemini.test(
             prefs.lang,
             onLine = { line ->
                 lines.add(line)
@@ -336,6 +304,7 @@ class SettingsActivity : AppCompatActivity() {
                 if (!isFinishing && !isDestroyed) {
                     binding.btnTestAi.isEnabled = true
                     renderInternet()
+                    renderUsage()
                 }
             }
         )
@@ -394,16 +363,13 @@ class SettingsActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
-        saveKeys()
-        prefs.geminiModel = binding.editGeminiModel.text.toString()
+        saveAiFields()
         prefs.city = binding.editCity.text.toString()
         val phrase = binding.editWakePhrase.text.toString().trim()
         if (phrase.isNotEmpty() && phrase != prefs.wakePhrases) {
             prefs.wakePhrases = phrase
             if (prefs.wakeEnabled) WakeWordService.reload(this)
         }
-        val token = binding.editToken.text.toString()
-        if (token != prefs.hfToken) prefs.hfToken = token
         voice?.stop()
     }
 
@@ -474,16 +440,24 @@ class SettingsActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun size(b: Long): String = Formatter.formatShortFileSize(this, b)
-
     private fun renderInternet() {
-        val noKey = nine.multi.configs().isEmpty() && aiKeyEdits.values.all { it.text.isNullOrBlank() }
+        val on = prefs.internetMode
+        binding.aiFields.visibility = if (on) View.VISIBLE else View.GONE
+        val hasKey = !binding.editGeminiKey.text.isNullOrBlank()
         binding.txtInternetStatus.text = when {
-            !prefs.internetMode -> getString(R.string.internet_status_off)
-            noKey -> getString(R.string.internet_status_nokey)
-            nine.online.isOnline() -> getString(R.string.internet_status_online, nine.online.displayName)
+            !on -> getString(R.string.internet_status_off)
+            !hasKey -> getString(R.string.internet_status_nokey)
+            nine.gemini.isOnline() -> getString(R.string.internet_status_online, nine.gemini.displayName)
             else -> getString(R.string.internet_status_offline)
         }
+    }
+
+    /** Kartu pemakaian: tampil bila Mode internet menyala dan ada kunci atau catatan pemakaian. */
+    private fun renderUsage() {
+        val snap = nine.gemini.usage.snapshot()
+        val hasKey = !binding.editGeminiKey.text.isNullOrBlank()
+        binding.usageCard.visibility = if (prefs.internetMode && (hasKey || !snap.isEmpty)) View.VISIBLE else View.GONE
+        binding.txtUsage.text = UsageText.format(snap, nine.gemini.cooling(), prefs.lang, System.currentTimeMillis())
     }
 
     private val notifPermission =
@@ -535,53 +509,6 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun render(s: ModelManager.Status) {
-        binding.brainProgress.visibility = View.GONE
-        binding.btnDownload.isEnabled = true
-        binding.btnImport.isEnabled = true
-        binding.btnDelete.visibility = View.GONE
-        binding.btnDownload.visibility = View.VISIBLE
-        when (s) {
-            ModelManager.Status.Ready -> {
-                binding.brainStatus.text = getString(R.string.model_ready, nine.models.variant.label, size(nine.models.modelFile.length()))
-                binding.brainDetail.visibility = View.GONE
-                binding.btnDownload.visibility = View.GONE
-                binding.btnDelete.visibility = View.VISIBLE
-            }
-            ModelManager.Status.Missing -> {
-                binding.brainStatus.text = getString(R.string.model_missing)
-                showBrainDetail(getString(R.string.model_card_text))
-                binding.btnDownload.setText(R.string.model_download)
-            }
-            is ModelManager.Status.Downloading -> {
-                binding.brainStatus.text = getString(R.string.model_downloading, size(s.downloaded), size(s.total))
-                binding.brainDetail.visibility = View.GONE
-                binding.brainProgress.visibility = View.VISIBLE
-                binding.brainProgress.max = 1000
-                if (s.total > 0) binding.brainProgress.setProgressCompat((s.downloaded * 1000 / s.total).toInt(), true)
-                binding.btnDownload.setText(R.string.model_cancel)
-                binding.btnImport.isEnabled = false
-            }
-            is ModelManager.Status.Importing -> {
-                binding.brainStatus.text = getString(R.string.model_importing, size(s.copied), size(s.total))
-                binding.brainProgress.visibility = View.VISIBLE
-                binding.brainProgress.max = 1000
-                if (s.total > 0) binding.brainProgress.setProgressCompat((s.copied * 1000 / s.total).toInt(), true)
-                binding.btnDownload.isEnabled = false
-                binding.btnImport.isEnabled = false
-            }
-            is ModelManager.Status.Failed -> {
-                binding.brainStatus.text = getString(R.string.model_missing)
-                showBrainDetail(
-                    when (s.reason) {
-                        ModelManager.Reason.NEED_TOKEN -> getString(R.string.model_fail_token)
-                        ModelManager.Reason.STORAGE -> getString(R.string.model_fail_storage)
-                        ModelManager.Reason.CORRUPT -> getString(R.string.model_fail_corrupt)
-                        ModelManager.Reason.IMPORT -> getString(R.string.model_fail_import, s.detail)
-                        else -> getString(R.string.model_fail_network, s.detail)
-                    }
-                )
-                binding.btnDownload.setText(R.string.model_retry)
-            }
-        }
+        binding.btnDeleteModel.visibility = if (s == ModelManager.Status.Ready) View.VISIBLE else View.GONE
     }
 }

@@ -3,7 +3,6 @@ package id.nine.assistant.nlu
 import id.nine.assistant.coach.CoachIntent
 import id.nine.assistant.coach.CoachIntents
 import id.nine.assistant.core.AppLang
-import id.nine.assistant.support.SupportIntent
 import java.time.LocalDateTime
 
 /**
@@ -43,8 +42,6 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
         if (first !is Command.Unknown) return first
         // Kalimat berantakan (urutan terbalik, salah ketik, kata pengisi): coba versi yang dirapikan.
         if (reQuestion.containsMatchIn(clean(input))) return first
-        // "aku mau curhat ke ibuku": kata "ke" yang dibuang pemulih kalimat tidak boleh mengubahnya jadi ajakan curhat ke Nine.
-        if (SupportIntent.targetsOtherPerson(input)) return first
         for (cand in Messy.candidates(input)) {
             val c = parseOne(cand)
             if (c !is Command.Unknown) return c
@@ -72,7 +69,7 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
     private fun answersQuestion(c: Command): Boolean = when (c) {
         Command.CurrentTime, Command.CurrentDate, Command.Battery, Command.DeviceInfo, is Command.PhoneInfo, Command.Help,
         Command.WhoAreYou, Command.HowAreYou, Command.TodoList, Command.ReadNotes, Command.ReadMemory, Command.ShowAlarms,
-        Command.AffinityStatus, Command.WhereAmI, is Command.CorrectEnglish, is Command.BetterWord, is Command.EnglishCoach, is Command.Support, is Command.Health -> true
+        Command.AffinityStatus, Command.WhereAmI, is Command.CorrectEnglish, is Command.BetterWord, is Command.EnglishCoach -> true
         is Command.ShowAgenda, is Command.Calculate, is Command.FinanceReport, is Command.FinanceList,
         is Command.Entertain -> true
         else -> false
@@ -83,9 +80,7 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
 
     private fun parseCommand(raw: String, norm: String, now: LocalDateTime): Command {
         return parseLanguage(raw)
-            ?: parseSupport(raw)
             ?: parseCoach(raw)
-            ?: parseHealth(raw)
             ?: parseReset(raw)
             ?: parseControl(raw)
             ?: parseCalc(raw)
@@ -946,15 +941,6 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
         is CoachIntent.BetterWord -> Command.BetterWord(i.word)
         else -> null
     }
-
-    // ------------------------------------------------------------------ pelatih fitness + ahli gizi
-
-    private fun parseHealth(raw: String): Command? = id.nine.assistant.fit.HealthIntent.parse(raw)?.let { Command.Health(it) }
-
-    // ------------------------------------------------------------------ teman curhat
-
-    private fun parseSupport(raw: String): Command? =
-        SupportIntent.parse(raw)?.let { Command.Support(it.on, it.exercise) }
 
     private val reWhere = rx("""^(?:(?:aku|saya|gue)\s+(?:lagi\s+|sedang\s+)?(?:di\s+mana|dimana)|(?:di\s+mana|dimana)\s+(?:aku|saya|gue|posisi\s+(?:aku|saya))(?:\s+sekarang)?|lokasi\s+(?:aku|saya|ku)(?:\s+sekarang)?|posisi\s+(?:aku|saya)(?:\s+sekarang)?|where\s+am\s+i(?:\s+(?:now|right\s+now))?|what(?:'s|\s+is)\s+my\s+(?:location|current\s+location|address))$""")
 

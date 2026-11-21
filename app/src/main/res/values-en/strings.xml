@@ -31,12 +31,12 @@
     <string name="model_importing">Copying %1$s / %2$s</string>
     <string name="model_ready">%1$s installed (%2$s)</string>
     <string name="model_missing">Not installed</string>
-    <string name="model_fail_token">The server requires a Hugging Face login. Open the model page in a browser, accept the license, create a \"Read\" token at huggingface.co/settings/tokens, paste it below, then retry. Or download the model file in a browser and use \"Import model file\".</string>
+    <string name="model_fail_token">The model server requires a Hugging Face login. Create a free account, accept the model\'s license on its page, then enter a \"Read\" token from huggingface.co/settings/tokens. Or download the model file in a browser and choose \"Import model file\".</string>
     <string name="model_fail_network">Download failed (%1$s). Check your connection and retry.</string>
     <string name="model_fail_storage">Not enough storage (about 3 GB free needed).</string>
     <string name="model_fail_corrupt">The model file is incomplete. Please download again.</string>
     <string name="model_fail_import">Import failed: %1$s</string>
-    <string name="model_delete_confirm">Delete this Gemma model? Nine returns to command mode (or internet mode if enabled).</string>
+    <string name="model_delete_confirm">Delete the offline Gemma model? Storage is freed; Nine uses Gemini (if on) or command mode.</string>
     <string name="hf_token_hint">Hugging Face token (optional)</string>
 
     <string name="sec_look">Appearance</string>
@@ -47,7 +47,7 @@
     <string name="voice_preview">Preview voice</string>
     <string name="assistant_button">Set as default assistant</string>
     <string name="sec_privacy">Privacy</string>
-    <string name="privacy_text">Nine\'s data stays on this phone. The internet is used to download models and, when Internet mode is on, to send general questions to the AI providers whose keys you enter in Settings.</string>
+    <string name="privacy_text">Nine\'s data stays on this phone. The internet is used to download the Gemma model and, when Internet mode is on, to send general questions to Google Gemini with your own key.</string>
 
     <string name="todo_title">Today\'s tasks</string>
     <string name="todo_hint">Add a task…</string>
@@ -59,23 +59,30 @@
     <string name="widget_orb_desc">Nine orb (follows theme): tap to talk</string>
     <string name="widget_today_desc">Nine (follows theme) · today\'s tasks</string>
 
-    <string name="internet_switch">Internet mode · free online AI</string>
+    <string name="internet_switch">Internet mode · free Gemini</string>
     <string name="city_hint">City for weather (optional)</string>
-    <string name="internet_status_off">Off. Answers come from offline Gemma (if installed).</string>
-    <string name="internet_status_nokey">Enter at least one API key to enable.</string>
+    <string name="internet_status_off">Off. General questions are answered by offline Gemma (if installed).</string>
+    <string name="internet_status_nokey">Enter your Gemini key below to enable.</string>
     <string name="internet_status_online">On · online · %1$s</string>
-    <string name="internet_status_offline">On · no internet, using Gemma if installed</string>
-    <string name="ai_intro">Enter one or more free keys (no credit card). Nine tries them in order: Gemini, Groq, Cerebras, then OpenRouter, and switches automatically when one provider runs out of quota. General questions (not commands) are sent to that provider together with a short context summary: Nine\'s memory, today\'s tasks and events, and your location if allowed. Free providers may use conversations to improve their products, so avoid sensitive details. Nine\'s venting chats and fitness data are never sent.</string>
-    <string name="ai_key_hint">%1$s API key</string>
-    <string name="ai_get_key">Get a free %1$s key</string>
+    <string name="internet_status_offline">On · no internet, using offline Gemma if installed</string>
+    <string name="ai_intro">Paste your own Gemini API key (free, no credit card). General questions (not commands) are sent to Google together with a short context summary: Nine\'s memory, today\'s tasks and events, and your location if allowed. Google\'s free tier may use conversations to improve its products, so avoid sensitive details. When the quota runs out or the internet drops, Nine switches to offline Gemma.</string>
+    <string name="ai_key_hint">Gemini API key</string>
+    <string name="ai_get_key">Get a key</string>
     <string name="ai_search_switch">Google Search through Gemini (paid keys only)</string>
     <string name="ai_test">Test connection</string>
     <string name="ai_testing">Testing…</string>
-    <string name="ai_test_nokey">Enter at least one key first.</string>
+    <string name="ai_test_nokey">Enter your Gemini key first.</string>
+    <string name="ai_advanced_show">Advanced ▾</string>
+    <string name="ai_advanced_hide">Advanced ▴</string>
+    <string name="usage_title">Gemini usage today</string>
+    <string name="usage_note">An estimate from requests sent by Nine only; use by other apps with the same key is not visible. Official numbers are on Google\'s dashboard.</string>
+    <string name="usage_dashboard">Google\'s dashboard</string>
+    <string name="usage_reset">Reset count</string>
+    <string name="usage_reset_done">Today\'s count was reset.</string>
+    <string name="model_delete_free">Delete offline model (free up space)</string>
+    <string name="model_token_retry">Save &amp; retry</string>
     <string name="brain_online">Online · %1$s</string>
 
-    <string name="variant_e2b">E2B · 2.6 GB · fast</string>
-    <string name="variant_e4b">E4B · 3.7 GB · smarter</string>
 
     <string name="wake_switch">Wake phrase</string>
     <string name="wake_overlay_button">Allow display over other apps</string>
@@ -102,7 +109,6 @@
     <string name="calendar_access">Allow calendar access</string>
     <string name="gemini_model_hint">Gemini model (optional)</string>
     <string name="wake_phrase_hint">Phrase, e.g. hey nine</string>
-    <string name="model_import_short">Import file</string>
 
 
     <string name="rec_channel">Nine voice recorder</string>
@@ -142,8 +148,6 @@
     <string name="alarm_fullscreen_ok">Full-screen alarms: allowed ✓</string>
     <string name="sec_memory_group">Nine\'s memory</string>
     <string name="memory_auto">Remember automatically</string>
-    <string name="support_auto">Listen automatically when I share feelings</string>
-    <string name="inbody_ocr">Read InBody result photos (on device, via ML Kit)</string>
     <string name="memory_count">%1$d things remembered</string>
     <string name="memory_manage">View &amp; delete</string>
     <string name="memory_clear">Delete all</string>
@@ -182,7 +186,6 @@
     <string name="profile_later">Maybe later</string>
     <string name="profile_saved">Profile saved</string>
     <string name="profile_button">Edit profile</string>
-    <string name="gpu_switch">AI on GPU (may stutter)</string>
     <string name="cd_attach">Send an image</string>
     <string name="image_failed">That image couldn\'t be read.</string>
     <string name="hub_finance">Finance report</string>

@@ -4,17 +4,11 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.os.Handler
-import android.os.Looper
 import androidx.core.content.ContextCompat
 import id.nine.assistant.NineApp
 import id.nine.assistant.coach.CoachSession
-import id.nine.assistant.fit.HealthEngine
-import id.nine.assistant.fit.HealthIntent
-import id.nine.assistant.fit.HealthRequest
-import id.nine.assistant.fit.InBodyParser
-import id.nine.assistant.fit.InBodyReading
 import id.nine.assistant.llm.AiHistory
+import id.nine.assistant.llm.ExpressionTag
 import id.nine.assistant.llm.LangGuard
 import id.nine.assistant.llm.LlmBrain
 import id.nine.assistant.llm.OnlineBrain
@@ -26,19 +20,12 @@ import id.nine.assistant.nlu.SlotFiller
 import id.nine.assistant.nlu.SlotOutcome
 import id.nine.assistant.recorder.RecorderService
 import id.nine.assistant.skills.CalendarSkill
-import id.nine.assistant.skills.FitFileStore
-import id.nine.assistant.skills.InBodyOcr
 import id.nine.assistant.skills.NoteStore
 import id.nine.assistant.skills.TodoStore
 import id.nine.assistant.skills.SkillExecutor
 import id.nine.assistant.speech.SpeechInput
 import id.nine.assistant.speech.DroidSinger
 import id.nine.assistant.speech.SpeechOutput
-import id.nine.assistant.support.CrisisCheck
-import id.nine.assistant.support.SupportEntry
-import id.nine.assistant.support.SupportSafety
-import id.nine.assistant.support.SupportSession
-import id.nine.assistant.support.SupportText
 import kotlinx.coroutines.Job
 
 /**
@@ -88,8 +75,6 @@ class AssistantController(context: Context, private val ui: Ui) {
     private val executor = SkillExecutor(app, NoteStore(app), prefs, memory)
     private val todos = TodoStore(app)
     private val calendar = CalendarSkill(app)
-    /** Pelatih fitness + ahli gizi; datanya satu berkas pribadi di penyimpanan aplikasi. */
-    private val health by lazy { HealthEngine(FitFileStore(app)) }
 
     /** Ukuran log saat jawaban AI terakhir selesai; giliran sesudahnya = perintah yang belum diketahui Gemma. */
     private var aiSeenUpTo = 0
@@ -143,15 +128,6 @@ class AssistantController(context: Context, private val ui: Ui) {
     /** Sesi mentor bahasa Inggris (offline); selama ada, ucapan diperiksa grammar-nya, bukan dijalankan sebagai perintah. */
     private var coach: CoachSession? = null
     private var coachAt = 0L
-    /**
-     * Sesi curhat (teman yang mendengarkan). Selama ada, ucapan ditangani sesi itu; isinya ditandai pribadi: tidak
-     * disimpan ke ruang obrolan, tidak dikirim ke AI online, tidak masuk ingatan jangka panjang.
-     */
-    private var support: SupportSession? = null
-    private var supportAt = 0L
-    /** Gemma pernah dipakai di sesi curhat ini: konteksnya dibuang saat sesi berakhir. */
-    private var supportUsedAi = false
-    private val mainHandler = Handler(Looper.getMainLooper())
     /** Ucapan terakhir datang dari mikrofon (bukan ketikan): hanya begitu Nine mendengarkan lagi sendiri. */
     private var viaVoice = false
     /** Konfirmasi yang sedang menunggu adalah ajakan kejutan harian (penolakan dijawab ringan, bukan "dibatalkan"). */
@@ -226,16 +202,12 @@ class AssistantController(context: Context, private val ui: Ui) {
      * Kirim gambar ([path] = berkas di cache aplikasi) ke otak AI offline untuk dijelaskan. [caption] = pertanyaan pengguna
      * tentang gambar itu (boleh kosong). Gambar tidak pernah dikirim ke internet.
      */
-    fun submitImage(path: String, caption: String, inbody: Boolean = false) {
+    fun submitImage(path: String, caption: String) {
         val l = lang
         val sfx = prefs.persona.sfx(l)
         recognizing = false
         input.cancel()
         stopOutput()
-        if (inbody && prefs.inbodyOcr) {
-            submitInBody(path)
-            return
-        }
         val q = caption.trim()
         log.add(true, if (q.isEmpty()) l.t("[Gambar]", "[Image]") else l.t("[Gambar] $q", "[Image] $q"))
         if (!brain.isUsable) {
@@ -262,8 +234,10 @@ class AssistantController(context: Context, private val ui: Ui) {
             override fun onChunk(text: String) {
                 if (gen != askGen) return
                 raw.append(text)
+                val shown = ExpressionTag.visible(raw.toString())
+                if (shown.isEmpty()) return
                 ui.onPartial("")
-                log.update(index, TextClean.clean(raw.toString()))
+                log.update(index, TextClean.clean(shown))
             }
 
             override fun onDone(fullText: String) {
@@ -272,16 +246,17 @@ class AssistantController(context: Context, private val ui: Ui) {
                 brainJob = null
                 cancelAi = null
                 ui.onPartial("")
-                val cleaned = TextClean.clean(fullText)
+                val tagged = ExpressionTag.parse(fullText)
+                val cleaned = TextClean.clean(tagged.text)
                 if (cleaned.isEmpty()) {
                     log.update(index, "…")
                     setState(State.IDLE)
                     return
                 }
                 log.update(index, cleaned)
-                ui.onMood(moodForText(cleaned))
+                ui.onMood(tagged.mood ?: ExpressionTag.guess(cleaned))
                 if (prefs.speakReplies) {
-                    output.speak(TextClean.speech(fullText), l, onStart = { setState(State.SPEAKING) }) { setState(State.IDLE) }
+                    output.speak(TextClean.speech(tagged.text), l, onStart = { setState(State.SPEAKING) }) { setState(State.IDLE) }
                 } else {
                     setState(State.IDLE)
                 }
@@ -311,53 +286,6 @@ class AssistantController(context: Context, private val ui: Ui) {
         }
         brainJob = brain.ask(prompt, l, cb, path)
         cancelAi = { brain.cancel() }
-    }
-
-    /**
-     * Foto ini akan dibaca sebagai lembar InBody (OCR di perangkat), bukan dijelaskan Gemma: pembaca foto menyala dan
-     * pengguna menyebut "inbody" di keterangan, atau sebelumnya sudah minta analisis InBody dan diminta mengirim foto.
-     */
-    fun wantsInBodyImage(caption: String): Boolean =
-        prefs.inbodyOcr && (health.isAwaitingPhoto() || HealthIntent.mentionsInBody(caption))
-
-    /** Baca foto lembar InBody dengan ML Kit di perangkat; hasilnya SELALU ditampilkan dulu dan baru disimpan setelah dibenarkan. */
-    private fun submitInBody(path: String) {
-        val l = lang
-        val sfx = prefs.persona.sfx(l)
-        val file = java.io.File(path)
-        log.add(true, l.t("[Foto InBody]", "[InBody photo]"), true)
-        pending = null
-        questOffer = false
-        endSupport() // pindah ke fitur lain yang jelas: sesi curhat berakhir tanpa suara
-        if (ui.isLocked()) {
-            file.delete()
-            ui.onMood(Mood.NEUTRAL)
-            reply(
-                l.t("Buka kunci HP dulu${sfx}, data kesehatan tidak diproses di layar kunci.", "Please unlock your phone first${sfx}; health data isn't processed on the lock screen."),
-                listenAfter = false,
-                priv = true
-            )
-            return
-        }
-        setState(State.THINKING)
-        ui.onPartial(l.t("Membaca foto InBody…", "Reading the InBody photo…"))
-        val gen = ++askGen
-        InBodyOcr.read(app, path) { lines ->
-            file.delete()
-            if (gen != askGen) return@read // dibatalkan pengguna selagi membaca
-            ui.onPartial("")
-            val text = try {
-                val reading = if (lines.isNullOrEmpty()) InBodyReading() else InBodyParser.parseRows(InBodyParser.rows(lines))
-                health.proposeInBody(reading, l)
-            } catch (e: Exception) {
-                l.t(
-                    "Maaf${sfx}, saya gagal membaca foto itu. Coba foto ulang lebih dekat dan terang, atau ketik angkanya: \"inbody berat 70 otot 32 lemak 14 pbf 20 visceral 7 bmr 1600\".",
-                    "My apologies${sfx}, I couldn't read that photo. Retake it closer and brighter, or type the numbers: \"inbody weight 70 muscle 32 fat 14 pbf 20 visceral 7 bmr 1600\"."
-                )
-            }
-            ui.onMood(Mood.NEUTRAL)
-            reply(text, listenAfter = false, priv = true)
-        }
     }
 
     fun submitText(text: String) {
@@ -391,8 +319,6 @@ class AssistantController(context: Context, private val ui: Ui) {
         pending = null
         questOffer = false
         retry = null
-        support = null // sesi curhat tidak ikut pindah ke ruang obrolan
-        supportUsedAi = false
         aiSeenUpTo = 0
         brain.reset()
         online.reset()
@@ -407,7 +333,7 @@ class AssistantController(context: Context, private val ui: Ui) {
      */
     fun offerQuestIfDue(): Boolean {
         try {
-            if (!prefs.profileDone || state != State.IDLE || pending != null || support != null || ui.isLocked()) return false
+            if (!prefs.profileDone || state != State.IDLE || pending != null || ui.isLocked()) return false
             if (nine.spaceSession.currentId.isNotEmpty()) return false
             val today = java.time.LocalDate.now()
             if (prefs.questDay == today.toString()) return false
@@ -485,7 +411,7 @@ class AssistantController(context: Context, private val ui: Ui) {
     // ------------------------------------------------------------------ memahami & menjalankan
 
     private fun pickBest(alternatives: List<String>): String {
-        if (pending != null || coach != null || support != null || alternatives.size == 1) return alternatives.first()
+        if (pending != null || coach != null || alternatives.size == 1) return alternatives.first()
         return alternatives.firstOrNull { parser.parse(it) !is Command.Unknown } ?: alternatives.first()
     }
 
@@ -497,20 +423,6 @@ class AssistantController(context: Context, private val ui: Ui) {
             ui.onAffinity(nine.affinity.record())
         } catch (e: Exception) {
             // affinity tidak boleh mengganggu perintah
-        }
-
-        // Keamanan lebih dulu, di mode apa pun: tanda krisis, lalu sesi curhat bila sedang berjalan.
-        if (supportGate(text, userIndex)) return
-
-        // Bacaan InBody dari foto menunggu "ya"/"batal"/koreksi angka: jawaban itu tidak boleh dikira perintah lain.
-        if (pending == null && !ui.isLocked() && health.hasDraft()) {
-            val turn = try { health.draftTurn(text, lang) } catch (e: Exception) { null }
-            if (turn != null) {
-                log.markPrivate(userIndex)
-                ui.onMood(Mood.NEUTRAL)
-                reply(turn, listenAfter = false, priv = true)
-                return
-            }
         }
 
         coach?.let { session ->
@@ -566,8 +478,6 @@ class AssistantController(context: Context, private val ui: Ui) {
                 reply(line, listenAfter = false)
                 return
             }
-            // Ucapan berisi curhat: Nine masuk mode teman curhat sendiri (isinya tidak diingat, tidak disimpan).
-            if (maybeOpenSupport(text, userIndex)) return
             // Ucapan biasa (bukan perintah): ingat hal tetap tentang pengguna ("aku suka …", "nama saya …").
             autoRemember(text)
         }
@@ -619,235 +529,6 @@ class AssistantController(context: Context, private val ui: Ui) {
         }
     }
 
-    // ------------------------------------------------------------------ keamanan & teman curhat
-
-    private fun activeSupport(): SupportSession? {
-        val s = support ?: return null
-        if (!s.active) {
-            support = null
-            return null
-        }
-        if (System.currentTimeMillis() - supportAt > SUPPORT_IDLE_MS) {
-            endSupport()
-            return null
-        }
-        return s
-    }
-
-    private fun endSupport() {
-        support = null
-        if (supportUsedAi) {
-            supportUsedAi = false
-            brain.reset() // konteks curhat tidak boleh terbawa ke percakapan lain
-            aiSeenUpTo = 0 // percakapan biasa diisi ulang dari riwayat tak-pribadi saja
-        }
-    }
-
-    private fun markLastUserPrivate() {
-        val i = log.entries.indexOfLast { it.fromUser }
-        if (i >= 0) log.markPrivate(i)
-    }
-
-    /**
-     * Keamanan lebih dulu, di mode apa pun: tanda krisis dijawab dengan nomor bantuan, tanpa AI, dan pesannya tidak
-     * pernah disimpan atau dikirim ke AI sebagai riwayat. Lalu, bila sesi curhat berjalan, ucapan ditangani sesi itu.
-     * True = ucapan sudah ditangani.
-     */
-    private fun supportGate(text: String, userIndex: Int): Boolean {
-        val l = lang
-        val level = try {
-            CrisisCheck.assess(text)
-        } catch (e: Exception) {
-            CrisisCheck.Level.NONE
-        }
-        var session = activeSupport()
-        if (level != CrisisCheck.Level.NONE) {
-            log.markPrivate(userIndex)
-            val s = session ?: SupportSession()
-            val turn = s.crisis(level, l)
-            if (turn != null) {
-                pending = null
-                questOffer = false
-                retry = null
-                if (level != CrisisCheck.Level.OTHER) coach = null
-                if (s.active) {
-                    support = s
-                    supportAt = System.currentTimeMillis()
-                } else {
-                    support = null
-                }
-                ui.onMood(turn.mood)
-                reply(turn.reply, listenAfter = viaVoice && s.active, priv = true)
-                return true
-            }
-            session = s.takeIf { it.active }
-        }
-        val s = session ?: return false
-        if (ui.isLocked()) {
-            // Ceritanya tidak boleh diproses atau tampil lebih jauh di layar kunci; sesi menunggu sampai HP dibuka.
-            log.markPrivate(userIndex)
-            reply(
-                l.t(
-                    "Buka kunci HP dulu untuk melanjutkan, supaya ceritamu tidak tampil di layar kunci.",
-                    "Please unlock your phone to continue, so what you share doesn't show on the lock screen."
-                ),
-                listenAfter = false,
-                priv = true
-            )
-            return true
-        }
-        // Pindah ke fitur lain yang jelas (ganti bahasa, mentor Inggris) mengakhiri sesi tanpa suara.
-        if (SupportText.words(text) <= 6) {
-            val c = parser.parse(text)
-            if (c is Command.SwitchLanguage || (c is Command.EnglishCoach && c.on)) {
-                endSupport()
-                return false
-            }
-        }
-        return supportTurn(s, text, userIndex, "")
-    }
-
-    /** Satu giliran curhat: balasan mesin aturan, atau Gemma bila tersedia (lewat pemeriksaan keamanan). */
-    private fun supportTurn(s: SupportSession, text: String, userIndex: Int, prefix: String): Boolean {
-        val l = lang
-        val turn = s.handle(text, l)
-        if (turn == null) {
-            endSupport()
-            return false
-        }
-        log.markPrivate(userIndex)
-        support = s
-        supportAt = System.currentTimeMillis()
-        if (turn.ended) endSupport()
-        val prompt = turn.aiPrompt
-        if (prompt != null && !turn.ended && supportAiAllowed()) {
-            askSupportAi(turn, prompt, prefix)
-            return true
-        }
-        ui.onMood(turn.mood)
-        reply(prefix + turn.reply, listenAfter = !turn.ended && viaVoice, priv = true)
-        return true
-    }
-
-    /**
-     * Ucapan biasa yang berisi curhat (bukan perintah): masuk mode teman curhat tanpa perlu kata "aku mau curhat".
-     * Tidak di ruang obrolan (tersimpan), tidak saat HP terkunci, dan bisa dimatikan di Pengaturan.
-     */
-    private fun maybeOpenSupport(text: String, userIndex: Int): Boolean {
-        if (!prefs.autoSupport || support != null || coach != null || pending != null) return false
-        if (nine.spaceSession.currentId.isNotEmpty() || ui.isLocked()) return false
-        if (!SupportEntry.shouldOpen(text)) return false
-        val s = SupportSession()
-        s.openNatural()
-        if (brain.isUsable) brain.preload()
-        return supportTurn(s, text, userIndex, SupportEntry.note(lang) + "\n\n")
-    }
-
-    /** AI lokal (Gemma) hanya dipakai bila modelnya sudah terpasang. AI online tidak pernah dipakai untuk curhat. */
-    private fun supportAiAllowed(): Boolean =
-        brain.isUsable && brain.state != LlmBrain.State.ERROR && brain.state != LlmBrain.State.NO_MODEL
-
-    /**
-     * Balasan curhat yang lebih alami dari Gemma. Tidak di-stream: seluruh teks diperiksa [SupportSafety.vet] dulu;
-     * bila ditolak, gagal, atau melewati batas waktu, dipakai balasan mesin aturan ([turn].reply).
-     */
-    private fun askSupportAi(turn: SupportSession.Turn, prompt: String, prefix: String = "") {
-        val l = lang
-        setState(State.THINKING)
-        ui.onPartial(l.t("Nine menyimak…", "Nine is listening…"))
-        val gen = ++askGen
-        supportUsedAi = true
-        var finished = false
-        var watchdog: Runnable? = null
-        fun finish(fromAi: String?) {
-            if (finished) return
-            finished = true
-            watchdog?.let { mainHandler.removeCallbacks(it) }
-            if (gen != askGen) return
-            brainJob = null
-            cancelAi = null
-            ui.onPartial("")
-            val vetted = fromAi?.let { SupportSafety.vet(TextClean.clean(it), l) }
-            ui.onMood(turn.mood)
-            reply(prefix + (vetted ?: turn.reply), listenAfter = viaVoice, priv = true)
-        }
-        val timeout = Runnable {
-            if (gen == askGen && !finished) {
-                brain.cancel()
-                finish(null)
-            }
-        }
-        watchdog = timeout
-        val cb = object : LlmBrain.ReplyCallback {
-            override fun onChunk(text: String) {}
-            override fun onDone(fullText: String) = finish(fullText)
-            override fun onError(message: String) = finish(null)
-        }
-        brainJob = brain.ask(prompt, l, cb)
-        cancelAi = {
-            mainHandler.removeCallbacks(timeout)
-            brain.cancel()
-        }
-        mainHandler.postDelayed(timeout, SUPPORT_AI_TIMEOUT_MS)
-    }
-
-    /** Pelatih fitness / ahli gizi: catat latihan & makanan, target, kemajuan, InBody, ilmu gizi. Semuanya pribadi. */
-    private fun healthCommand(req: HealthRequest) {
-        val l = lang
-        markLastUserPrivate()
-        health.photoEnabled = prefs.inbodyOcr
-        val text = try {
-            health.handle(req, l)
-        } catch (e: Exception) {
-            l.t(
-                "Maaf${prefs.persona.sfx(l)}, ada yang salah saat mengurus catatan itu. Coba ulangi sebentar lagi.",
-                "My apologies${prefs.persona.sfx(l)}, something went wrong with that entry. Please try again shortly."
-            )
-        }
-        ui.onMood(Mood.NEUTRAL)
-        reply(text, listenAfter = false, priv = true)
-    }
-
-    /** "Aku mau curhat" / "latihan napas" / "stop curhat". */
-    private fun supportCommand(cmd: Command.Support) {
-        val l = lang
-        if (!cmd.on) {
-            val s = activeSupport()
-            if (s == null) {
-                reply(l.t("Mode curhat sedang tidak berjalan.", "Venting mode isn't running."), listenAfter = false)
-                return
-            }
-            val turn = s.stop(l)
-            endSupport()
-            markLastUserPrivate()
-            ui.onMood(turn.mood)
-            reply(turn.reply, listenAfter = false, priv = true)
-            return
-        }
-        if (nine.spaceSession.currentId.isNotEmpty()) {
-            // Ruang obrolan tersimpan di penyimpanan; curhat tidak boleh ikut tersimpan.
-            ui.onMood(Mood.NEUTRAL)
-            reply(
-                l.t(
-                    "Mode curhat tidak tersedia di ruang obrolan karena isinya tersimpan. Buka obrolan utama dulu ya.",
-                    "Venting mode isn't available inside a chat space because spaces are saved. Please open the main chat first."
-                ),
-                listenAfter = false
-            )
-            return
-        }
-        coach = null
-        pending = null
-        questOffer = false
-        val s = SupportSession()
-        support = s
-        supportAt = System.currentTimeMillis()
-        if (brain.isUsable) brain.preload() // hangatkan model di latar belakang supaya balasan pertama tidak lama
-        markLastUserPrivate()
-        ui.onMood(Mood.NEUTRAL)
-        reply(s.start(l, cmd.exercise), listenAfter = viaVoice, priv = true)
-    }
-
     /** Simpan otomatis kalimat berisi fakta tentang pengguna ke ingatan jangka panjang. */
     private fun autoRemember(text: String) {
         if (!prefs.autoMemory) return
@@ -886,24 +567,18 @@ class AssistantController(context: Context, private val ui: Ui) {
         is Command.DeleteEvents -> lang.t("menghapus ${c.items.size} acara", "delete ${c.items.size} events")
         is Command.Forget -> lang.t("melupakan ${c.query}", "forget ${c.query}")
         is Command.CallControl -> if (c.accept) lang.t("menjawab telepon", "answer the call") else lang.t("menolak telepon", "decline the call")
-        is Command.Health -> lang.t("mengubah catatan fitness/gizi", "change your fitness/nutrition log")
         is Command.OpenSettings -> if (c.turnOn != null) lang.t("mengubah pengaturan ponsel", "change a phone setting") else null
         else -> null
     }
 
     private fun execute(cmd: Command, confirmed: Boolean, fromAi: Boolean = false) {
         if (ui.isLocked() && !safeWhileLocked(cmd) && cmd !is Command.Unknown) {
-            if (cmd is Command.Health) markLastUserPrivate() // data kesehatan: tidak ikut riwayat walau ditolak di layar kunci
             reply(lang.t("Buka kunci HP dulu${prefs.persona.sfx(lang)}.", "Please unlock your phone first${prefs.persona.sfx(lang)}."), listenAfter = false)
             ui.onRequestUnlock { execute(cmd, confirmed, fromAi) }
             return
         }
         if (cmd is Command.EnglishCoach) {
             coachCommand(cmd.on)
-            return
-        }
-        if (cmd is Command.Support) {
-            supportCommand(cmd)
             return
         }
         if (fromAi && !confirmed) {
@@ -915,10 +590,6 @@ class AssistantController(context: Context, private val ui: Ui) {
                 )
                 return
             }
-        }
-        if (cmd is Command.Health) {
-            healthCommand(cmd.req)
-            return
         }
         val res = executor.execute(cmd, lang, confirmed, denied)
 
@@ -1192,17 +863,6 @@ class AssistantController(context: Context, private val ui: Ui) {
         }
     }
 
-    /** Ekspresi wajah untuk jawaban AI. */
-    private fun moodForText(text: String): Mood {
-        val low = text.lowercase()
-        return when {
-            Regex("""\b(?:maaf|sayangnya|sorry|apologies|unfortunately|sadly|tidak bisa|can't|cannot)\b""").containsMatchIn(low) -> Mood.SAD
-            Regex("""\b(?:selamat|hebat|bagus|luar biasa|senang|great|wonderful|excellent|splendid|congratulations|delighted|glad)\b""").containsMatchIn(low) -> Mood.HAPPY
-            low.trimEnd().endsWith("?") -> Mood.CURIOUS
-            else -> Mood.NEUTRAL
-        }
-    }
-
     private fun askAi(question: String) {
         val l = lang
         val ai = online
@@ -1223,7 +883,8 @@ class AssistantController(context: Context, private val ui: Ui) {
         val speak = prefs.speakReplies
         if (speak) output.beginStream(l) { setState(State.SPEAKING) }
         val gen = ++askGen
-        var holding = true // menahan keluaran sampai jelas ini bukan "CMD:"
+        var holding = true // menahan keluaran sampai jelas ini bukan "CMD:" dan tag ekspresi (bila ada) sudah lengkap
+        var tagMood: Mood? = null // ekspresi dari tag "[happy]" di awal jawaban AI
         var viaGemma = !online // jawaban dari Gemma offline (bukan Gemini): periksa campuran bahasa
 
         // Tulis ulang jawaban yang bahasanya bercampur lewat percakapan Gemma yang sama; [done] menerima hasilnya (atau null).
@@ -1276,14 +937,20 @@ class AssistantController(context: Context, private val ui: Ui) {
                 raw.append(text)
                 if (holding) {
                     val r = raw.toString()
-                    if (cmdOf(r) != null || maybeCmd(r)) return
+                    if (ExpressionTag.maybePartial(r)) return
+                    val tagged = ExpressionTag.parse(r)
+                    if (cmdOf(tagged.text) != null || maybeCmd(tagged.text)) return
                     holding = false
                     ui.onPartial("")
-                    log.update(index, TextClean.clean(r))
-                    if (speak) for (sentence in splitter.push(r)) output.enqueue(TextClean.speech(sentence))
+                    tagged.mood?.let {
+                        tagMood = it
+                        ui.onMoodHold(it, 3200)
+                    }
+                    log.update(index, TextClean.clean(tagged.text))
+                    if (speak) for (sentence in splitter.push(tagged.text)) output.enqueue(TextClean.speech(sentence))
                     return
                 }
-                log.update(index, TextClean.clean(raw.toString()))
+                log.update(index, TextClean.clean(ExpressionTag.parse(raw.toString()).text))
                 if (speak) {
                     for (sentence in splitter.push(text)) output.enqueue(TextClean.speech(sentence))
                 }
@@ -1295,7 +962,9 @@ class AssistantController(context: Context, private val ui: Ui) {
                 cancelAi = null
                 aiSeenUpTo = log.entries.size
                 ui.onPartial("")
-                val action = cmdOf(fullText)
+                val tagged = ExpressionTag.parse(fullText)
+                val body = tagged.text
+                val action = cmdOf(body)
                 if (action != null) {
                     // AI memahami permintaan sebagai tindakan: jalankan lewat modul perintah yang sebenarnya.
                     output.stop()
@@ -1304,7 +973,7 @@ class AssistantController(context: Context, private val ui: Ui) {
                     execute(parsed, confirmed = false, fromAi = true)
                     return
                 }
-                val cleaned = TextClean.clean(fullText)
+                val cleaned = TextClean.clean(body)
                 if (cleaned.isEmpty()) {
                     log.update(index, "…")
                     output.stop()
@@ -1315,7 +984,7 @@ class AssistantController(context: Context, private val ui: Ui) {
                 if (speak) {
                     if (holding) {
                         // seluruh jawaban pendek tertahan: bunyikan sekarang
-                        for (sentence in splitter.push(fullText)) output.enqueue(TextClean.speech(sentence))
+                        for (sentence in splitter.push(body)) output.enqueue(TextClean.speech(sentence))
                     }
                     splitter.flush()?.let { output.enqueue(TextClean.speech(it)) }
                 }
@@ -1323,7 +992,7 @@ class AssistantController(context: Context, private val ui: Ui) {
                     // AI mengaku tidak tahu / butuh pencarian: setelah selesai bicara, buka Google dengan pertanyaannya.
                     // Jawaban panjang berarti AI sudah menjawab dengan isi; hanya jawaban pendek "saya tidak tahu" yang memicu Google.
                     val unsure = finalText.length <= 320 && ChitChat.looksUnsure(finalText) && ChitChat.worthSearching(question) && !ui.isLocked()
-                    ui.onMood(if (unsure) Mood.CURIOUS else moodForText(finalText))
+                    ui.onMood(if (unsure) Mood.CURIOUS else (tagMood ?: tagged.mood ?: ExpressionTag.guess(finalText)))
                     val followUp = finalText.trimEnd().endsWith("?")
                     val finishUp = {
                         setState(State.IDLE)
@@ -1367,6 +1036,7 @@ class AssistantController(context: Context, private val ui: Ui) {
                     ui.onPartial(l.t("Internet bermasalah, beralih ke mode offline…", "Connection trouble, switching to offline mode…"))
                     raw.setLength(0)
                     holding = true
+                    tagMood = null
                     viaGemma = true
                     brainJob = brain.ask(gemmaMessage(question, l, userIndex), l, this)
                     cancelAi = { brain.cancel() }
@@ -1471,8 +1141,5 @@ class AssistantController(context: Context, private val ui: Ui) {
     private companion object {
         /** Sesi latihan yang didiamkan selama ini dianggap selesai (agar perintah biasa tidak terjebak). */
         const val COACH_IDLE_MS = 20 * 60_000L
-        const val SUPPORT_IDLE_MS = 20 * 60_000L
-        /** Batas menunggu AI lokal di sesi curhat; lewat itu dipakai balasan mesin aturan. */
-        const val SUPPORT_AI_TIMEOUT_MS = 45_000L
     }
 }

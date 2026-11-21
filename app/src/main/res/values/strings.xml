@@ -31,12 +31,12 @@
     <string name="model_importing">Menyalin %1$s / %2$s</string>
     <string name="model_ready">%1$s terpasang (%2$s)</string>
     <string name="model_missing">Belum terpasang</string>
-    <string name="model_fail_token">Server meminta login Hugging Face. Buka halaman model di browser, setujui lisensinya, buat token \"Read\" di huggingface.co/settings/tokens, tempel di bawah, lalu coba lagi. Atau unduh file model di browser lalu pilih \"Impor file model\".</string>
+    <string name="model_fail_token">Server model meminta login Hugging Face. Buat akun gratis, setujui lisensi model di halaman modelnya, lalu masukkan token \"Read\" dari huggingface.co/settings/tokens. Atau unduh file model lewat browser lalu pilih \"Impor file model\".</string>
     <string name="model_fail_network">Unduhan gagal (%1$s). Periksa koneksi lalu coba lagi.</string>
     <string name="model_fail_storage">Ruang penyimpanan tidak cukup (butuh ±3 GB kosong).</string>
     <string name="model_fail_corrupt">File model tidak lengkap. Silakan unduh ulang.</string>
     <string name="model_fail_import">Gagal mengimpor file: %1$s</string>
-    <string name="model_delete_confirm">Hapus model Gemma ini? Nine kembali ke mode perintah (atau mode internet bila aktif).</string>
+    <string name="model_delete_confirm">Hapus model Gemma offline? Ruang penyimpanan kembali; Nine memakai Gemini (bila aktif) atau mode perintah.</string>
     <string name="hf_token_hint">Token Hugging Face (opsional)</string>
 
     <string name="sec_look">Tampilan</string>
@@ -47,7 +47,7 @@
     <string name="voice_preview">Contoh suara</string>
     <string name="assistant_button">Jadikan asisten default</string>
     <string name="sec_privacy">Privasi</string>
-    <string name="privacy_text">Data Nine tetap di HP ini. Internet dipakai untuk mengunduh model dan, bila Mode internet menyala, mengirim pertanyaan umum ke penyedia AI yang kuncinya diisi di Pengaturan.</string>
+    <string name="privacy_text">Data Nine tetap di HP ini. Internet dipakai untuk mengunduh model Gemma dan, bila Mode internet menyala, mengirim pertanyaan umum ke Google Gemini dengan kunci milikmu.</string>
 
     <string name="todo_title">Tugas hari ini</string>
     <string name="todo_hint">Tambah tugas…</string>
@@ -59,23 +59,30 @@
     <string name="widget_orb_desc">Orb Nine (ikut tema): ketuk untuk bicara</string>
     <string name="widget_today_desc">Nine (ikut tema) · tugas hari ini</string>
 
-    <string name="internet_switch">Mode internet · AI online gratis</string>
+    <string name="internet_switch">Mode internet · Gemini gratis</string>
     <string name="city_hint">Kota untuk cuaca (opsional)</string>
-    <string name="internet_status_off">Mati. Jawaban dari Gemma offline (bila terpasang).</string>
-    <string name="internet_status_nokey">Isi minimal satu kunci API untuk mengaktifkan.</string>
+    <string name="internet_status_off">Mati. Pertanyaan umum dijawab Gemma offline (bila terpasang).</string>
+    <string name="internet_status_nokey">Isi kunci Gemini di bawah untuk mengaktifkan.</string>
     <string name="internet_status_online">Aktif · online · %1$s</string>
-    <string name="internet_status_offline">Aktif · tidak ada internet, memakai Gemma bila terpasang</string>
-    <string name="ai_intro">Isi satu atau beberapa kunci gratis (tanpa kartu kredit). Nine mencoba berurutan: Gemini, Groq, Cerebras, lalu OpenRouter, dan beralih sendiri bila kuota satu penyedia habis. Pertanyaan umum (bukan perintah) dikirim ke penyedia itu bersama ringkasan singkat konteks: ingatan Nine, tugas dan acara hari ini, serta lokasi bila diizinkan. Penyedia gratis bisa memakai percakapan untuk meningkatkan produknya, jadi jangan menyebut data sensitif. Obrolan curhat dan data kebugaran Nine tidak pernah dikirim.</string>
-    <string name="ai_key_hint">Kunci API %1$s</string>
-    <string name="ai_get_key">Dapatkan kunci %1$s (gratis)</string>
+    <string name="internet_status_offline">Aktif · tidak ada internet, memakai Gemma offline bila terpasang</string>
+    <string name="ai_intro">Tempel kunci API Gemini milikmu (gratis, tanpa kartu kredit). Pertanyaan umum (bukan perintah) dikirim ke Google bersama ringkasan singkat konteks: ingatan Nine, tugas dan acara hari ini, serta lokasi bila diizinkan. Tingkat gratis Google bisa memakai percakapan untuk meningkatkan produknya, jadi jangan menyebut data sensitif. Bila kuota habis atau internet putus, Nine beralih ke Gemma offline.</string>
+    <string name="ai_key_hint">Kunci API Gemini</string>
+    <string name="ai_get_key">Dapatkan kunci</string>
     <string name="ai_search_switch">Pencarian Google lewat Gemini (hanya untuk kunci berbayar)</string>
     <string name="ai_test">Tes koneksi</string>
     <string name="ai_testing">Menguji…</string>
-    <string name="ai_test_nokey">Isi minimal satu kunci dulu.</string>
+    <string name="ai_test_nokey">Isi kunci Gemini dulu.</string>
+    <string name="ai_advanced_show">Lanjutan ▾</string>
+    <string name="ai_advanced_hide">Lanjutan ▴</string>
+    <string name="usage_title">Pemakaian Gemini hari ini</string>
+    <string name="usage_note">Perkiraan dari permintaan yang dikirim Nine saja; pemakaian aplikasi lain dengan kunci yang sama tidak terlihat. Angka resmi ada di dasbor Google.</string>
+    <string name="usage_dashboard">Dasbor resmi Google</string>
+    <string name="usage_reset">Setel ulang hitungan</string>
+    <string name="usage_reset_done">Hitungan hari ini disetel ulang.</string>
+    <string name="model_delete_free">Hapus model offline (hemat ruang)</string>
+    <string name="model_token_retry">Simpan &amp; coba lagi</string>
     <string name="brain_online">Online · %1$s</string>
 
-    <string name="variant_e2b">E2B · 2,6 GB · cepat</string>
-    <string name="variant_e4b">E4B · 3,7 GB · lebih pintar</string>
 
     <string name="wake_switch">Kata pemanggil</string>
     <string name="wake_overlay_button">Izinkan tampil di atas aplikasi</string>
@@ -102,7 +109,6 @@
     <string name="calendar_access">Izinkan akses kalender</string>
     <string name="gemini_model_hint">Model Gemini (opsional)</string>
     <string name="wake_phrase_hint">Frasa, mis. hey nine</string>
-    <string name="model_import_short">Impor file</string>
 
 
     <string name="rec_channel">Perekam suara Nine</string>
@@ -142,8 +148,6 @@
     <string name="alarm_fullscreen_ok">Layar penuh alarm: diizinkan ✓</string>
     <string name="sec_memory_group">Memori Nine</string>
     <string name="memory_auto">Ingat otomatis</string>
-    <string name="support_auto">Curhat otomatis (Nine mendengarkan saat aku bercerita)</string>
-    <string name="inbody_ocr">Baca foto hasil InBody (di perangkat, lewat ML Kit)</string>
     <string name="memory_count">%1$d hal diingat</string>
     <string name="memory_manage">Lihat &amp; hapus</string>
     <string name="memory_clear">Hapus semua</string>
@@ -182,7 +186,6 @@
     <string name="profile_later">Nanti saja</string>
     <string name="profile_saved">Profil disimpan</string>
     <string name="profile_button">Ubah profil</string>
-    <string name="gpu_switch">AI dengan GPU (bisa patah-patah)</string>
     <string name="cd_attach">Kirim gambar</string>
     <string name="image_failed">Gambar tidak bisa dibaca.</string>
     <string name="hub_finance">Laporan keuangan</string>

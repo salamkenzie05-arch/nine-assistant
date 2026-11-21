@@ -3,7 +3,7 @@ package id.nine.assistant.core
 /** Riwayat percakapan di memori (tidak disimpan ke disk). */
 class ConversationLog {
     /**
-     * [private] = isi curhat/krisis: tetap tampil di layar, tetapi TIDAK disimpan ke ruang obrolan dan TIDAK dikirim
+     * [private] = isi pribadi: tetap tampil di layar, tetapi TIDAK disimpan ke ruang obrolan dan TIDAK dikirim
      * ke AI sebagai riwayat.
      */
     data class Entry(val fromUser: Boolean, var text: String, var private: Boolean = false)
@@ -33,7 +33,7 @@ class ConversationLog {
         return i
     }
 
-    /** Tandai entri sebagai pribadi (curhat/krisis). */
+    /** Tandai entri sebagai pribadi. */
     fun markPrivate(index: Int) {
         if (index in entries.indices) entries[index].private = true
     }

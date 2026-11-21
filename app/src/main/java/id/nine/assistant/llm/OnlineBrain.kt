@@ -7,7 +7,7 @@ import id.nine.assistant.core.AppLang
 
 /** Otak online Nine (penyedia AI gratis). Dipakai hanya bila pengguna menyalakan Mode internet dan mengisi kunci. */
 interface OnlineBrain {
-    /** Nama penyedia untuk ditampilkan, mis. "Gemini + Groq". */
+    /** Nama penyedia untuk ditampilkan, mis. "Gemini". */
     val displayName: String
 
     /** Mode internet aktif dan API key terisi. */

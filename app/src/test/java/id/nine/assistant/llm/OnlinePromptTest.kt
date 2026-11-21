@@ -61,4 +61,26 @@ class OnlinePromptTest {
         assertFalse(p.whoAreYou(AppLang.ID).contains("tidak pernah dikirim ke internet"))
         assertFalse(p.whoAreYou(AppLang.EN).contains("never leaves"))
     }
+
+    @Test
+    fun expressionRuleListsEveryMoodAndComesBeforeLanguageRule() {
+        for (lang in AppLang.values()) {
+            val online = p.onlinePrompt(lang, now, "")
+            val gemma = p.systemPrompt(lang, now)
+            for (s in listOf(online, gemma)) {
+                assertTrue(s.contains("[happy]"))
+                for (name in ExpressionTag.PROMPT_NAMES) assertTrue("$name belum ada di prompt $lang", s.contains(name))
+                val rule = s.indexOf(if (lang == AppLang.ID) "EKSPRESI WAJAH" else "FACIAL EXPRESSION")
+                val language = s.indexOf(if (lang == AppLang.ID) "ATURAN BAHASA" else "LANGUAGE RULE")
+                assertTrue(rule in 0 until language) // aturan bahasa tetap instruksi terakhir
+            }
+        }
+    }
+
+    @Test
+    fun everyPromptedMoodNameIsUnderstood() {
+        for (name in ExpressionTag.PROMPT_NAMES) {
+            assertTrue("$name tidak dikenali", ExpressionTag.parse("[$name] x").text == "x")
+        }
+    }
 }

@@ -6,7 +6,7 @@ import kotlin.random.Random
 
 /**
  * Kepribadian Nine: kepala pelayan AI yang tenang, sangat sopan, cerdas, dengan humor kering yang halus.
- * Dipakai untuk jawaban perintah (teks tetap) dan sebagai instruksi sistem untuk Gemma.
+ * Dipakai untuk jawaban perintah (teks tetap) dan sebagai instruksi sistem untuk Gemini dan Gemma.
  */
 class Persona(private val honorificId: String, private val honorificEn: String) {
 
@@ -93,11 +93,31 @@ class Persona(private val honorificId: String, private val honorificEn: String) 
     )
 
     /**
-     * Instruksi sistem untuk AI online (Gemini, Groq, Cerebras, OpenRouter). [search]: nama alat pencarian bila model punya
+     * Aturan ekspresi: jawaban diawali satu tag seperti "[happy]" yang diubah Nine menjadi ekspresi wajah (tag tidak tampil dan
+     * tidak diucapkan; lihat [id.nine.assistant.llm.ExpressionTag]). Baris "CMD:" tidak diberi tag.
+     */
+    private fun expressionRule(lang: AppLang): String {
+        val names = id.nine.assistant.llm.ExpressionTag.PROMPT_NAMES.joinToString(", ")
+        return lang.t(
+            "EKSPRESI WAJAH: awali setiap jawaban biasa dengan SATU tag ekspresi di awal, tepat seperti [happy], lalu spasi, lalu jawabanmu. " +
+                "Pilih salah satu dari: $names. Pilih yang paling cocok dengan nada jawaban: happy untuk kabar baik atau pujian, sad untuk maaf, kabar buruk, atau empati, " +
+                "curious bila kamu bertanya balik, surprised untuk hal mengejutkan, confused bila permintaan kurang jelas, laugh atau wink untuk candaan, " +
+                "love untuk terima kasih atau kehangatan, sleepy untuk selamat tidur, neutral untuk jawaban faktual biasa. Hanya satu tag, hanya di awal, tanpa kata lain di dalam kurung siku. " +
+                "Baris perintah \"CMD:\" TIDAK diberi tag.",
+            "FACIAL EXPRESSION: begin every normal reply with ONE expression tag at the very start, exactly like [happy], then a space, then your reply. " +
+                "Pick one of: $names. Choose what fits the tone of the reply: happy for good news or praise, sad for apologies, bad news or empathy, " +
+                "curious when you ask a question back, surprised for something surprising, confused when the request is unclear, laugh or wink for jokes, " +
+                "love for thanks or warmth, sleepy for good night, neutral for ordinary factual answers. Only one tag, only at the start, no other words inside the brackets. " +
+                "A \"CMD:\" command line gets NO tag."
+        )
+    }
+
+    /**
+     * Instruksi sistem untuk AI online (Gemini). [search]: nama alat pencarian bila model punya
      * (mis. "Google Search"), null bila tidak: model lalu diminta jujur bahwa ia tak bisa memeriksa info terkini.
      */
     fun onlinePrompt(lang: AppLang, now: LocalDateTime, city: String, search: String? = null): String =
-        baseOnlinePrompt(lang, now, city, search) + "\n\n" + languageRule(lang)
+        baseOnlinePrompt(lang, now, city, search) + "\n\n" + expressionRule(lang) + "\n\n" + languageRule(lang)
 
     private fun baseOnlinePrompt(lang: AppLang, now: LocalDateTime, city: String, search: String?): String {
         val date = now.format(DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy, HH:mm", lang.locale))
@@ -161,6 +181,7 @@ class Persona(private val honorificId: String, private val honorificEn: String) 
     fun systemPrompt(lang: AppLang, now: LocalDateTime, memory: String = ""): String {
         val sb = StringBuilder(baseSystemPrompt(lang, now))
         if (memory.isNotBlank()) sb.append("\n\n").append(memory.trim())
+        sb.append("\n\n").append(expressionRule(lang))
         sb.append("\n\n").append(languageRule(lang))
         return sb.toString()
     }

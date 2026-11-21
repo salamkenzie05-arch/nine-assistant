@@ -1,6 +1,6 @@
 package id.nine.assistant.llm
 
-/** Utilitas teks untuk keluaran LLM: membersihkan markdown dan memotong per kalimat untuk TTS. */
+/** Utilitas teks untuk keluaran LLM: membersihkan markdown dan tag ekspresi, dan memotong per kalimat untuk TTS. */
 object TextClean {
 
     private val reBold = Regex("""\*\*(.+?)\*\*""")
@@ -19,7 +19,7 @@ object TextClean {
      * dan butir bernomor menjadi "1. ".
      */
     fun clean(s: String): String {
-        var t = s
+        var t = ExpressionTag.strip(s)
         t = reLink.replace(t, "$1")
         t = reBullet.replace(t, "• ")
         t = reNumbered.replace(t, "$1. ")

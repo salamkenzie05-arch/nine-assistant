@@ -124,161 +124,12 @@ class HttpBackendTest {
         return "http://127.0.0.1:${ss.localPort}" to seen
     }
 
-    private fun chunk(t: String) = """data: {"choices":[{"delta":{"content":${MiniJson.write(t)}}}]}"""
-
     private val req = ChatRequest("SYS", listOf("user" to "a", "model" to "b"), "c")
 
     private fun collect(b: ChatBackend, model: String): String {
         val sb = StringBuilder()
         b.stream(model, req) { sb.append(it) }
         return sb.toString()
-    }
-
-    // ------------------------------------------------------------ OpenAI-compatible
-
-    @Test
-    fun openAiStreamsTextAndSendsAuthAndBody() {
-        val (base, seen) = serve { ex, _ -> ex.sse(": PROCESSING", chunk("Ha"), chunk("lo "), chunk("dunia"), "data: [DONE]") }
-        val b = OpenAiBackend(Providers.OPENROUTER, "SECRET", "$base/v1")
-        assertEquals("Halo dunia", collect(b, "meta/llama:free"))
-        val s = seen.single()
-        assertEquals("POST", s.method)
-        assertEquals("/v1/chat/completions", s.path)
-        assertEquals("Bearer SECRET", s.headers["authorization"])
-        assertNotNull(s.headers["x-title"])
-        val v = MiniJson.parse(s.body)
-        assertEquals("meta/llama:free", MiniJson.str(v, "model"))
-        assertEquals(true, MiniJson.get(v, "stream"))
-        assertEquals("SYS", MiniJson.str(v, "messages", 0, "content"))
-        assertEquals("c", MiniJson.str(v, "messages", 3, "content"))
-        assertNull(MiniJson.get(v, "reasoning_effort"))
-    }
-
-    @Test
-    fun groqGptOssGetsReasoningEffortAndNoOpenRouterHeaders() {
-        val (base, seen) = serve { ex, _ -> ex.sse(chunk("ok"), "data: [DONE]") }
-        val b = OpenAiBackend(Providers.GROQ, "k", "$base/openai/v1")
-        collect(b, "openai/gpt-oss-120b")
-        assertEquals("low", MiniJson.str(MiniJson.parse(seen.single().body), "reasoning_effort"))
-        assertNull(seen.single().headers["x-title"])
-    }
-
-    @Test
-    fun thinkBlocksAreRemovedAcrossSseLines() {
-        val (base, _) = serve { ex, _ ->
-            ex.sse(chunk("<thi"), chunk("nk>aku mikir"), chunk(" dulu</th"), chunk("ink>\n\nJawaban"), chunk(" final."), "data: [DONE]")
-        }
-        assertEquals("Jawaban final.", collect(OpenAiBackend(Providers.CEREBRAS, "k", base), "qwen-3-235b"))
-    }
-
-    @Test
-    fun rateLimitCarriesRetryAfter() {
-        val (base, _) = serve { ex, _ -> ex.json(429, """{"error":{"message":"Rate limit reached on tokens per minute"}}""", "Retry-After" to "7") }
-        try {
-            collect(OpenAiBackend(Providers.GROQ, "k", base), "m")
-            fail()
-        } catch (e: ProviderException) {
-            assertEquals(FailKind.RATE_LIMIT, e.failure.kind)
-            assertEquals(7000L, e.failure.retryAfterMs)
-            assertEquals(429, e.failure.code)
-            assertEquals("Rate limit reached on tokens per minute", e.failure.message)
-        }
-    }
-
-    @Test
-    fun authErrorIsClassified() {
-        val (base, _) = serve { ex, _ -> ex.json(401, """{"error":{"message":"Invalid API Key","type":"invalid_request_error"}}""") }
-        try {
-            collect(OpenAiBackend(Providers.GROQ, "k", base), "m")
-            fail()
-        } catch (e: ProviderException) {
-            assertEquals(FailKind.AUTH, e.failure.kind)
-        }
-    }
-
-    @Test
-    fun retriesWithoutReasoningEffortWhenRejected() {
-        val (base, seen) = serve { ex, s ->
-            if (s.body.contains("reasoning_effort")) ex.json(400, """{"error":{"message":"unknown field reasoning_effort"}}""")
-            else ex.sse(chunk("lolos"), "data: [DONE]")
-        }
-        assertEquals("lolos", collect(OpenAiBackend(Providers.CEREBRAS, "k", base), "gpt-oss-120b"))
-        assertEquals(2, seen.size)
-        assertFalse(seen[1].body.contains("reasoning_effort"))
-    }
-
-    @Test
-    fun noRetryForOtherModelsOn400() {
-        val (base, seen) = serve { ex, _ -> ex.json(400, """{"error":{"message":"bad"}}""") }
-        try {
-            collect(OpenAiBackend(Providers.GROQ, "k", base), "llama-3.1-8b-instant")
-            fail()
-        } catch (e: ProviderException) {
-            assertEquals(1, seen.size)
-        }
-    }
-
-    @Test
-    fun inStreamErrorAfterTextKeepsTextAndThrows() {
-        val (base, _) = serve { ex, _ ->
-            ex.sse(chunk("Halo "), """data: {"error":{"code":429,"message":"Rate limit exceeded: free-models-per-day"}}""")
-        }
-        val got = StringBuilder()
-        try {
-            OpenAiBackend(Providers.OPENROUTER, "k", base).stream("m:free", req) { got.append(it) }
-            fail()
-        } catch (e: ProviderException) {
-            assertEquals(FailKind.QUOTA_DAILY, e.failure.kind)
-        }
-        assertEquals("Halo ", got.toString())
-    }
-
-    @Test
-    fun nonStreamingJsonReplyIsStillUnderstood() {
-        val (base, _) = serve { ex, _ ->
-            ex.json(200, """{"choices":[{"message":{"role":"assistant","content":"<think>x</think>Jawaban biasa"}}]}""")
-        }
-        assertEquals("Jawaban biasa", collect(OpenAiBackend(Providers.GROQ, "k", base), "m"))
-    }
-
-    @Test
-    fun errorObjectWithStatus200IsAnError() {
-        val (base, _) = serve { ex, _ -> ex.json(200, """{"error":{"code":429,"message":"Rate limit"}}""") }
-        try {
-            collect(OpenAiBackend(Providers.OPENROUTER, "k", base), "m:free")
-            fail()
-        } catch (e: ProviderException) {
-            assertEquals(FailKind.RATE_LIMIT, e.failure.kind)
-        }
-    }
-
-    @Test
-    fun emptyStreamProducesNoText() {
-        val (base, _) = serve { ex, _ -> ex.sse("data: [DONE]") }
-        assertEquals("", collect(OpenAiBackend(Providers.GROQ, "k", base), "m"))
-    }
-
-    @Test
-    fun listModelsParsesAndFiltersOpenRouter() {
-        val (base, seen) = serve { ex, _ ->
-            ex.json(200, """{"data":[{"id":"a:free"},{"id":"paid/b"},{"id":"openrouter/free"}]}""")
-        }
-        val ids = OpenAiBackend(Providers.OPENROUTER, "KEY", base).listModels()
-        assertEquals(listOf("a:free", "openrouter/free"), ids)
-        assertEquals("GET", seen.single().method)
-        assertEquals("/models", seen.single().path)
-        assertEquals("Bearer KEY", seen.single().headers["authorization"])
-    }
-
-    @Test
-    fun listModelsAuthError() {
-        val (base, _) = serve { ex, _ -> ex.json(401, """{"error":{"message":"Invalid API Key"}}""") }
-        try {
-            OpenAiBackend(Providers.GROQ, "k", base).listModels()
-            fail()
-        } catch (e: ProviderException) {
-            assertEquals(FailKind.AUTH, e.failure.kind)
-        }
     }
 
     // ------------------------------------------------------------ Gemini
@@ -358,6 +209,36 @@ class HttpBackendTest {
         assertEquals("Sebagian", collect(GeminiBackend("k", search = false, baseUrl = base), "gemini-x"))
     }
 
+
+    @Test
+    fun geminiReportsTokenUsageFromTheLastChunk() {
+        val usage = """data: {"candidates":[{"content":{"parts":[{"text":"!"}]}}],"usageMetadata":{"promptTokenCount":50,"candidatesTokenCount":4,"totalTokenCount":70}}"""
+        val (base, _) = serve { ex, _ -> ex.sse(gchunk("Halo"), usage) }
+        val b = GeminiBackend("k", search = false, baseUrl = base)
+        assertNull(b.lastUsage)
+        assertEquals("Halo!", collect(b, "gemini-x"))
+        assertEquals(TokenUsage(50, 20), b.lastUsage)
+        // permintaan berikutnya dimulai dari nol, tidak mewarisi angka lama
+        val (base2, _) = serve { ex, _ -> ex.sse(gchunk("tanpa angka")) }
+        val b2 = GeminiBackend("k", search = false, baseUrl = base2)
+        collect(b2, "gemini-x")
+        assertNull(b2.lastUsage)
+    }
+
+    @Test
+    fun geminiDailyQuotaCarriesTheLimit() {
+        val (base, _) = serve { ex, _ ->
+            ex.json(429, """{"error":{"code":429,"message":"You exceeded your current quota","status":"RESOURCE_EXHAUSTED","details":[{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaValue":"250"}]}]}}""")
+        }
+        try {
+            collect(GeminiBackend("k", search = false, baseUrl = base), "gemini-x")
+            fail()
+        } catch (e: ProviderException) {
+            assertEquals(FailKind.QUOTA_DAILY, e.failure.kind)
+            assertEquals(250, e.failure.dailyLimit)
+        }
+    }
+
     // ------------------------------------------------------------ jaringan
 
     @Test
@@ -366,7 +247,7 @@ class HttpBackendTest {
         val port = ss.localPort
         ss.close() // port tertutup
         try {
-            collect(OpenAiBackend(Providers.GROQ, "k", "http://127.0.0.1:$port"), "m")
+            collect(GeminiBackend("k", false, "http://127.0.0.1:$port"), "m")
             fail()
         } catch (e: ConnectException) {
             assertEquals(FailKind.NETWORK, Failures.fromException(e).kind)
@@ -377,10 +258,10 @@ class HttpBackendTest {
     fun slowServerTimesOutAsTimeout() {
         val (base, _) = serve { ex, _ ->
             Thread.sleep(1500)
-            ex.sse(chunk("terlambat"))
+            ex.sse(gchunk("terlambat"))
         }
         try {
-            collect(OpenAiBackend(Providers.GROQ, "k", base, connectMs = 1000, readMs = 300), "m")
+            collect(GeminiBackend("k", false, base, connectMs = 1000, readMs = 300), "m")
             fail()
         } catch (e: SocketTimeoutException) {
             assertEquals(FailKind.TIMEOUT, Failures.fromException(e).kind)
@@ -389,8 +270,8 @@ class HttpBackendTest {
 
     @Test
     fun abortBeforeCallCancelsImmediately() {
-        val (base, seen) = serve { ex, _ -> ex.sse(chunk("x")) }
-        val b = OpenAiBackend(Providers.GROQ, "k", base)
+        val (base, seen) = serve { ex, _ -> ex.sse(gchunk("x")) }
+        val b = GeminiBackend("k", false, base)
         b.abort()
         try {
             collect(b, "m")
@@ -405,14 +286,14 @@ class HttpBackendTest {
         val release = java.util.concurrent.CountDownLatch(1)
         val (base, _) = serve { ex, _ ->
             ex.startSse()
-            ex.write(chunk("awal") + "\n\n")
+            ex.write(gchunk("awal") + "\n\n")
             release.await(5, java.util.concurrent.TimeUnit.SECONDS)
-            ex.write(chunk(" akhir") + "\n\ndata: [DONE]\n\n")
+            ex.write(gchunk(" akhir") + "\n\n")
         }
-        val engine = BrainEngine({ OpenAiBackend(it.info, it.key, base) }, MemoryModelStore())
+        val engine = BrainEngine({ GeminiBackend(it.key, it.search, base) })
         val token = CancelToken()
         val got = StringBuilder()
-        val out = engine.run(listOf(ProviderConfig(Providers.CEREBRAS, "k")), req, {
+        val out = engine.run(listOf(ProviderConfig(Providers.GEMINI, "k", Providers.geminiModels(""))), req, {
             got.append(it)
             token.cancel()
             release.countDown()
@@ -421,36 +302,34 @@ class HttpBackendTest {
         assertEquals("awal", got.toString())
     }
 
-    // ------------------------------------------------------------ mesin + klien nyata
+    // ------------------------------------------------------------ mesin + klien nyata + buku pemakaian
 
     @Test
-    fun engineFallsBackAcrossRealHttpProviders() {
-        val (gBase, gSeen) = serve { ex, _ ->
-            ex.json(429, """{"error":{"code":429,"message":"quota","details":[{"quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier"}]}}""")
+    fun exhaustedFlashFallsBackToLiteAndEverythingIsRecorded() {
+        val usage = """data: {"candidates":[{"content":{"parts":[{"text":"."}]}}],"usageMetadata":{"promptTokenCount":30,"totalTokenCount":42}}"""
+        val (base, seen) = serve { ex, s ->
+            if (s.path.contains("gemini-flash-latest")) {
+                ex.json(429, """{"error":{"code":429,"message":"quota","details":[{"violations":[{"quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaValue":"20"}]}]}}""")
+            } else {
+                ex.sse(gchunk("Halo dari lite"), usage)
+            }
         }
-        val (qBase, qSeen) = serve { ex, s ->
-            if (s.path.endsWith("/models")) ex.json(200, """{"data":[{"id":"whisper-large-v3"},{"id":"openai/gpt-oss-120b"}]}""")
-            else ex.sse(chunk("Halo dari Groq"), "data: [DONE]")
-        }
-        val engine = BrainEngine({ cfg ->
-            if (cfg.info.native) GeminiBackend(cfg.key, cfg.search, "$gBase/v1beta") else OpenAiBackend(cfg.info, cfg.key, "$qBase/openai/v1")
-        }, MemoryModelStore())
-        val sink = StringBuilder()
-        val out = engine.run(
-            listOf(ProviderConfig(Providers.GEMINI, "g"), ProviderConfig(Providers.GROQ, "q")),
-            req, { sink.append(it) }
-        )
-        assertEquals(Outcome.Success("Halo dari Groq", "Groq", "openai/gpt-oss-120b"), out)
-        assertEquals("Halo dari Groq", sink.toString())
-        assertEquals(2, gSeen.size) // dua model Gemini dicoba
-        assertEquals(listOf("/openai/v1/models", "/openai/v1/chat/completions"), qSeen.map { it.path })
-        // pertanyaan kedua: Gemini sedang istirahat (kuota harian), langsung ke Groq tanpa menanya daftar model lagi
-        val out2 = engine.run(
-            listOf(ProviderConfig(Providers.GEMINI, "g"), ProviderConfig(Providers.GROQ, "q")),
-            req, { }
-        )
-        assertTrue(out2 is Outcome.Success)
-        assertEquals(2, gSeen.size)
-        assertEquals(3, qSeen.size)
+        val ledger = UsageLedger(MemoryUsageStore()) { 1_700_000_000_000L }
+        val engine = BrainEngine({ GeminiBackend(it.key, it.search, base) }, onAttempt = { _, model, a -> ledger.record(model, a) })
+        val cfg = ProviderConfig(Providers.GEMINI, "k", Providers.geminiModels(""))
+        val out = engine.run(listOf(cfg), req, { })
+        assertEquals(Outcome.Success("Halo dari lite.", "Gemini", "gemini-flash-lite-latest"), out)
+        assertEquals(2, seen.size)
+        val snap = ledger.snapshot()
+        val flash = snap.models.first { it.model == "gemini-flash-latest" }
+        val lite = snap.models.first { it.model == "gemini-flash-lite-latest" }
+        assertEquals(1, flash.limited)
+        assertEquals(20, flash.dailyLimit)
+        assertEquals(1, lite.ok)
+        assertEquals(42L, lite.tokens)
+        // pertanyaan kedua: flash istirahat, langsung ke lite
+        engine.run(listOf(cfg), req, { })
+        assertEquals(3, seen.size)
+        assertEquals(2, ledger.snapshot().models.first { it.model == "gemini-flash-lite-latest" }.ok)
     }
 }

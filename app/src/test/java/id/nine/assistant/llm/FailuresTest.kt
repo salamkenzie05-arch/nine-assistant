@@ -101,11 +101,46 @@ class FailuresTest {
 
     @Test
     fun providerWideRules() {
-        assertTrue(Failures.providerWide(Failure(FailKind.AUTH, 401, ""), "groq"))
-        assertTrue(Failures.providerWide(Failure(FailKind.NETWORK, null, ""), "groq"))
-        assertFalse(Failures.providerWide(Failure(FailKind.RATE_LIMIT, 429, ""), "groq"))
-        assertTrue(Failures.providerWide(Failure(FailKind.RATE_LIMIT, 429, ""), "openrouter"))
-        assertFalse(Failures.providerWide(Failure(FailKind.SERVER, 503, ""), "openrouter"))
+        assertTrue(Failures.providerWide(Failure(FailKind.AUTH, 401, "")))
+        assertTrue(Failures.providerWide(Failure(FailKind.NETWORK, null, "")))
+        // kuota Gemini dihitung per model: batas satu model tidak mengistirahatkan model lain
+        assertFalse(Failures.providerWide(Failure(FailKind.RATE_LIMIT, 429, "")))
+        assertFalse(Failures.providerWide(Failure(FailKind.QUOTA_DAILY, 429, "")))
+        assertFalse(Failures.providerWide(Failure(FailKind.SERVER, 503, "")))
+    }
+
+    private val quotaBody = """{"error":{"code":429,"message":"You exceeded your current quota","status":"RESOURCE_EXHAUSTED","details":[
+        {"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[
+            {"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"model":"gemini-flash-latest"},"quotaValue":"250"}]},
+        {"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"20s"}]}}"""
+
+    @Test
+    fun dailyRequestLimitIsReadFromQuotaFailure() {
+        assertEquals(250, Failures.dailyRequestLimit(quotaBody))
+        val f = Failures.fromHttp(429, quotaBody, null)
+        assertEquals(FailKind.QUOTA_DAILY, f.kind)
+        assertEquals(250, f.dailyLimit)
+    }
+
+    @Test
+    fun perMinuteLimitIsNotReportedAsDailyLimit() {
+        val body = """{"error":{"code":429,"message":"rate","details":[{"violations":[{"quotaId":"GenerateRequestsPerMinutePerProjectPerModel-FreeTier","quotaValue":"10"}]}]}}"""
+        assertNull(Failures.dailyRequestLimit(body))
+        val tokens = """{"error":{"code":429,"message":"x","details":[{"violations":[{"quotaId":"GenerateContentInputTokensPerModelPerDay-FreeTier","quotaValue":"1000000"}]}]}}"""
+        assertNull(Failures.dailyRequestLimit(tokens)) // batas token, bukan permintaan
+    }
+
+    @Test
+    fun dailyRequestLimitIgnoresGarbage() {
+        assertNull(Failures.dailyRequestLimit("bukan json"))
+        assertNull(Failures.dailyRequestLimit("""{"error":{"details":"x"}}"""))
+        assertNull(Failures.dailyRequestLimit("""{"error":{"details":[{"violations":[{"quotaId":"RequestsPerDay","quotaValue":"abc"}]}]}}"""))
+        assertNull(Failures.dailyRequestLimit("""{"error":{"details":[{"violations":[{"quotaId":"RequestsPerDay","quotaValue":"0"}]}]}}"""))
+    }
+
+    @Test
+    fun nonQuotaErrorsCarryNoDailyLimit() {
+        assertNull(Failures.fromHttp(500, quotaBody, null).dailyLimit)
     }
 
     @Test

@@ -135,7 +135,7 @@ class LlmBrain(context: Context, private val prefs: Prefs, private val models: M
         val path = models.modelFile.absolutePath
         if (engine != null && loadedPath == path && (!vision || engineHasVision)) return true
         if (engine != null) {
-            closeEngine() // model diganti (E2B ↔ E4B), atau perlu pembaca gambar
+            closeEngine() // model diganti atau perlu pembaca gambar
             contextDropped = true
         }
         if (!models.isReady()) {
@@ -353,21 +353,6 @@ class LlmBrain(context: Context, private val prefs: Prefs, private val models: M
         scope.launch {
             if (!busy) closeConversation()
             contextDropped = false // pengguna sengaja melupakan: jangan sisipkan riwayat lama
-        }
-    }
-
-    /** Ganti backend AI ("gpu"/"cpu"): model dimuat ulang dengan backend baru saat dibutuhkan. */
-    fun useBackend(name: String) {
-        if (name != "gpu" && name != "cpu") return
-        prefs.llmBackend = name
-        scope.launch {
-            while (busy) delay(50)
-            if (backendName != name) {
-                backendName = name
-                closeEngine()
-                contextDropped = true
-                setState(if (models.isReady()) State.IDLE else State.NO_MODEL)
-            }
         }
     }
 

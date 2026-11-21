@@ -13,21 +13,10 @@ import java.util.concurrent.Executors
 
 /**
  * Mengelola file model Gemma di penyimpanan aplikasi: unduh (sekali), impor dari file, hapus.
- * Model disimpan di Android/data/id.nine.assistant/files/models/ dan tidak pernah diunggah ke mana pun.
+ * Satu model saja: Gemma 4 E2B (cepat, ±2,6 GB), diunduh dari Hugging Face. Berkas disimpan di
+ * Android/data/id.nine.assistant/files/models/ dan tidak pernah diunggah ke mana pun.
  */
 class ModelManager(context: Context, private val prefs: Prefs) {
-
-    /** Pilihan model Gemma offline. E4B lebih pintar tetapi lebih besar dan sedikit lebih lambat. */
-    enum class Variant(val id: String, val label: String, val file: String, val repo: String, val approxBytes: Long, val minBytes: Long) {
-        E2B("e2b", "Gemma 4 E2B", "gemma-4-E2B-it.litertlm", "litert-community/gemma-4-E2B-it-litert-lm", 2_583_000_000L, 1_500_000_000L),
-        E4B("e4b", "Gemma 4 E4B", "gemma-4-E4B-it.litertlm", "litert-community/gemma-4-E4B-it-litert-lm", 3_654_000_000L, 2_500_000_000L);
-
-        val url: String get() = "https://huggingface.co/$repo/resolve/main/$file?download=true"
-
-        companion object {
-            fun of(id: String): Variant = values().firstOrNull { it.id == id } ?: E2B
-        }
-    }
 
     sealed class Status {
         object Missing : Status()
@@ -53,12 +42,11 @@ class ModelManager(context: Context, private val prefs: Prefs) {
     var status: Status = Status.Missing
         private set
 
-    val variant: Variant get() = Variant.of(prefs.modelVariant)
-    private val MODEL_NAME: String get() = variant.label
-    private val FILE_NAME: String get() = variant.file
-    private val URL_STR: String get() = variant.url
-    private val MIN_BYTES: Long get() = variant.minBytes
-    private val APPROX_BYTES: Long get() = variant.approxBytes
+    private val MODEL_NAME = "Gemma 4 E2B"
+    private val FILE_NAME = "gemma-4-E2B-it.litertlm"
+    private val URL_STR = "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/$FILE_NAME?download=true"
+    private val MIN_BYTES = 1_500_000_000L
+    private val APPROX_BYTES = 2_583_000_000L
 
     private val dir: File get() = (app.getExternalFilesDir("models") ?: File(app.filesDir, "models")).apply { mkdirs() }
     val modelFile: File get() = File(dir, FILE_NAME)
@@ -69,6 +57,17 @@ class ModelManager(context: Context, private val prefs: Prefs) {
     init {
         status = if (isReady()) Status.Ready else Status.Missing
         if (prefs.downloadId >= 0) poll() // lanjutkan memantau unduhan yang sedang berjalan
+        if (isReady()) io.execute { removeLegacy() }
+    }
+
+    /** Model E4B (3,7 GB) dari versi lama sudah tidak dipakai: hapus agar ruang penyimpanan kembali, tapi hanya bila E2B siap. */
+    private fun removeLegacy() {
+        try {
+            File(dir, "gemma-4-E4B-it.litertlm").delete()
+            File(dir, "gemma-4-E4B-it.litertlm.part").delete()
+        } catch (e: Exception) {
+            // abaikan
+        }
     }
 
     fun addListener(l: Listener) {
@@ -218,6 +217,7 @@ class ModelManager(context: Context, private val prefs: Prefs) {
             emit(Status.Failed(Reason.STORAGE, "rename"))
             return
         }
+        removeLegacy()
         emit(Status.Ready)
     }
 
@@ -274,27 +274,5 @@ class ModelManager(context: Context, private val prefs: Prefs) {
         cancelDownload()
         modelFile.delete()
         emit(Status.Missing)
-    }
-
-    /** Ganti model aktif. File model lain tetap ada sampai dihapus (agar bisa kembali tanpa unduh ulang). */
-    fun setVariant(v: Variant) {
-        if (v == variant) return
-        cancelDownload()
-        prefs.modelVariant = v.id
-        emit(if (isReady()) Status.Ready else Status.Missing)
-    }
-
-    /** Hapus file model yang tidak sedang dipakai untuk menghemat ruang. */
-    fun deleteOthers(): Long {
-        var freed = 0L
-        for (v in Variant.values()) {
-            if (v == variant) continue
-            val f = File(dir, v.file)
-            if (f.isFile) {
-                freed += f.length()
-                f.delete()
-            }
-        }
-        return freed
     }
 }

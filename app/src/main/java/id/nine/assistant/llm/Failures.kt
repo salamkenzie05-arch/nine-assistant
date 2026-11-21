@@ -8,7 +8,8 @@ import java.net.UnknownHostException
 
 enum class FailKind { RATE_LIMIT, QUOTA_DAILY, AUTH, NOT_FOUND, BAD_REQUEST, TOO_LARGE, SERVER, TIMEOUT, NETWORK, BLOCKED, EMPTY, OTHER }
 
-data class Failure(val kind: FailKind, val code: Int?, val message: String, val retryAfterMs: Long? = null)
+/** [dailyLimit]: batas permintaan per hari yang disebut Google di galat kuota (bila ada). */
+data class Failure(val kind: FailKind, val code: Int?, val message: String, val retryAfterMs: Long? = null, val dailyLimit: Int? = null)
 
 /** Kegagalan dari satu panggilan ke penyedia. */
 class ProviderException(val failure: Failure) : IOException(failure.message)
@@ -49,10 +50,34 @@ object Failures {
             }
             else -> FailKind.OTHER
         }
-        return Failure(kind, code, msg.ifBlank { "HTTP $code" }, retry)
+        return Failure(kind, code, msg.ifBlank { "HTTP $code" }, retry, if (code == 429) dailyRequestLimit(body) else null)
     }
 
-    /** Galat di tengah aliran (mis. OpenRouter): [code] bila ada, kalau tidak lihat isi pesannya. */
+    /**
+     * Batas permintaan per hari yang disebut Google di galat 429: detail "QuotaFailure" berisi "quotaId" (…PerDay…)
+     * dan "quotaValue". Null bila tidak ada, bukan JSON, atau bukan batas harian.
+     */
+    fun dailyRequestLimit(body: String): Int? {
+        val v0 = MiniJson.parseOrNull(body)
+        val v = if (v0 is List<*>) v0.firstOrNull() else v0
+        val details = MiniJson.arr(v, "error", "details") ?: return null
+        for (d in details) {
+            val violations = MiniJson.arr(d, "violations") ?: continue
+            for (x in violations) {
+                val id = MiniJson.str(x, "quotaId") ?: continue
+                if (!id.contains("PerDay", ignoreCase = true) || !id.contains("Request", ignoreCase = true)) continue
+                val value = when (val q = MiniJson.get(x, "quotaValue")) {
+                    is String -> q.trim().toLongOrNull()
+                    is Number -> q.toLong()
+                    else -> null
+                } ?: continue
+                if (value in 1..10_000_000L) return value.toInt()
+            }
+        }
+        return null
+    }
+
+    /** Galat di tengah aliran: [code] bila ada, kalau tidak lihat isi pesannya. */
     fun fromStream(message: String, code: Int?): Failure {
         if (code != null && code in 100..599) return fromHttp(code, message, null)
         val kind = when {
@@ -81,12 +106,8 @@ object Failures {
         return (m ?: body).trim().replace(Regex("\\s+"), " ").take(300)
     }
 
-    /** Kegagalan ini berlaku untuk seluruh penyedia (kunci/jaringan/kuota bersama), bukan hanya satu model? */
-    fun providerWide(f: Failure, providerId: String): Boolean = when (f.kind) {
-        FailKind.AUTH, FailKind.NETWORK -> true
-        FailKind.RATE_LIMIT, FailKind.QUOTA_DAILY -> providerId == Providers.OPENROUTER.id
-        else -> false
-    }
+    /** Kegagalan ini berlaku untuk seluruh penyedia (kunci salah, jaringan putus), bukan hanya satu model? Kuota Gemini per model. */
+    fun providerWide(f: Failure): Boolean = f.kind == FailKind.AUTH || f.kind == FailKind.NETWORK
 
     /** Berapa lama sebuah penyedia/model dibiarkan istirahat setelah gagal (0 = tidak perlu). */
     fun cooldownMs(f: Failure): Long = when (f.kind) {

@@ -4,19 +4,24 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URI
 
+/** Jumlah token satu permintaan: [input] = prompt, [output] = semua yang dihasilkan (termasuk token berpikir). */
+data class TokenUsage(val input: Long, val output: Long) {
+    val total: Long get() = input + output
+}
+
 /** Satu penyedia AI online. Dipanggil dari thread latar (memblokir). */
 interface ChatBackend {
     /** Mengalirkan jawaban lewat [onChunk]. Melempar [ProviderException] bila gagal, [CancelledException] bila di-[abort]. */
     fun stream(model: String, req: ChatRequest, onChunk: (String) -> Unit)
 
-    /** Daftar id model yang ditawarkan penyedia (kosong bila tak didukung). */
-    fun listModels(): List<String>
-
     /** Memutus koneksi yang sedang berjalan. */
     fun abort()
+
+    /** Token yang dipakai [stream] terakhir bila penyedia melaporkannya, kalau tidak null. */
+    val lastUsage: TokenUsage? get() = null
 }
 
-/** Pembantu HTTP bersama untuk kedua jenis penyedia. */
+/** Pembantu HTTP untuk panggilan ke penyedia. */
 internal class HttpCall(private val connectMs: Int, private val readMs: Int) {
     @Volatile
     private var conn: HttpURLConnection? = null
@@ -99,110 +104,7 @@ internal fun readSse(c: HttpURLConnection, rawOut: StringBuilder, onLine: (Strin
     }
 }
 
-/** Groq, Cerebras, OpenRouter: format OpenAI-compatible. */
-class OpenAiBackend(
-    private val info: ProviderInfo,
-    private val key: String,
-    private val baseUrl: String = info.baseUrl,
-    connectMs: Int = 8_000,
-    readMs: Int = 30_000
-) : ChatBackend {
-
-    private val http = HttpCall(connectMs, readMs)
-    private val base get() = baseUrl.trimEnd('/')
-
-    private fun headers(): Map<String, String> {
-        val h = LinkedHashMap<String, String>()
-        h["Authorization"] = "Bearer $key"
-        h["Content-Type"] = "application/json; charset=utf-8"
-        h["Accept"] = "text/event-stream"
-        h["Accept-Encoding"] = "identity" // aliran SSE tanpa kompresi supaya potongan jawaban tiba langsung
-        if (info.id == Providers.OPENROUTER.id) {
-            h["HTTP-Referer"] = "https://github.com/salamkenzie05-arch/nine-assistant"
-            h["X-Title"] = "Nine"
-        }
-        return h
-    }
-
-    override fun abort() = http.abort()
-
-    override fun stream(model: String, req: ChatRequest, onChunk: (String) -> Unit) {
-        val effort = OpenAiWire.reasoningEffortFor(info.id, model)
-        var emitted = false
-        try {
-            streamOnce(model, req, effort) {
-                emitted = true
-                onChunk(it)
-            }
-        } catch (e: ProviderException) {
-            // Sebagian model menolak reasoning_effort: ulangi sekali tanpa parameter itu (hanya bila belum ada teks keluar).
-            val code = e.failure.code
-            if (effort != null && !emitted && (code == 400 || code == 422)) streamOnce(model, req, null, onChunk) else throw e
-        }
-    }
-
-    private fun streamOnce(model: String, req: ChatRequest, effort: String?, onChunk: (String) -> Unit) {
-        http.run("POST", "$base/chat/completions", headers(), OpenAiWire.body(model, req, effort)) { c ->
-            val filter = ThinkFilter()
-            val raw = StringBuilder()
-            var any = false
-            fun emit(t: String) {
-                val out = filter.feed(t)
-                if (out.isNotEmpty()) {
-                    any = true
-                    onChunk(out)
-                }
-            }
-            readSse(c, raw) { line ->
-                when (val ev = OpenAiWire.parseLine(line)) {
-                    is SseEvent.Text -> {
-                        emit(ev.text)
-                        true
-                    }
-                    is SseEvent.Error -> throw ProviderException(Failures.fromStream(ev.message, ev.code))
-                    SseEvent.Done -> false
-                    else -> true
-                }
-            }
-            val tail = filter.finish()
-            if (tail.isNotEmpty()) {
-                any = true
-                onChunk(tail)
-            }
-            if (!any && raw.isNotBlank()) {
-                // Penyedia membalas JSON biasa (bukan SSE): ambil isinya.
-                val v = MiniJson.parseOrNull(raw.toString())
-                MiniJson.get(v, "error")?.let {
-                    val e = OpenAiWire.errorEvent(it)
-                    throw ProviderException(Failures.fromStream(e.message, e.code))
-                }
-                val text = MiniJson.str(v, "choices", 0, "message", "content")
-                if (!text.isNullOrBlank()) {
-                    val f = ThinkFilter()
-                    val clean = f.feed(text) + f.finish()
-                    if (clean.isNotEmpty()) onChunk(clean)
-                }
-            }
-        }
-    }
-
-    override fun listModels(): List<String> =
-        http.run("GET", "$base/models", mapOf("Authorization" to "Bearer $key", "Accept" to "application/json"), null) { c ->
-            val text = c.inputStream.bufferedReader(Charsets.UTF_8).use { r ->
-                val sb = StringBuilder()
-                val buf = CharArray(8192)
-                while (sb.length < 4_000_000) {
-                    val n = r.read(buf)
-                    if (n < 0) break
-                    sb.append(buf, 0, n)
-                }
-                sb.toString()
-            }
-            OpenAiWire.parseModels(text, info.id)
-        }
-}
-
-/** Gemini lewat Google AI Studio (API sendiri, bukan format OpenAI). */
+/** Gemini lewat Google AI Studio. */
 class GeminiBackend(
     private val key: String,
     private val search: Boolean,
@@ -215,9 +117,12 @@ class GeminiBackend(
 
     override fun abort() = http.abort()
 
-    override fun listModels(): List<String> = emptyList()
+    @Volatile
+    override var lastUsage: TokenUsage? = null
+        private set
 
     override fun stream(model: String, req: ChatRequest, onChunk: (String) -> Unit) {
+        lastUsage = null
         var emitted = false
         try {
             streamOnce(model, req, search) {
@@ -244,6 +149,7 @@ class GeminiBackend(
             var any = false
             var blocked: String? = null
             readSse(c, raw) { line ->
+                if (line.indexOf("usageMetadata") >= 0) GeminiWire.parseUsage(line)?.let { lastUsage = it }
                 when (val ev = GeminiWire.parseLine(line)) {
                     is SseEvent.Text -> {
                         any = true
@@ -262,7 +168,7 @@ class GeminiBackend(
                 if (raw.isNotBlank()) {
                     val v = MiniJson.parseOrNull(raw.toString().trim().removePrefix("[").removeSuffix("]").trim())
                     MiniJson.get(v, "error")?.let {
-                        val e = OpenAiWire.errorEvent(it)
+                        val e = GeminiWire.errorEvent(it)
                         throw ProviderException(Failures.fromStream(e.message, e.code))
                     }
                 }
