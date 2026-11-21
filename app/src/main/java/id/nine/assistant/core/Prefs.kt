@@ -1,5 +1,6 @@
 package id.nine.assistant.core
 
+import id.nine.assistant.speech.NineVoice
 import android.content.Context
 import androidx.appcompat.app.AppCompatDelegate
 import java.util.Locale
@@ -38,10 +39,10 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("speak", true)
         set(value) = sp.edit().putBoolean("speak", value).apply()
 
-    /** Suara Nine: "female" (wanita) atau "male" (pria); lihat VoiceGender. */
-    var voiceGender: String
-        get() = sp.getString("voice_gender", "female") ?: "female"
-        set(value) = sp.edit().putString("voice_gender", if (value == "male") "male" else "female").apply()
+    /** Suara Nine: "droid" (bawaan), "female" (wanita), atau "male" (pria); lihat NineVoice. */
+    var voice: String
+        get() = NineVoice.of(sp.getString("voice_kind", null)).key
+        set(value) = sp.edit().putString("voice_kind", NineVoice.of(value).key).apply()
 
     /** Nine mengingat otomatis hal tentang pengguna yang disebut dalam percakapan ("aku suka …", "nama saya …"). */
     var autoMemory: Boolean
@@ -94,11 +95,6 @@ class Prefs(context: Context) {
         sp.edit().putString("${id}_key", SecureStore.encrypt(v)).apply()
     }
 
-    /** Pencarian Google lewat Gemini; hanya berguna untuk kunci berbayar, jadi mati secara bawaan. */
-    var aiSearch: Boolean
-        get() = sp.getBoolean("ai_search", false)
-        set(value) = sp.edit().putBoolean("ai_search", value).apply()
-
     var geminiKey: String
         get() = providerKey("gemini")
         set(value) = setProviderKey("gemini", value)
@@ -137,15 +133,6 @@ class Prefs(context: Context) {
             sp.edit().putString("launch_token", t).apply()
             return t
         }
-
-    var geminiModel: String
-        get() = (sp.getString("gemini_model", null) ?: "").ifBlank { DEFAULT_GEMINI_MODEL }
-        set(value) = sp.edit().putString("gemini_model", value.trim()).apply()
-
-    /** Kota pengguna (opsional) agar pertanyaan cuaca/lokal lebih tepat. */
-    var city: String
-        get() = sp.getString("city", "") ?: ""
-        set(value) = sp.edit().putString("city", value.trim()).apply()
 
     // --- Wake word
     var wakeEnabled: Boolean
@@ -261,12 +248,12 @@ class Prefs(context: Context) {
             raw.filter { it.isLetterOrDigit() || it == ' ' || it == '.' || it == '-' || it == '\'' }
                 .replace(Regex("\\s+"), " ").trim().take(max).trim()
 
-        const val DEFAULT_GEMINI_MODEL = "gemini-flash-latest"
-
         /** Pengaturan milik fitur yang sudah dihapus; dibuang saat aplikasi dibuka. */
         private val RETIRED_KEYS = setOf(
             "groq_key", "cerebras_key", "openrouter_key", "auto_support", "inbody_ocr", "model_variant",
-            "alarm_engine", "alarm_engine_v27", "ai_usage"
+            "alarm_engine", "alarm_engine_v27", "ai_usage",
+            // Opsi "Lanjutan" Gemini (nama model, pencarian Google) dan kolom kota dihapus; Nine selalu memakai model bawaan.
+            "gemini_model", "ai_search", "city", "voice_gender"
         )
     }
 }

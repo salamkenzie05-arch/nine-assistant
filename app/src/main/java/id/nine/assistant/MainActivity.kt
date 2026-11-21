@@ -560,19 +560,11 @@ open class MainActivity : AppCompatActivity(), AssistantController.Ui {
         sheet.show()
     }
 
-    /** Menu NINE: alarm, tugas, pengaturan, bahasa, tema, dan status otak AI. */
+    /** Menu NINE: tugas, pengaturan, bahasa, tema, dan status otak AI. */
     private fun showMenu() {
         val sheet = BottomSheetDialog(this)
         val v = layoutInflater.inflate(R.layout.sheet_menu, null)
         menuBrain = v.findViewById<TextView>(R.id.menuBrain).also { it.text = brainText() }
-        v.findViewById<View>(R.id.menuAlarms).setOnClickListener {
-            sheet.dismiss()
-            try {
-                startActivity(Intent(android.provider.AlarmClock.ACTION_SHOW_ALARMS))
-            } catch (e: Exception) {
-                Toast.makeText(this, R.string.alarm_no_clock, Toast.LENGTH_SHORT).show()
-            }
-        }
         v.findViewById<View>(R.id.menuTodo).setOnClickListener {
             sheet.dismiss()
             startActivity(Intent(this, TodoActivity::class.java))
@@ -840,6 +832,10 @@ open class MainActivity : AppCompatActivity(), AssistantController.Ui {
 
     override fun onMoodHold(mood: Mood, ms: Long) {
         binding.orb.react(mood, ms)
+    }
+
+    override fun onTalk(ms: Long) {
+        binding.orb.talkFor(ms)
     }
 
     override fun onAction(action: UiAction) {

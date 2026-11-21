@@ -11,6 +11,17 @@ enum class VoiceGender(val key: String, val geminiVoice: String) {
     }
 }
 
+/** Pilihan suara Nine di Pengaturan: bunyi droid (bawaan) atau suara manusia pria/wanita ([gender] null = droid). */
+enum class NineVoice(val key: String, val gender: VoiceGender?) {
+    DROID("droid", null),
+    FEMALE("female", VoiceGender.FEMALE),
+    MALE("male", VoiceGender.MALE);
+
+    companion object {
+        fun of(key: String?): NineVoice = values().firstOrNull { it.key == key } ?: DROID
+    }
+}
+
 /** Satu suara mesin TTS bawaan HP, disederhanakan dari android.speech.tts.Voice agar bisa diuji tanpa Android. */
 data class VoiceInfo(val name: String, val lang: String, val network: Boolean, val quality: Int)
 

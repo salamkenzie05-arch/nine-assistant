@@ -15,6 +15,7 @@
         android:fontFamily="@font/nine_light"
         android:gravity="center"
         android:letterSpacing="0.35"
+        android:paddingStart="7dp"
         android:text="NINE"
         android:textColor="@color/nine_on_bg"
         android:textSize="20sp" />
@@ -27,12 +28,6 @@
         android:gravity="center"
         android:textColor="@color/nine_gold"
         android:textSize="12sp" />
-
-    <TextView
-        android:id="@+id/menuAlarms"
-        style="@style/Nine.MenuRow"
-        android:drawableStart="@drawable/ic_alarm"
-        android:text="@string/alarms_title" />
 
     <TextView
         android:id="@+id/menuTodo"

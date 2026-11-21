@@ -53,6 +53,7 @@ class NineFaceView @JvmOverloads constructor(
                 touchActivity()
                 // Mulai mendengar: lupakan ekspresi lama (kecuali kaget karena baru disentuh).
                 if (value == Mode.LISTENING && SystemClock.uptimeMillis() - moodStarted > 600) clearMood()
+                if (value == Mode.LISTENING || value == Mode.THINKING) talkUntil = 0L
             }
             invalidate()
         }
@@ -327,6 +328,16 @@ class NineFaceView @JvmOverloads constructor(
     private var thinkFlip = 0L
     private var thinkSide = 1f
 
+    /** Sampai kapan wajah "berbicara" walau tanpa suara (jawaban hanya tampil sebagai teks); lihat [talkFor]. */
+    private var talkUntil = 0L
+
+    /** Gerakkan wajah seperti sedang berbicara selama [ms] (dipakai saat suara dimatikan dan jawaban tampil di layar). */
+    fun talkFor(ms: Long) {
+        talkUntil = SystemClock.uptimeMillis() + ms.coerceIn(0L, 10_000L)
+        touchActivity()
+        invalidate()
+    }
+
     private fun reset(e: Eye) {
         e.sx = 1f; e.sy = 1f; e.lid = 0f; e.tilt = 0f; e.happy = 0f; e.heart = 0f; e.chevron = 0f
     }
@@ -396,8 +407,6 @@ class NineFaceView @JvmOverloads constructor(
             Mode.SPEAKING -> {
                 tGazeX = glanceX * 0.3f; tGazeY = -0.05f
                 tl.happy = 0.22f; tr.happy = 0.22f
-                val talk = 0.06f * abs(sin(t * 9.5f)) * (0.6f + 0.4f * sin(t * 2.7f))
-                tl.sy = 1f + talk; tr.sy = 1f + talk
             }
         }
         if (mode == Mode.IDLE && musicOn(now) && !touching) {
@@ -438,6 +447,15 @@ class NineFaceView @JvmOverloads constructor(
             }
             Mood.LAUGH -> { tl.happy = 1f; tr.happy = 1f; tl.sy = 0.95f; tr.sy = 0.95f; if (!touching) tGazeY = -0.15f }
             Mood.NEUTRAL, null -> Unit
+        }
+        // --- gerak bicara: di atas ekspresi apa pun (mood tidak boleh menghentikannya), selama suara berbunyi
+        // atau sebentar setelah jawaban tampil tanpa suara.
+        if (mode == Mode.SPEAKING || now < talkUntil) {
+            val wave = abs(sin(t * 9.5f)) * (0.6f + 0.4f * sin(t * 2.7f))
+            val talk = 1f + 0.09f * wave
+            tl.sy *= talk; tr.sy *= talk
+            tFaceTilt += 1.6f * sin(t * 3.1f)
+            if (!touching) tGazeY += 0.05f * wave
         }
     }
 

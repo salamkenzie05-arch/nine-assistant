@@ -9,6 +9,7 @@ Yang dikerjakan (idempoten, aman dijalankan berulang):
      dan bayangan alas berkurva gaussian (tanpa tepi keras), serta kilau.
   2. Menurunkan seluruh isi wajah sedikit (group translateY) agar pas di bola yang baru.
   3. Membuat bingkai perantara dengan easing (smoothstep) untuk melirik kiri/kanan, mendongak, dan kedip,
+     serta ekspresi tambahan (kedip sebelah, kaget, penasaran, mata hati, tertawa) dari mata neutral/happy,
      lalu menulis ulang widget/FaceFrames.kt.
 """
 import math
@@ -63,7 +64,61 @@ for k in range(1, 4):  # mendongak: 0 -> up (naik 3,06)
 EXTRA["bl1"] = 'pivotX="54" pivotY="52.16" scaleY="0.55"'  # kelopak setengah turun
 EXTRA["bl2"] = 'pivotX="54" pivotY="52.16" scaleY="0.22"'  # hampir menutup
 
-ALL_NAMES = BASE_NAMES + list(EXTRA)
+# Ekspresi tambahan yang disusun dari mata "neutral" dan "happy" (tanpa gambar baru), supaya widget lebih hidup:
+# kedip sebelah, kaget, penasaran (miring), mata hati yang berdenyut, dan tertawa (naik-turun).
+COMPOSED = ["wink", "surprised", "curious", "love1", "love2", "laugh1", "laugh2"]
+
+ALL_NAMES = BASE_NAMES + list(EXTRA) + COMPOSED
+
+HEART = "#FFFF4D6D"
+
+
+def eyes(content: str):
+    """Pecah isi wajah menjadi (blok mata kiri, blok mata kanan). Versi gelap punya dua lingkaran pendar di depan."""
+    parts = [p for p in re.split(r"(?m)^(?=    <path )", content) if p.strip()]
+    if len(parts) == 4:
+        return parts[:2], parts[2:]
+    assert len(parts) == 6, f"isi wajah harus 4 atau 6 blok, dapat {len(parts)}"
+    return [parts[0], parts[2], parts[3]], [parts[1], parts[4], parts[5]]
+
+
+def grp(attrs: str, inner: str) -> str:
+    return f'    <group android:{attrs.replace(" ", " android:")}>\n{inner}    </group>\n'
+
+
+def heart(cx: float, cy: float, s: float) -> str:
+    """Hati selebar ±1,05·s dan lebih tinggi daripada lebar sedikit (ky), terpusat di mata."""
+    ky = 1.35
+    y = lambda o: fmt(cy + ky * s * o)
+    d = (
+        f"M{fmt(cx)},{y(0.62)}"
+        f"C{fmt(cx - 0.35 * s)},{y(0.30)} {fmt(cx - 1.05 * s)},{y(-0.05)} {fmt(cx - 1.05 * s)},{y(-0.36)}"
+        f"C{fmt(cx - 1.05 * s)},{y(-0.74)} {fmt(cx - 0.45 * s)},{y(-0.84)} {fmt(cx)},{y(-0.40)}"
+        f"C{fmt(cx + 0.45 * s)},{y(-0.84)} {fmt(cx + 1.05 * s)},{y(-0.74)} {fmt(cx + 1.05 * s)},{y(-0.36)}"
+        f"C{fmt(cx + 1.05 * s)},{y(-0.05)} {fmt(cx + 0.35 * s)},{y(0.30)} {fmt(cx)},{y(0.62)}Z"
+    )
+    return f'    <path android:pathData="{d}" android:fillColor="{HEART}" />\n'
+
+
+def composed(neutral: str, happy: str):
+    """Nama -> (isi wajah, atribut group luar atau '') untuk ekspresi tambahan."""
+    (nl, nr), (hl, hr) = eyes(neutral), eyes(happy)
+    eye_l, eye_r = 36.98, 71.02
+    cy = 52.16
+    out = {
+        "wink": ("".join(nl + hr), ""),
+        "surprised": (neutral, 'pivotX="54" pivotY="52.16" scaleX="1.08" scaleY="1.28"'),
+        "curious": (
+            grp(f'pivotX="{eye_l}" pivotY="{cy}" scaleY="0.9"', "".join(nl)) + grp(f'pivotX="{eye_r}" pivotY="{cy}" scaleY="1.15"', "".join(nr)),
+            'pivotX="54" pivotY="50" rotation="7"',
+        ),
+        "love1": (heart(eye_l, cy, 10.5) + heart(eye_r, cy, 10.5), ""),
+        "love2": (heart(eye_l, cy, 11.8) + heart(eye_r, cy, 11.8), ""),
+        "laugh1": (happy, 'translateY="-1.6"'),
+        "laugh2": (happy, 'translateY="0.8"'),
+    }
+    assert list(out) == COMPOSED
+    return out
 
 
 def _grad(cx, cy, r, stops, ind=8):
@@ -175,6 +230,10 @@ def main():
             total += 1
         for name, attrs in EXTRA.items():
             (d / f"face_{prefix}_{name}.xml").write_text(build(neutral_head, theme, neutral, attrs))
+            total += 1
+        _, happy = split((d / f"face_{prefix}_happy.xml").read_text())
+        for name, (content, attrs) in composed(neutral, happy).items():
+            (d / f"face_{prefix}_{name}.xml").write_text(build(neutral_head, theme, content, attrs))
             total += 1
 
     # FaceFrames.kt

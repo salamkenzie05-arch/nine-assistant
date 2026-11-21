@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bingkai wajah Nine untuk widget (tools/face_sphere.py). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- sphere3d v3 -->
+    <group android:translateY="4">
+    <path android:pathData="M6,50a48,48 0 1,0 96,0a48,48 0 1,0 -96,0Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="radial" android:centerX="54" android:centerY="50" android:gradientRadius="48">
+                <item android:offset="0" android:color="#00000000" />
+                <item android:offset="0.86" android:color="#00000000" />
+                <item android:offset="0.9" android:color="#1C000000" />
+                <item android:offset="0.92" android:color="#17000000" />
+                <item android:offset="0.94" android:color="#10000000" />
+                <item android:offset="0.95" android:color="#0A000000" />
+                <item android:offset="0.97" android:color="#05000000" />
+                <item android:offset="0.98" android:color="#03000000" />
+                <item android:offset="0.99" android:color="#01000000" />
+                <item android:offset="1" android:color="#00000000" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path android:pathData="M11,50a43,43 0 1,0 86,0a43,43 0 1,0 -86,0Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="radial" android:centerX="40" android:centerY="32" android:gradientRadius="70">
+                <item android:offset="0" android:color="#FFFFFF" />
+                <item android:offset="0.28" android:color="#F8FAFD" />
+                <item android:offset="0.6" android:color="#E3E8F1" />
+                <item android:offset="0.85" android:color="#C9D1DF" />
+                <item android:offset="1" android:color="#B4BECF" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path android:pathData="M11,50a43,43 0 1,0 86,0a43,43 0 1,0 -86,0Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="radial" android:centerX="54" android:centerY="50" android:gradientRadius="43">
+                <item android:offset="0" android:color="#00000000" />
+                <item android:offset="0.7" android:color="#000B1220" />
+                <item android:offset="0.78" android:color="#020B1220" />
+                <item android:offset="0.86" android:color="#080B1220" />
+                <item android:offset="0.93" android:color="#120B1220" />
+                <item android:offset="1" android:color="#210B1220" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <group android:pivotX="37" android:pivotY="26" android:rotation="-30" android:scaleY="0.55">
+        <path android:pathData="M22,26a15,15 0 1,0 30,0a15,15 0 1,0 -30,0Z">
+            <aapt:attr name="android:fillColor">
+                <gradient android:type="radial" android:centerX="37" android:centerY="26" android:gradientRadius="15">
+                    <item android:offset="0" android:color="#F2FFFFFF" />
+                    <item android:offset="0.5" android:color="#99FFFFFF" />
+                    <item android:offset="1" android:color="#00FFFFFF" />
+                </gradient>
+            </aapt:attr>
+        </path>
+    </group>
+    </group>
+    <group android:translateY="0">
+    <group android:pivotX="54" android:pivotY="50" android:rotation="7">
+    <group android:pivotX="36.98" android:pivotY="52.16" android:scaleY="0.9">
+    <path android:pathData="M34.55,40.66H39.41A5.16,5.16 0 0,1 44.57,45.82V58.5A5.16,5.16 0 0,1 39.41,63.66H34.55A5.16,5.16 0 0,1 29.39,58.5V45.82A5.16,5.16 0 0,1 34.55,40.66Z" android:fillColor="#13151A" />
+    <path android:pathData="M34.55,40.66H39.41A5.16,5.16 0 0,1 44.57,45.82V58.5A5.16,5.16 0 0,1 39.41,63.66H34.55A5.16,5.16 0 0,1 29.39,58.5V45.82A5.16,5.16 0 0,1 34.55,40.66Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="0" android:startY="29.16" android:endX="0" android:endY="31.46" android:tileMode="repeat">
+                <item android:offset="0" android:color="#00000000" />
+                <item android:offset="0.64" android:color="#00000000" />
+                <item android:offset="0.64" android:color="#3DFFFFFF" />
+                <item android:offset="1" android:color="#3DFFFFFF" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    </group>
+    <group android:pivotX="71.02" android:pivotY="52.16" android:scaleY="1.15">
+    <path android:pathData="M68.59,40.66H73.45A5.16,5.16 0 0,1 78.61,45.82V58.5A5.16,5.16 0 0,1 73.45,63.66H68.59A5.16,5.16 0 0,1 63.43,58.5V45.82A5.16,5.16 0 0,1 68.59,40.66Z" android:fillColor="#13151A" />
+    <path android:pathData="M68.59,40.66H73.45A5.16,5.16 0 0,1 78.61,45.82V58.5A5.16,5.16 0 0,1 73.45,63.66H68.59A5.16,5.16 0 0,1 63.43,58.5V45.82A5.16,5.16 0 0,1 68.59,40.66Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="0" android:startY="29.16" android:endX="0" android:endY="31.46" android:tileMode="repeat">
+                <item android:offset="0" android:color="#00000000" />
+                <item android:offset="0.64" android:color="#00000000" />
+                <item android:offset="0.64" android:color="#3DFFFFFF" />
+                <item android:offset="1" android:color="#3DFFFFFF" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    </group>
+    </group>
+    </group>
+</vector>

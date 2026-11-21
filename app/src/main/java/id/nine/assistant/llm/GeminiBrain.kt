@@ -33,7 +33,7 @@ class GeminiBrain(context: Context, private val prefs: Prefs) : OnlineBrain {
     fun configs(): List<ProviderConfig> {
         val key = prefs.geminiKey
         if (key.isBlank()) return emptyList()
-        return listOf(ProviderConfig(Providers.GEMINI, key, Providers.geminiModels(prefs.geminiModel), prefs.aiSearch))
+        return listOf(ProviderConfig(Providers.GEMINI, key, Providers.geminiModels(Providers.DEFAULT_GEMINI_MODEL), false))
     }
 
     override val displayName: String get() = Providers.GEMINI.label
@@ -57,7 +57,7 @@ class GeminiBrain(context: Context, private val prefs: Prefs) : OnlineBrain {
         token = tk
         val cfgs = configs()
         val search = cfgs.any { it.search }
-        val system = prefs.persona.onlinePrompt(lang, LocalDateTime.now(), prefs.city, if (search) "Google Search" else null, prefs.autoMemory) +
+        val system = prefs.persona.onlinePrompt(lang, LocalDateTime.now(), "", if (search) "Google Search" else null, prefs.autoMemory) +
             (if (context.isBlank()) "" else "\n\n" + context)
         val req = ChatRequest(system, history, text)
         exec.execute {

@@ -28,7 +28,7 @@ import id.nine.assistant.databinding.ActivitySettingsBinding
 import id.nine.assistant.llm.Providers
 import id.nine.assistant.skills.CalendarSkill
 import id.nine.assistant.speech.SpeechOutput
-import id.nine.assistant.speech.VoiceGender
+import id.nine.assistant.speech.NineVoice
 import id.nine.assistant.wake.WakeWordService
 import id.nine.assistant.a11y.NineAccessibilityService
 
@@ -51,11 +51,6 @@ class SettingsActivity : AppCompatActivity() {
 
         // --- Otak AI (Gemini)
         binding.editGeminiKey.setText(prefs.geminiKey)
-        binding.editGeminiModel.setText(if (prefs.geminiModel == Prefs.DEFAULT_GEMINI_MODEL) "" else prefs.geminiModel)
-        binding.switchAiSearch.isChecked = prefs.aiSearch
-        binding.switchAiSearch.setOnCheckedChangeListener { _, checked -> prefs.aiSearch = checked }
-        setAdvanced(prefs.aiSearch || prefs.geminiModel != Prefs.DEFAULT_GEMINI_MODEL)
-        binding.btnAdvanced.setOnClickListener { setAdvanced(binding.advancedBox.visibility != View.VISIBLE) }
         binding.btnGetKey.setOnClickListener { openUrl(Providers.GEMINI.keyUrl) }
         binding.btnTestAi.setOnClickListener { testAi() }
         binding.switchInternet.isChecked = prefs.internetMode
@@ -100,7 +95,6 @@ class SettingsActivity : AppCompatActivity() {
         renderA11y()
 
         // --- Lokasi
-        binding.editCity.setText(prefs.city)
         binding.switchLocation.isChecked = prefs.useLocation && nine.location.hasPermission()
         binding.switchLocation.setOnCheckedChangeListener { _, checked ->
             if (checked && !nine.location.hasPermission()) {
@@ -162,9 +156,19 @@ class SettingsActivity : AppCompatActivity() {
         // --- Suara
         binding.switchSpeak.isChecked = prefs.speakReplies
         binding.switchSpeak.setOnCheckedChangeListener { _, checked -> prefs.speakReplies = checked }
-        binding.groupVoice.check(if (VoiceGender.of(prefs.voiceGender) == VoiceGender.MALE) R.id.voiceMale else R.id.voiceFemale)
+        binding.groupVoice.check(
+            when (NineVoice.of(prefs.voice)) {
+                NineVoice.FEMALE -> R.id.voiceFemale
+                NineVoice.MALE -> R.id.voiceMale
+                NineVoice.DROID -> R.id.voiceDroid
+            }
+        )
         binding.groupVoice.setOnCheckedChangeListener { _, id ->
-            prefs.voiceGender = if (id == R.id.voiceMale) VoiceGender.MALE.key else VoiceGender.FEMALE.key
+            prefs.voice = when (id) {
+                R.id.voiceFemale -> NineVoice.FEMALE.key
+                R.id.voiceMale -> NineVoice.MALE.key
+                else -> NineVoice.DROID.key
+            }
         }
         voice = SpeechOutput(this, prefs) { Toast.makeText(this, it, Toast.LENGTH_LONG).show() }
         voice?.onEngine = { Toast.makeText(this, it, Toast.LENGTH_LONG).show() }
@@ -233,14 +237,8 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
-    private fun setAdvanced(show: Boolean) {
-        binding.advancedBox.visibility = if (show) View.VISIBLE else View.GONE
-        binding.btnAdvanced.setText(if (show) R.string.ai_advanced_hide else R.string.ai_advanced_show)
-    }
-
     private fun saveAiFields() {
         prefs.geminiKey = binding.editGeminiKey.text?.toString().orEmpty()
-        prefs.geminiModel = binding.editGeminiModel.text?.toString().orEmpty()
     }
 
     /** Uji kunci Gemini dan tampilkan model yang dipakai atau penyebab gagalnya. */
@@ -313,7 +311,6 @@ class SettingsActivity : AppCompatActivity() {
     override fun onPause() {
         super.onPause()
         saveAiFields()
-        prefs.city = binding.editCity.text.toString()
         val phrase = binding.editWakePhrase.text.toString().trim()
         if (phrase.isNotEmpty() && phrase != prefs.wakePhrases) {
             prefs.wakePhrases = phrase

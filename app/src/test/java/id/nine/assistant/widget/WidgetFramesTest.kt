@@ -39,4 +39,18 @@ class WidgetFramesTest {
             }
         }
     }
+
+    @Test
+    fun wajahNetralMemakaiEkspresiTambahanDanTidakTerlaluPanjang() {
+        val n = WidgetUpdater.frameNames(Face.NEUTRAL, false)
+        for (name in listOf("wink", "surprised", "curious", "happy")) assertTrue("tanpa $name", name in n)
+        // RemoteViews memuat satu anak per bingkai: jaga agar tetap ringan bagi launcher
+        for (f in Face.values()) assertTrue("${f.name} terlalu panjang: ${WidgetUpdater.frameNames(f, false).size}", WidgetUpdater.frameNames(f, false).size <= 400)
+    }
+
+    @Test
+    fun wajahSenangMemakaiMataHatiDanTertawa() {
+        val n = WidgetUpdater.frameNames(Face.HAPPY, false)
+        for (name in listOf("love1", "love2", "wink", "laugh1", "laugh2")) assertTrue("tanpa $name", name in n)
+    }
 }

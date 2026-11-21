@@ -125,6 +125,9 @@ object WidgetUpdater {
         return go + hold(away, restMs) + go.reversed().drop(1) + listOf(rest)
     }
 
+    /** Tertawa kecil: wajah senang naik-turun sebanyak [times] kali (±300 ms per kali). */
+    private fun laugh(times: Int): List<String> = List(times) { hold("laugh1", 140) + hold("laugh2", 140) }.flatten()
+
     /** Mendongak halus lalu kembali. */
     private fun lookUp(restMs: Int): List<String> {
         val go = names("up1", "up2", "up3", "up")
@@ -137,14 +140,23 @@ object WidgetUpdater {
      * Gerak mata memakai bingkai perantara berkurva smoothstep supaya tidak melompat.
      */
     private fun sequence(f: Face): List<String> = when (f) {
+        // Putaran ±20 detik (±290 bingkai; bingkai bertahan dihitung di sini, bukan di launcher): kedip biasa dan dobel, melirik, mendongak, penasaran (miring), kedip sebelah, kaget, tersenyum.
         Face.NEUTRAL -> hold("neutral", 1500) + blink() + hold("neutral", 900) +
             glance("l", 700) + hold("neutral", 700) +
             glance("r", 700) + hold("neutral", 1300) +
             blink() + hold("neutral", 160) + blink() + hold("neutral", 800) +
-            lookUp(350) + hold("neutral", 200) + hold("happy", 600) + hold("neutral", 500)
+            lookUp(350) + hold("neutral", 200) + hold("happy", 600) + hold("neutral", 500) +
+            hold("curious", 1400) + hold("neutral", 500) + blink() + hold("neutral", 1000) +
+            hold("wink", 500) + hold("neutral", 800) +
+            hold("surprised", 700) + hold("neutral", 350) + blink() + hold("neutral", 1200) +
+            lookUp(300) + hold("happy", 800) + hold("neutral", 600) + blink() + hold("neutral", 500)
+        // Baru diajak bicara: ceria, mata hati yang berdenyut, kedip sebelah, lalu tertawa kecil.
         Face.HAPPY -> hold("happy", 1100) + hold("neutral", 150) + blink() + hold("neutral", 150) + hold("happy", 900) +
             glance("l", 500, "happy") + hold("happy", 700) +
-            glance("r", 500, "happy") + hold("happy", 700)
+            glance("r", 500, "happy") + hold("happy", 700) +
+            hold("love1", 280) + hold("love2", 280) + hold("love1", 280) + hold("love2", 280) + hold("love1", 280) + hold("happy", 600) +
+            hold("wink", 550) + hold("happy", 700) +
+            laugh(6) + hold("happy", 900)
         Face.SLEEPY -> hold("sleepy1", 700) + hold("sleepy2", 700) + hold("sleepy3", 700) + hold("sleepyclosed", 1100) +
             hold("sleepy1", 700) + hold("sleepy2", 700) + hold("sleepy3", 700) + hold("sleepyclosed", 600)
         Face.CHARGING -> hold("charge1", 560) + hold("charge2", 560) + hold("charge1", 560) + hold("charge2", 560) +

@@ -45,7 +45,7 @@
     <string name="voice_preview">Coba suara</string>
     <string name="assistant_button">Jadikan asisten default</string>
     <string name="sec_privacy">Privasi</string>
-    <string name="privacy_text">Data Nine tersimpan di HP. Yang dikirim ke Google Gemini hanya pertanyaan umum dan teks jawaban yang disuarakan, dan hanya bila Internet menyala.</string>
+    <string name="privacy_text">Data Nine tersimpan di HP. Ke Google Gemini hanya dikirim pertanyaan umum, dan teks jawaban yang disuarakan bila kamu memilih suara Pria/Wanita; hanya saat Internet menyala.</string>
 
     <string name="todo_title">Tugas hari ini</string>
     <string name="todo_hint">Tambah tugas…</string>
@@ -58,7 +58,6 @@
     <string name="widget_today_desc">Nine (ikut tema) · tugas hari ini</string>
 
     <string name="internet_switch">Internet · Gemini</string>
-    <string name="city_hint">Kota untuk cuaca (opsional)</string>
     <string name="internet_status_off">Mati · pakai Gemma offline</string>
     <string name="internet_status_nokey">Isi kunci di bawah.</string>
     <string name="internet_status_online">Aktif · %1$s</string>
@@ -66,12 +65,9 @@
     <string name="ai_intro">Kunci gratis dari Google AI Studio. Pertanyaan umum dikirim ke Google.</string>
     <string name="ai_key_hint">Kunci API Gemini</string>
     <string name="ai_get_key">Dapatkan kunci</string>
-    <string name="ai_search_switch">Pencarian Google (kunci berbayar)</string>
     <string name="ai_test">Tes koneksi</string>
     <string name="ai_testing">Menguji…</string>
     <string name="ai_test_nokey">Isi kunci dulu.</string>
-    <string name="ai_advanced_show">Lanjutan ▾</string>
-    <string name="ai_advanced_hide">Lanjutan ▴</string>
     <string name="model_token_retry">Simpan &amp; coba lagi</string>
     <string name="brain_online">Online · %1$s</string>
 
@@ -99,7 +95,6 @@
     <string name="calendar_target">Simpan acara baru ke</string>
     <string name="calendar_auto">Otomatis</string>
     <string name="calendar_access">Izinkan akses kalender</string>
-    <string name="gemini_model_hint">Model Gemini (opsional)</string>
     <string name="wake_phrase_hint">Frasa, mis. hey nine</string>
 
 
@@ -119,7 +114,6 @@
     <string name="cd_menu">Menu Nine</string>
     <string name="menu_lang">Bahasa</string>
     <string name="menu_theme">Tema</string>
-    <string name="alarms_title">Alarm</string>
     <string name="sec_memory_group">Memori Nine</string>
     <string name="memory_auto">Ingat otomatis</string>
     <string name="memory_count">%1$d hal diingat</string>
@@ -205,7 +199,7 @@
     <string name="fin_all_time">Semua waktu</string>
     <string name="fin_delete_msg">Hapus catatan %1$s?</string>
     <string name="ai_dashboard">Dasbor kuota ↗</string>
+    <string name="voice_droid">Droid</string>
     <string name="voice_female">Wanita</string>
     <string name="voice_male">Pria</string>
-    <string name="alarm_no_clock">Aplikasi Jam tidak ditemukan.</string>
 </resources>

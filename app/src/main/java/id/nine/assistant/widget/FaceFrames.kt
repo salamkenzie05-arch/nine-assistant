@@ -35,7 +35,14 @@ object FaceFrames {
         "up2" to R.drawable.face_light_up2,
         "up3" to R.drawable.face_light_up3,
         "bl1" to R.drawable.face_light_bl1,
-        "bl2" to R.drawable.face_light_bl2
+        "bl2" to R.drawable.face_light_bl2,
+        "wink" to R.drawable.face_light_wink,
+        "surprised" to R.drawable.face_light_surprised,
+        "curious" to R.drawable.face_light_curious,
+        "love1" to R.drawable.face_light_love1,
+        "love2" to R.drawable.face_light_love2,
+        "laugh1" to R.drawable.face_light_laugh1,
+        "laugh2" to R.drawable.face_light_laugh2
     )
 
     val DARK: Map<String, Int> = mapOf(
@@ -69,7 +76,14 @@ object FaceFrames {
         "up2" to R.drawable.face_dark_up2,
         "up3" to R.drawable.face_dark_up3,
         "bl1" to R.drawable.face_dark_bl1,
-        "bl2" to R.drawable.face_dark_bl2
+        "bl2" to R.drawable.face_dark_bl2,
+        "wink" to R.drawable.face_dark_wink,
+        "surprised" to R.drawable.face_dark_surprised,
+        "curious" to R.drawable.face_dark_curious,
+        "love1" to R.drawable.face_dark_love1,
+        "love2" to R.drawable.face_dark_love2,
+        "laugh1" to R.drawable.face_dark_laugh1,
+        "laugh2" to R.drawable.face_dark_laugh2
     )
 
     val AUTO: Map<String, Int> = mapOf(
@@ -103,7 +117,14 @@ object FaceFrames {
         "up2" to R.drawable.face_auto_up2,
         "up3" to R.drawable.face_auto_up3,
         "bl1" to R.drawable.face_auto_bl1,
-        "bl2" to R.drawable.face_auto_bl2
+        "bl2" to R.drawable.face_auto_bl2,
+        "wink" to R.drawable.face_auto_wink,
+        "surprised" to R.drawable.face_auto_surprised,
+        "curious" to R.drawable.face_auto_curious,
+        "love1" to R.drawable.face_auto_love1,
+        "love2" to R.drawable.face_auto_love2,
+        "laugh1" to R.drawable.face_auto_laugh1,
+        "laugh2" to R.drawable.face_auto_laugh2
     )
 
 }

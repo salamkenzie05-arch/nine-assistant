@@ -25,7 +25,8 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
 /**
- * Suara Nine. Satu suara wanita dan satu suara pria (pilihan di Pengaturan):
+ * Suara Nine, tiga pilihan di Pengaturan: **Droid** (bawaan; bunyi bip/kicau [DroidVoice], tanpa internet), **Wanita**, **Pria**.
+ * Untuk Wanita/Pria urutannya:
  *  1. Gemini TTS (suara AI sangat natural, memakai kunci Gemini pengguna) bila mode internet menyala, ada kunci, ada jaringan;
  *  2. bila gagal/tidak tersedia: mesin Text-to-Speech bawaan HP ([SystemTts]);
  *  3. bila itu juga tidak ada: bunyi droid ([DroidVoice]), supaya Nine tetap "bersuara".
@@ -59,6 +60,8 @@ class SpeechOutput(context: Context, private val prefs: Prefs, private val onNot
     private var onStartSpeaking: (() -> Unit)? = null
     private var lang = AppLang.ID
     private var gender = VoiceGender.FEMALE
+    private var droid = true // pilihan Droid: tanpa Gemini maupun suara HP
+    private var droidCount = 0
     private var style: String? = null
     private var ttsKey: String? = null // bukan null = sintesis Gemini dipakai untuk aliran ini
     private var ttsSkip: String? = null // bila ttsKey null: alasan Gemini tidak dipakai (untuk laporan "Coba suara")
@@ -105,13 +108,21 @@ class SpeechOutput(context: Context, private val prefs: Prefs, private val onNot
         stop()
         streamOpen = true
         this.lang = lang
-        gender = VoiceGender.of(prefs.voiceGender)
+        val choice = NineVoice.of(prefs.voice)
+        droid = choice == NineVoice.DROID
+        gender = choice.gender ?: VoiceGender.FEMALE
+        droidCount = 0
         style = null
         sentences = 0
         spokenChars = 0
         remainder.setLength(0)
         onStartSpeaking = onStart
-        gate()
+        if (droid) {
+            ttsKey = null
+            ttsSkip = null
+        } else {
+            gate()
+        }
     }
 
     /** Ekspresi Nine untuk jawaban ini (menentukan gaya bicara suara Gemini). Panggil sebelum [enqueue] pertama. */
@@ -122,6 +133,13 @@ class SpeechOutput(context: Context, private val prefs: Prefs, private val onNot
     fun enqueue(sentence: String) {
         val text = sentence.trim()
         if (text.isEmpty() || !streamOpen) return
+        if (droid) {
+            // Droid cukup "berkicau" untuk beberapa kalimat pertama; sisanya dibaca di layar.
+            if (droidCount >= DROID_MAX_SENTENCES) return
+            droidCount++
+            enqueueAudio(DroidVoice.SAMPLE_RATE) { DroidVoice.render(text) }
+            return
+        }
         if (ttsKey != null) {
             // Gemini: kalimat pertama segera, sisanya satu permintaan di akhir (lihat flushRemainder).
             if (sentences++ == 0) {
@@ -384,5 +402,8 @@ class SpeechOutput(context: Context, private val prefs: Prefs, private val onNot
         const val LOCAL_MAX_CHARS = 700
 
         const val AWAIT_MAX_SEC = 60L
+
+        /** Jumlah kalimat yang "dikicaukan" suara Droid per jawaban. */
+        const val DROID_MAX_SENTENCES = 3
     }
 }

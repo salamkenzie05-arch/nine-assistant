@@ -18,12 +18,17 @@
             android:layout_height="56dp"
             android:layout_marginTop="4dp">
 
+            <!-- Dua sisi sama lebar (bobot 1) supaya NINE tepat di tengah layar; lencana BETA menggantung di kanannya. -->
             <LinearLayout
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:layout_gravity="center"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1" />
 
                 <TextView
                     android:id="@+id/txtTitle"
@@ -34,27 +39,33 @@
                     android:fontFamily="@font/nine_light"
                     android:gravity="center"
                     android:letterSpacing="0.35"
-                    android:paddingStart="20dp"
-                    android:paddingEnd="6dp"
+                    android:paddingStart="24dp"
+                    android:paddingEnd="16dp"
                     android:text="NINE"
                     android:textColor="@color/nine_on_bg"
                     android:textSize="22sp" />
 
-                <TextView
-                    android:id="@+id/txtBeta"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="8dp"
-                    android:background="@drawable/bg_beta_badge"
-                    android:letterSpacing="0.12"
-                    android:paddingStart="6dp"
-                    android:paddingTop="1dp"
-                    android:paddingEnd="6dp"
-                    android:paddingBottom="1dp"
-                    android:text="BETA"
-                    android:textColor="@color/nine_gold"
-                    android:textSize="9sp"
-                    android:textStyle="bold" />
+                <FrameLayout
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <TextView
+                        android:id="@+id/txtBeta"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="start|center_vertical"
+                        android:background="@drawable/bg_beta_badge"
+                        android:letterSpacing="0.12"
+                        android:paddingStart="6dp"
+                        android:paddingTop="1dp"
+                        android:paddingEnd="6dp"
+                        android:paddingBottom="1dp"
+                        android:text="BETA"
+                        android:textColor="@color/nine_gold"
+                        android:textSize="9sp"
+                        android:textStyle="bold" />
+                </FrameLayout>
             </LinearLayout>
         </FrameLayout>
 

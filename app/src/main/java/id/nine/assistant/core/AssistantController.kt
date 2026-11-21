@@ -56,6 +56,8 @@ class AssistantController(context: Context, private val ui: Ui) {
         fun onMood(mood: Mood) {}
         /** Ekspresi yang ditahan selama [ms] (atas permintaan pengguna, hinaan, nyanyian). */
         fun onMoodHold(mood: Mood, ms: Long) { onMood(mood) }
+        /** Gerakkan wajah seperti berbicara selama [ms] (jawaban tampil sebagai teks karena suara dimatikan). */
+        fun onTalk(ms: Long) {}
         /** Tindakan sisi layar setelah jawaban selesai diucapkan: tema, keluar, tuner, wake word, dll. */
         fun onAction(action: UiAction) {}
     }
@@ -258,6 +260,7 @@ class AssistantController(context: Context, private val ui: Ui) {
                 if (prefs.speakReplies) {
                     output.speak(TextClean.speech(tagged.text), l, onStart = { setState(State.SPEAKING) }, mood = tagged.mood ?: ExpressionTag.guess(cleaned)) { setState(State.IDLE) }
                 } else {
+                    talkQuietly(cleaned)
                     setState(State.IDLE)
                 }
             }
@@ -937,6 +940,7 @@ class AssistantController(context: Context, private val ui: Ui) {
             if (speak) {
                 output.speak(text, l, onStart = { setState(State.SPEAKING) }, mood = mood) { setState(State.IDLE) }
             } else {
+                talkQuietly(text)
                 setState(State.IDLE)
             }
         }
@@ -1015,7 +1019,12 @@ class AssistantController(context: Context, private val ui: Ui) {
                             startListening()
                         }
                     }
-                    if (speak) output.endStream { finishUp() } else finishUp()
+                    if (speak) {
+                        output.endStream { finishUp() }
+                    } else {
+                        talkQuietly(finalText)
+                        finishUp()
+                    }
                 }
                 if (viaGemma && LangGuard.needsRewrite(cleaned, l, question)) {
                     ui.onPartial(l.t("Merapikan bahasa…", "Polishing the wording…"))
@@ -1076,6 +1085,11 @@ class AssistantController(context: Context, private val ui: Ui) {
 
     // ------------------------------------------------------------------ menjawab
 
+    /** Suara mati: wajah tetap "berbicara" sebentar (kira-kira selama membaca [text]) supaya jawaban terasa hidup. */
+    private fun talkQuietly(text: String) {
+        ui.onTalk((500L + text.length * 40L).coerceAtMost(5_000L))
+    }
+
     private fun reply(text: String, listenAfter: Boolean, priv: Boolean = false, then: (() -> Unit)? = null) {
         if (text.isBlank()) {
             setState(State.IDLE)
@@ -1091,6 +1105,7 @@ class AssistantController(context: Context, private val ui: Ui) {
         if (prefs.speakReplies) {
             output.speak(text, lang, onStart = { setState(State.SPEAKING) }) { after() }
         } else {
+            talkQuietly(text)
             after()
         }
     }

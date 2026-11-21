@@ -161,4 +161,23 @@ class VoiceTest {
         assertEquals("Kore", VoiceGender.FEMALE.geminiVoice)
         assertEquals("Charon", VoiceGender.MALE.geminiVoice)
     }
+
+    @Test
+    fun droidIsTheDefaultVoice() {
+        assertEquals(NineVoice.DROID, NineVoice.of(null))
+        assertEquals(NineVoice.DROID, NineVoice.of(""))
+        assertEquals(NineVoice.DROID, NineVoice.of("???"))
+        // nilai lama dari versi sebelumnya ("female"/"male") tetap dikenali
+        assertEquals(NineVoice.FEMALE, NineVoice.of("female"))
+        assertEquals(NineVoice.MALE, NineVoice.of("male"))
+    }
+
+    @Test
+    fun voiceKeysRoundTripAndOnlyHumanVoicesHaveAGender() {
+        for (v in NineVoice.values()) assertEquals(v, NineVoice.of(v.key))
+        assertNull(NineVoice.DROID.gender)
+        assertEquals(VoiceGender.FEMALE, NineVoice.FEMALE.gender)
+        assertEquals(VoiceGender.MALE, NineVoice.MALE.gender)
+        assertEquals(3, NineVoice.values().size)
+    }
 }
