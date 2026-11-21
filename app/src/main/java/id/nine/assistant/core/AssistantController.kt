@@ -1281,7 +1281,7 @@ class AssistantController(context: Context, private val ui: Ui) {
 
     // ------------------------------------------------------------------ menjawab
 
-    private fun reply(text: String, listenAfter: Boolean, then: (() -> Unit)? = null, priv: Boolean = false) {
+    private fun reply(text: String, listenAfter: Boolean, priv: Boolean = false, then: (() -> Unit)? = null) {
         if (text.isBlank()) {
             setState(State.IDLE)
             then?.invoke()
