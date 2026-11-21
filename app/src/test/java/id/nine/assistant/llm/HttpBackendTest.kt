@@ -1,7 +1,5 @@
 package id.nine.assistant.llm
 
-import com.sun.net.httpserver.HttpExchange
-import com.sun.net.httpserver.HttpServer
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -11,60 +9,119 @@ import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
 import java.net.ConnectException
-import java.net.InetSocketAddress
+import java.io.ByteArrayOutputStream
+import java.io.InputStream
+import java.io.OutputStream
+import java.net.InetAddress
+import java.net.ServerSocket
+import java.net.Socket
 import java.net.SocketTimeoutException
-import java.util.concurrent.Executors
 
 /** Menguji klien HTTP sungguhan terhadap server lokal (tanpa internet). */
 class HttpBackendTest {
 
     private class Seen(val method: String, val path: String, val query: String?, val headers: Map<String, String>, val body: String)
 
-    private val servers = ArrayList<HttpServer>()
+    /** Koneksi satu permintaan di server uji: menulis respons HTTP/1.1 mentah ("Connection: close", tanpa dependensi tambahan). */
+    private class Conn(private val sock: Socket) {
+        private val out: OutputStream = sock.getOutputStream()
+
+        fun head(status: Int, contentType: String, length: Int?, vararg extra: Pair<String, String>) {
+            val sb = StringBuilder("HTTP/1.1 $status X\r\nContent-Type: $contentType\r\nConnection: close\r\n")
+            if (length != null) sb.append("Content-Length: $length\r\n")
+            for ((k, v) in extra) sb.append("$k: $v\r\n")
+            sb.append("\r\n")
+            out.write(sb.toString().toByteArray())
+            out.flush()
+        }
+
+        fun startSse(status: Int = 200) = head(status, "text/event-stream", null)
+
+        fun write(s: String) {
+            out.write(s.toByteArray())
+            out.flush()
+        }
+
+        fun sse(vararg lines: String, status: Int = 200) {
+            startSse(status)
+            for (l in lines) write(l + "\n\n")
+        }
+
+        fun json(status: Int, body: String, vararg extra: Pair<String, String>) {
+            val b = body.toByteArray()
+            head(status, "application/json", b.size, *extra)
+            out.write(b)
+            out.flush()
+        }
+
+        fun close() {
+            try {
+                sock.close()
+            } catch (e: Exception) {
+                // abaikan
+            }
+        }
+    }
+
+    private val servers = ArrayList<ServerSocket>()
 
     @After
     fun stop() {
-        servers.forEach { it.stop(0) }
+        servers.forEach { try { it.close() } catch (e: Exception) { } }
     }
 
-    private fun serve(handler: (HttpExchange, Seen) -> Unit): Pair<String, MutableList<Seen>> {
+    private fun readLine(inp: InputStream): String? {
+        val bo = ByteArrayOutputStream()
+        while (true) {
+            val c = inp.read()
+            if (c < 0) return if (bo.size() == 0) null else bo.toString("UTF-8")
+            if (c == '\n'.code) return bo.toString("UTF-8").trimEnd('\r')
+            bo.write(c)
+        }
+    }
+
+    private fun serve(handler: (Conn, Seen) -> Unit): Pair<String, MutableList<Seen>> {
         val seen = ArrayList<Seen>()
-        val s = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        s.executor = Executors.newCachedThreadPool()
-        s.createContext("/") { ex ->
-            val body = ex.requestBody.readBytes().toString(Charsets.UTF_8)
-            val hs = HashMap<String, String>()
-            for ((k, v) in ex.requestHeaders) hs[k.lowercase()] = v.joinToString(",")
-            val sn = Seen(ex.requestMethod, ex.requestURI.path, ex.requestURI.query, hs, body)
-            synchronized(seen) { seen.add(sn) }
-            try {
-                handler(ex, sn)
-            } finally {
-                ex.close()
+        val ss = ServerSocket(0, 50, InetAddress.getByName("127.0.0.1"))
+        servers.add(ss)
+        Thread {
+            while (!ss.isClosed) {
+                val sock = try { ss.accept() } catch (e: Exception) { break }
+                Thread {
+                    val conn = Conn(sock)
+                    try {
+                        val inp = sock.getInputStream()
+                        val reqLine = readLine(inp) ?: return@Thread
+                        val parts = reqLine.split(" ")
+                        val hs = HashMap<String, String>()
+                        while (true) {
+                            val l = readLine(inp) ?: break
+                            if (l.isEmpty()) break
+                            val i = l.indexOf(':')
+                            if (i > 0) hs[l.substring(0, i).trim().lowercase()] = l.substring(i + 1).trim()
+                        }
+                        val len = hs["content-length"]?.toIntOrNull() ?: 0
+                        val bodyBytes = ByteArray(len)
+                        var got = 0
+                        while (got < len) {
+                            val n = inp.read(bodyBytes, got, len - got)
+                            if (n < 0) break
+                            got += n
+                        }
+                        val target = parts.getOrElse(1) { "/" }
+                        val q = target.indexOf('?')
+                        val sn = Seen(parts[0], if (q >= 0) target.substring(0, q) else target, if (q >= 0) target.substring(q + 1) else null, hs, String(bodyBytes, Charsets.UTF_8))
+                        synchronized(seen) { seen.add(sn) }
+                        handler(conn, sn)
+                    } catch (e: Exception) {
+                        // klien memutus: abaikan
+                    } finally {
+                        conn.close()
+                    }
+                }.start()
             }
-        }
-        s.start()
-        servers.add(s)
-        return "http://127.0.0.1:${s.address.port}" to seen
-    }
-
-    private fun HttpExchange.sse(vararg lines: String, status: Int = 200) {
-        responseHeaders.add("Content-Type", "text/event-stream")
-        sendResponseHeaders(status, 0)
-        responseBody.use { o ->
-            for (l in lines) {
-                o.write((l + "\n\n").toByteArray())
-                o.flush()
-            }
-        }
-    }
-
-    private fun HttpExchange.json(status: Int, body: String, vararg extra: Pair<String, String>) {
-        responseHeaders.add("Content-Type", "application/json")
-        for ((k, v) in extra) responseHeaders.add(k, v)
-        val b = body.toByteArray()
-        sendResponseHeaders(status, b.size.toLong())
-        responseBody.use { it.write(b) }
+        }.start()
+        return "http://127.0.0.1:${ss.localPort}" to seen
     }
 
     private fun chunk(t: String) = """data: {"choices":[{"delta":{"content":${MiniJson.write(t)}}}]}"""
@@ -347,12 +404,10 @@ class HttpBackendTest {
     fun engineCancelDuringRealStreamYieldsCancelledAndKeepsEarlyText() {
         val release = java.util.concurrent.CountDownLatch(1)
         val (base, _) = serve { ex, _ ->
-            ex.responseHeaders.add("Content-Type", "text/event-stream")
-            ex.sendResponseHeaders(200, 0)
-            ex.responseBody.write((chunk("awal") + "\n\n").toByteArray())
-            ex.responseBody.flush()
+            ex.startSse()
+            ex.write(chunk("awal") + "\n\n")
             release.await(5, java.util.concurrent.TimeUnit.SECONDS)
-            ex.responseBody.write((chunk(" akhir") + "\n\ndata: [DONE]\n\n").toByteArray())
+            ex.write(chunk(" akhir") + "\n\ndata: [DONE]\n\n")
         }
         val engine = BrainEngine({ OpenAiBackend(it.info, it.key, base) }, MemoryModelStore())
         val token = CancelToken()
