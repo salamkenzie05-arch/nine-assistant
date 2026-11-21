@@ -1,19 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.Nine" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/nine_accent</item>
-        <item name="colorOnPrimary">@color/nine_bg</item>
-        <item name="colorSecondary">@color/nine_gold</item>
-        <!-- Semua kontrol (radio, saklar, tombol teks/outline, kolom isian, pemilih tanggal) berwarna emas Nine, bukan biru Material. -->
-        <item name="colorPrimaryContainer">@color/nine_pill</item>
-        <item name="colorOnPrimaryContainer">@color/nine_on_bg</item>
-        <item name="colorTertiary">@color/nine_gold</item>
-        <item name="colorTertiaryContainer">@color/nine_pill</item>
+        <!-- Palet playful: teal untuk kontrol (radio, saklar, tombol, kolom isian, pemilih tanggal), lime untuk pilihan/sorotan, oranye untuk aksen. -->
+        <item name="colorPrimary">@color/nine_primary</item>
+        <item name="colorOnPrimary">@color/nine_on_primary</item>
+        <item name="colorSecondary">@color/nine_primary</item>
+        <item name="colorOnSecondary">@color/nine_on_primary</item>
+        <item name="colorPrimaryContainer">@color/nine_lime</item>
+        <item name="colorOnPrimaryContainer">@color/nine_on_lime</item>
+        <item name="colorTertiary">@color/nine_orange</item>
+        <item name="colorTertiaryContainer">@color/nine_pastel_orange</item>
         <item name="colorOnTertiaryContainer">@color/nine_on_bg</item>
-        <item name="colorControlActivated">@color/nine_accent</item>
-        <item name="colorAccent">@color/nine_accent</item>
-        <item name="android:colorAccent">@color/nine_accent</item>
-        <item name="android:textColorHighlight">@color/nine_vignette_edge</item>
+        <item name="colorControlActivated">@color/nine_primary</item>
+        <item name="colorAccent">@color/nine_primary</item>
+        <item name="android:colorAccent">@color/nine_primary</item>
+        <item name="android:textColorHighlight">#66DDF35E</item>
         <item name="colorSurface">@color/nine_card</item>
         <item name="colorOnSurface">@color/nine_on_bg</item>
         <!-- Matikan nuansa lavender bawaan Material 3 (sheet, toggle, outline, tint elevasi). -->
@@ -24,8 +25,8 @@
         <item name="colorSurfaceContainerHighest">@color/nine_pill</item>
         <item name="colorSurfaceVariant">@color/nine_pill</item>
         <item name="colorOnSurfaceVariant">@color/nine_muted</item>
-        <item name="colorSecondaryContainer">@color/nine_pill</item>
-        <item name="colorOnSecondaryContainer">@color/nine_on_bg</item>
+        <item name="colorSecondaryContainer">@color/nine_lime</item>
+        <item name="colorOnSecondaryContainer">@color/nine_on_lime</item>
         <item name="colorOutline">@color/nine_outline</item>
         <item name="colorOutlineVariant">@color/nine_outline_variant</item>
         <item name="bottomSheetDialogTheme">@style/Nine.BottomSheetDialog</item>
@@ -60,7 +61,7 @@
         <item name="android:layout_marginTop">24dp</item>
         <item name="android:layout_marginBottom">8dp</item>
         <item name="android:paddingStart">4dp</item>
-        <item name="android:textColor">@color/nine_gold</item>
+        <item name="android:textColor">@color/nine_orange</item>
         <item name="android:textSize">13sp</item>
         <item name="android:textStyle">bold</item>
         <item name="android:letterSpacing">0.12</item>
@@ -75,7 +76,7 @@
         <item name="android:layout_marginTop">4dp</item>
         <item name="android:background">?attr/selectableItemBackground</item>
         <item name="android:drawablePadding">16dp</item>
-        <item name="android:drawableTint">@color/nine_gold</item>
+        <item name="android:drawableTint">@color/nine_orange</item>
         <item name="android:gravity">center_vertical</item>
         <item name="android:paddingStart">8dp</item>
         <item name="android:textColor">@color/nine_on_bg</item>
@@ -91,6 +92,14 @@
         <item name="android:padding">16dp</item>
     </style>
 
+
+    <!-- Tombol pilihan (periode, jenis): terpilih = pil lime bertulisan gelap, lainnya polos. Dipakai di MaterialButtonToggleGroup. -->
+    <style name="Nine.Toggle" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:textColor">@color/nine_toggle_text</item>
+        <item name="backgroundTint">@color/nine_toggle_bg</item>
+        <item name="strokeColor">@color/nine_outline_variant</item>
+        <item name="rippleColor">@color/nine_lime</item>
+    </style>
 
     <style name="Nine.Divider" parent="">
         <item name="android:layout_width">match_parent</item>

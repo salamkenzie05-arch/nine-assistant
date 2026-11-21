@@ -1,5 +1,6 @@
 package id.nine.assistant
 
+import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -24,6 +25,7 @@ import id.nine.assistant.nlu.FinanceCats
 import id.nine.assistant.nlu.FinanceMath
 import id.nine.assistant.nlu.Txn
 import id.nine.assistant.skills.FinanceStore
+import id.nine.assistant.ui.FinBarsView
 import java.text.DateFormat
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -40,6 +42,11 @@ class FinanceActivity : AppCompatActivity() {
     private var all: List<Txn> = emptyList()
     private var items: List<Txn> = emptyList()
     private val lang get() = (application as NineApp).prefs.lang
+
+    private companion object {
+        /** Warna bergilir untuk baris kategori (titik dan batang progres). */
+        val CAT_COLORS = intArrayOf(R.color.cat_1, R.color.cat_2, R.color.cat_3, R.color.cat_4, R.color.cat_5)
+    }
 
     private inner class VH(v: View) : RecyclerView.ViewHolder(v) {
         val title: TextView = v.findViewById(R.id.txtTitle)
@@ -154,13 +161,26 @@ class FinanceActivity : AppCompatActivity() {
         showTab()
     }
 
-    /** Grafik batang dan daftar kategori untuk jenis yang dipilih (pengeluaran/pemasukan) pada periode ini. */
+    /**
+     * Grafik perbandingan pemasukan vs pengeluaran untuk periode ini, dan daftar kategori untuk jenis yang
+     * dipilih (pengeluaran/pemasukan).
+     */
     private fun renderChart() {
         val today = LocalDate.now()
         val (from, to) = FinanceMath.range(period, today)
-        val buckets = FinanceMath.buckets(all, period, type, today, lang)
-        binding.finBars.setData(buckets.map { it.label }, buckets.map { it.value })
         val s = FinanceMath.summarize(all, from, to)
+        binding.finBars.setBars(
+            listOf(
+                FinBarsView.Bar(
+                    getString(R.string.fin_income), s.income, FinanceMath.money(s.income, lang),
+                    ContextCompat.getColor(this, R.color.fin_income_bar)
+                ),
+                FinBarsView.Bar(
+                    getString(R.string.fin_expense), s.expense, FinanceMath.money(s.expense, lang),
+                    ContextCompat.getColor(this, R.color.fin_expense_bar)
+                )
+            )
+        )
         val cats = if (type == FinType.EXPENSE) s.expenseByCat else s.incomeByCat
         val pct = FinanceMath.shares(cats.map { it.second })
         binding.finCats.removeAllViews()
@@ -169,7 +189,12 @@ class FinanceActivity : AppCompatActivity() {
             row.findViewById<TextView>(R.id.catName).text = FinanceCats.name(c.first, lang)
             row.findViewById<TextView>(R.id.catAmount).text = FinanceMath.money(c.second, lang)
             row.findViewById<TextView>(R.id.catPct).text = if (pct[i] == 0) "<1%" else pct[i].toString() + "%"
-            row.findViewById<LinearProgressIndicator>(R.id.catBar).setProgressCompat(pct[i], false)
+            val color = ContextCompat.getColor(this, CAT_COLORS[i % CAT_COLORS.size])
+            row.findViewById<View>(R.id.catDot).backgroundTintList = ColorStateList.valueOf(color)
+            row.findViewById<LinearProgressIndicator>(R.id.catBar).apply {
+                setIndicatorColor(color)
+                setProgressCompat(pct[i], false)
+            }
             binding.finCats.addView(row)
         }
         binding.txtCatEmpty.visibility = if (cats.isEmpty()) View.VISIBLE else View.GONE

@@ -210,6 +210,16 @@ object FinanceMath {
         return out
     }
 
+    /**
+     * Tinggi relatif 0..1 tiap batang pada grafik perbandingan: nilai terbesar = 1, lainnya sebanding.
+     * Nilai nol atau negatif = 0; bila tidak ada nilai positif, semuanya 0.
+     */
+    fun barFractions(values: List<Long>): List<Float> {
+        val max = values.maxOrNull() ?: return emptyList()
+        if (max <= 0L) return values.map { 0f }
+        return values.map { if (it <= 0L) 0f else (it.toDouble() / max).toFloat() }
+    }
+
     /** "Rp 25.000" (ID) / "Rp 25,000" (EN). */
     fun money(v: Long, lang: AppLang): String {
         val sep = if (lang == AppLang.ID) '.' else ','

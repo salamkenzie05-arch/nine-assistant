@@ -215,6 +215,7 @@
     <string name="fin_income">Income</string>
     <string name="fin_expense">Spending</string>
     <string name="fin_diff">Net</string>
+    <string name="fin_compare">Income vs spending</string>
     <string name="fin_cats">Categories</string>
     <string name="fin_none">No data yet</string>
     <string name="fin_all_time">All time</string>

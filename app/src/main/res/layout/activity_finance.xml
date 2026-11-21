@@ -22,7 +22,7 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/back"
             android:src="@drawable/ic_back"
-            app:tint="@color/nine_gold" />
+            app:tint="@color/nine_orange" />
 
         <TextView
             android:layout_width="0dp"
@@ -38,11 +38,17 @@
         android:id="@+id/finTabs"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/nine_bg"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginEnd="16dp"
+        android:background="@drawable/bg_tabs"
         app:tabGravity="fill"
-        app:tabIndicatorColor="@color/nine_gold"
+        app:tabIndicator="@drawable/bg_tab_indicator"
+        app:tabIndicatorColor="@color/nine_lime"
+        app:tabIndicatorFullWidth="true"
+        app:tabIndicatorGravity="stretch"
         app:tabMode="fixed"
-        app:tabRippleColor="@color/nine_pill"
+        app:tabRippleColor="@android:color/transparent"
         app:tabSelectedTextColor="@color/nine_on_bg"
         app:tabTextColor="@color/nine_muted">
 
@@ -69,7 +75,7 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnPToday"
-            style="@style/Widget.Material3.Button.OutlinedButton"
+            style="@style/Nine.Toggle"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
@@ -79,7 +85,7 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnPWeek"
-            style="@style/Widget.Material3.Button.OutlinedButton"
+            style="@style/Nine.Toggle"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
@@ -89,7 +95,7 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnPMonth"
-            style="@style/Widget.Material3.Button.OutlinedButton"
+            style="@style/Nine.Toggle"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
@@ -99,7 +105,7 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnPAll"
-            style="@style/Widget.Material3.Button.OutlinedButton"
+            style="@style/Nine.Toggle"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
@@ -237,35 +243,19 @@
                     style="@style/Nine.Card"
                     android:layout_marginBottom="12dp">
 
-                    <com.google.android.material.button.MaterialButtonToggleGroup
-                        android:id="@+id/finType"
+                    <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        app:selectionRequired="true"
-                        app:singleSelection="true">
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnTExpense"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/fin_expense" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnTIncome"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/fin_income" />
-                    </com.google.android.material.button.MaterialButtonToggleGroup>
+                        android:text="@string/fin_compare"
+                        android:textColor="@color/nine_on_bg"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
 
                     <id.nine.assistant.ui.FinBarsView
                         android:id="@+id/finBars"
                         android:layout_width="match_parent"
-                        android:layout_height="168dp"
-                        android:layout_marginTop="16dp" />
+                        android:layout_height="208dp"
+                        android:layout_marginTop="12dp" />
                 </LinearLayout>
 
                 <LinearLayout style="@style/Nine.Card">
@@ -278,10 +268,36 @@
                         android:textSize="16sp"
                         android:textStyle="bold" />
 
+                    <com.google.android.material.button.MaterialButtonToggleGroup
+                        android:id="@+id/finType"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        app:selectionRequired="true"
+                        app:singleSelection="true">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnTExpense"
+                            style="@style/Nine.Toggle"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/fin_expense" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnTIncome"
+                            style="@style/Nine.Toggle"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/fin_income" />
+                    </com.google.android.material.button.MaterialButtonToggleGroup>
+
                     <LinearLayout
                         android:id="@+id/finCats"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
                         android:orientation="vertical" />
 
                     <TextView

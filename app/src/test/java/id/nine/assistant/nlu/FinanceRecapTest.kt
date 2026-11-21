@@ -36,6 +36,20 @@ class FinanceRecapTest {
     }
 
     @Test
+    fun tinggiBatangPerbandinganPemasukanDanPengeluaran() {
+        assertEquals(listOf(1f, 0.5f), FinanceMath.barFractions(listOf(6_000L, 3_000L)))
+        assertEquals(listOf(0.25f, 1f), FinanceMath.barFractions(listOf(1_000L, 4_000L)))
+        assertEquals(listOf(1f, 1f), FinanceMath.barFractions(listOf(7L, 7L)))
+        assertEquals(listOf(1f, 0f), FinanceMath.barFractions(listOf(500L, 0L)))
+        assertEquals(listOf(0f, 0f), FinanceMath.barFractions(listOf(0L, 0L)))
+        assertEquals(listOf(0f, 1f), FinanceMath.barFractions(listOf(-5L, 40L)))
+        assertEquals(emptyList<Float>(), FinanceMath.barFractions(emptyList()))
+        val f = FinanceMath.barFractions(listOf(6_018_000L, 4_275_740L))
+        assertEquals(1f, f[0], 0f)
+        assertEquals(0.7104f, f[1], 0.0001f)
+    }
+
+    @Test
     fun mingguMulaiSeninDanHanyaJenisYangDipilih() {
         val today = d(2026, 11, 21) // Sabtu
         assertEquals(d(2026, 11, 16), FinanceMath.weekStart(today))

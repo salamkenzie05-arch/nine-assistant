@@ -215,6 +215,7 @@
     <string name="fin_income">Pemasukan</string>
     <string name="fin_expense">Pengeluaran</string>
     <string name="fin_diff">Selisih</string>
+    <string name="fin_compare">Pemasukan vs pengeluaran</string>
     <string name="fin_cats">Kategori</string>
     <string name="fin_none">Belum ada data</string>
     <string name="fin_all_time">Semua waktu</string>

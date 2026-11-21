@@ -1,13 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="white">#FFFFFF</color>
-    <color name="nine_bg">#F4F6FB</color>
-    <color name="nine_on_bg">#0B1220</color>
-    <color name="nine_muted">#4B5466</color>
-    <color name="nine_pill">#E3E8F2</color>
+    <color name="nine_bg">#F7F8F0</color>
+    <color name="nine_on_bg">#13160E</color>
+    <color name="nine_muted">#596052</color>
+    <color name="nine_pill">#ECEFDF</color>
     <color name="nine_card">#FFFFFF</color>
-    <color name="nine_accent">#8C5A0A</color>
-    <color name="nine_gold">#8C5A0A</color>
+    <!-- Palet playful: teal = kontrol utama, lime = pilihan/sorotan (teks gelap di atasnya), oranye = aksen (ikon, judul, tautan). -->
+    <color name="nine_primary">#00796B</color>
+    <color name="nine_on_primary">#FFFFFF</color>
+    <color name="nine_lime">#DDF35E</color>
+    <color name="nine_on_lime">#1A2000</color>
+    <color name="nine_orange">#A84400</color>
+    <!-- Latar pastel untuk gelembung ikon, lencana, dan batang kategori. -->
+    <color name="nine_pastel_mint">#D5F5EE</color>
+    <color name="nine_pastel_orange">#FFE9D6</color>
+    <color name="nine_pastel_lilac">#ECE6FB</color>
+    <color name="nine_pastel_pink">#FFE3EA</color>
+    <color name="cat_1">#00B8A0</color>
+    <color name="cat_2">#FF8A1F</color>
+    <color name="cat_3">#8F7AE5</color>
+    <color name="cat_4">#F26B8A</color>
+    <color name="cat_5">#9BC81F</color>
     <color name="ic_launcher_background">#FFFFFF</color>
     <color name="widget_bg">#E6FFFFFF</color>
     <!-- Widget putih (tetap putih, tidak ikut tema) -->
@@ -16,15 +30,18 @@
     <color name="widget_muted_white">#4B5466</color>
     <color name="widget_text">#0B1220</color>
     <color name="widget_muted">#4B5466</color>
-    <color name="nine_bg_clear">#00F4F6FB</color>
+    <color name="nine_bg_clear">#00F7F8F0</color>
     <!-- Netral (tanpa rona ungu Material 3): dipakai untuk sheet, tombol toggle, outline. -->
-    <color name="nine_outline">#B8C0CF</color>
-    <color name="nine_outline_variant">#DCE1EA</color>
+    <color name="nine_outline">#BFC6B0</color>
+    <color name="nine_outline_variant">#E1E6D2</color>
     <!-- Overlay asisten (transparan; vinyet berwarna emas Nine, tanpa gradasi putih/hitam) -->
     <color name="nine_vignette_clear">#00C7861A</color>
     <color name="nine_vignette_edge">#33C7861A</color>
     <color name="assist_bubble">#F7FFFFFF</color>
     <color name="assist_dim">#A60B0F18</color>
-    <color name="fin_income">#1B7F4B</color>
-    <color name="fin_expense">#B3261E</color>
+    <color name="fin_income">#0B7A55</color>
+    <color name="fin_expense">#C0322B</color>
+    <!-- Warna batang grafik (lebih cerah daripada warna teks di atas). -->
+    <color name="fin_income_bar">#00AF7A</color>
+    <color name="fin_expense_bar">#E5605C</color>
 </resources>

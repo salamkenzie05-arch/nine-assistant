@@ -95,7 +95,7 @@
                         android:layout_height="wrap_content"
                         android:letterSpacing="0.15"
                         android:text="@string/nine_lv"
-                        android:textColor="@color/nine_gold"
+                        android:textColor="@color/nine_orange"
                         android:textSize="11sp"
                         android:textStyle="bold" />
 
@@ -157,7 +157,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:max="1000"
-                    app:indicatorColor="@color/nine_gold"
+                    app:indicatorColor="@color/nine_orange"
                     app:trackColor="@color/nine_pill"
                     app:trackCornerRadius="14dp"
                     app:trackThickness="28dp" />
