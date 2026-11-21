@@ -28,7 +28,7 @@ android {
         minSdk = 26
         targetSdk = 35
         versionCode = ciVersionCode
-        versionName = "3.3.$ciVersionCode-beta"
+        versionName = "1.0.$ciVersionCode-beta"
 
         ndk {
             // Galaxy S23 dan hampir semua HP modern: 64-bit ARM. Memperkecil APK.

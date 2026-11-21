@@ -1,6 +1,6 @@
 # Nine: asisten pribadi offline untuk Android
 
-> **Versi BETA (3.1).** Nine masih dalam pengujian. Bagian yang memakai layanan aksesibilitas (Wi-Fi/Bluetooth otomatis, putar lagu otomatis di YouTube Music) belum teruji di semua HP; bila gagal, Nine menampilkan kode galat singkat "(beta, kode: …)" supaya mudah dilaporkan.
+> **Nine 1.0 beta.** Nine masih dalam pengujian. Bagian yang memakai layanan aksesibilitas (Wi-Fi/Bluetooth otomatis, putar lagu otomatis di YouTube Music) belum teruji di semua HP; bila gagal, Nine menampilkan kode galat singkat "(beta, kode: …)" supaya mudah dilaporkan.
 
 Nine adalah asisten suara seperti Siri yang berjalan **sepenuhnya di perangkat**. Kepribadiannya tenang, sangat sopan, dan sedikit jenaka, seperti kepala pelayan yang juga insinyur jenius. Nine mengerti dan menjawab dalam **Bahasa Indonesia** dan **English**, dan bersuara seperti droid kecil (bip, kicau, dan siulan elektronik).
 

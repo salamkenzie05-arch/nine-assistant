@@ -136,7 +136,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
-          name: Nine 3.3 beta 1 (build ${{ github.run_number }})
+          name: Nine 1.0 beta (build ${{ github.run_number }})
           body: |
             Tanda tangan APK: ${{ steps.sig.outputs.label }}.
 
