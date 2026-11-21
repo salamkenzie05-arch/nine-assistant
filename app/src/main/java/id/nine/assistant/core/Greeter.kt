@@ -44,7 +44,7 @@ object Greeter {
         else -> Band.MALAM
     }
 
-    /** 0 = formal (level 1-2), 1 = ramah (3-5), 2 = akrab (6-9). */
+    /** 0 = formal (level 1-2), 1 = ramah (3-5), 2 = akrab (6-8). */
     fun tier(level: Int): Int = when {
         level <= 2 -> 0
         level <= 5 -> 1

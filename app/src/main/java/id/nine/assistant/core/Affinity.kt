@@ -5,7 +5,7 @@ import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
 /**
- * Tingkat kedekatan dengan Nine (seperti streak): 9 level berdasarkan XP, plus streak harian.
+ * Tingkat kedekatan dengan Nine (seperti streak): 8 level berdasarkan XP, plus streak harian.
  *
  * - +10 XP untuk interaksi pertama setiap hari, +2 XP per interaksi berikutnya (maks. 20 XP per hari dari ini)
  * - Bonus streak: +1 XP per hari streak (maks. +15) pada interaksi pertama hari itu
@@ -46,15 +46,15 @@ class Affinity(context: Context) {
 
     companion object {
         val LEVELS = listOf(
-            Level(1, 0, "Perkenalan", "Introductions", "lv1"),
-            Level(2, 60, "Rekan", "Associate", "lv2"),
-            Level(3, 160, "Akrab", "Familiar", "lv3"),
-            Level(4, 320, "Teman", "Friend", "lv4"),
-            Level(5, 540, "Teman Dekat", "Close Friend", "lv5"),
-            Level(6, 820, "Orang Kepercayaan", "Trusted", "lv6"),
-            Level(7, 1180, "Sahabat", "Confidant", "lv7"),
-            Level(8, 1650, "Tangan Kanan", "Right Hand", "lv8"),
-            Level(9, 2300, "Nine", "Nine", "lv9")
+            // Nama level sengaja memakai istilah Inggris yang sama di kedua bahasa (seperti pangkat dalam game).
+            Level(1, 0, "Stranger", "Stranger", "lv1"),
+            Level(2, 60, "Aware", "Aware", "lv2"),
+            Level(3, 170, "Acquainted", "Acquainted", "lv3"),
+            Level(4, 340, "Interested", "Interested", "lv4"),
+            Level(5, 600, "Familiar", "Familiar", "lv5"),
+            Level(6, 950, "Connected", "Connected", "lv6"),
+            Level(7, 1450, "Loyal", "Loyal", "lv7"),
+            Level(8, 2300, "Devoted", "Devoted", "lv8")
         )
 
         fun levelFor(xp: Int): Level = LEVELS.last { xp >= it.minXp }

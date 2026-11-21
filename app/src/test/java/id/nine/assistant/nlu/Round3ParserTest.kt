@@ -187,6 +187,10 @@ class Round3ParserTest {
         assertEquals(Command.AffinityStatus, p("status affinity"))
         assertEquals(Command.AffinityStatus, p("berapa level kedekatan kita"))
         assertEquals(Command.AffinityStatus, p("progress affinity nine"))
+        assertEquals(Command.AffinityStatus, p("level kita apa sekarang"))
+        assertEquals(Command.AffinityStatus, p("apa saja level kedekatan"))
+        assertEquals(Command.AffinityStatus, p("daftar level"))
+        assertEquals(Command.AffinityStatus, p("what level are we"))
     }
 
     @Test

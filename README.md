@@ -13,11 +13,19 @@ Nine adalah asisten suara seperti Siri yang berjalan **sepenuhnya di perangkat**
 - **Otak AI: Gemma 4 E2B** (Google, Apache-2.0) lewat LiteRT-LM, berjalan di CPU secara default (GPU bisa dipilih di Pengaturan; otomatis kembali ke CPU bila GPU gagal). Untuk obrolan dan pertanyaan bebas, jawabannya mulai diucapkan per kalimat sebelum seluruh jawaban selesai dibuat.
 - **Wajah Nine**: dua mata ekspresif ala robot meja yang berkedip, melirik, mengikuti jari, senang saat dielus, kesal bila diketuk berkali-kali, kaget lalu senang saat dicas, lesu saat baterai lemah, mengantuk saat lama diam, dan bereaksi pada percakapan (mendengar, berpikir, berbicara, senang, bingung, sedih). Bilah atas hanya "NINE"; ketuk untuk menu (alarm, tugas, pengaturan, bahasa, tema).
 
+### Baru di 3.3 (beta), putaran 3
+
+- **Mentor bahasa Inggris (offline, tanpa AI)**: bilang "jadi mentor bahasa Inggris saya" atau "latihan bahasa Inggris" untuk memulai sesi. Nine memberi pertanyaan pancingan, lalu setiap kalimat Inggrismu dikoreksi (maksimal 3 perbaikan sekaligus, dengan alasan singkat dalam dua bahasa) dan diberi saran kata yang lebih bagus ("very good" → "excellent"), lalu dilanjutkan dengan pertanyaan berikutnya. Selama sesi: "topik lain" untuk ganti topik, "progres" untuk hitungan latihan, "berhenti" untuk keluar; mikrofon mendengarkan bahasa Inggris. Di luar sesi juga bisa: "koreksi kalimat saya: i goes to school", "apakah ini benar: she don't like it", "kata lain dari good".
+  - Semuanya **aturan tata bahasa buatan sendiri** (`coach/`: kala lampau tak beraturan, be/do/have, kesesuaian subjek-kata kerja, artikel a/an, jamak, perbandingan, preposisi umum, urutan kata tanya, dll.). Tidak memanggil model AI sama sekali, jadi jalan walau model belum diunduh dan tidak menguras baterai.
+  - **Batas yang jujur:** aturan hanya mencakup kesalahan pemula-menengah yang umum dan sengaja berhati-hati supaya tidak "mengoreksi" kalimat yang sebenarnya benar, jadi banyak kesalahan lain akan lolos. Ini bukan pengganti guru. Pengenal suara Android kadang sudah membetulkan tata bahasamu sebelum teksnya sampai ke Nine (ketikan tidak). Suara droid tidak bisa mengucapkan kata Inggris; umpan balik dibaca di layar.
+- **Kedekatan kini 8 level**: Stranger, Aware, Acquainted, Interested, Familiar, Connected, Loyal, Devoted. Tanyakan langsung ke Nine: "level kita apa?", "status affinity", atau "daftar level". Level tertinggi tetap butuh 90 hari pemakaian.
+- **Menu di kanan orb**: entri "Nine" dihapus (tersisa Laporan keuangan, Tugas hari ini, Ruang obrolan). Kode layar Nine masih ada di repo tetapi tidak bisa dibuka dari aplikasi.
+
 ### Baru di 3.3 (beta), putaran 2
 
-- **Tombol menu di kanan orb** (menggantikan pintasan tugas): Laporan keuangan, Tugas hari ini, Ruang obrolan, dan Nine.
+- **Tombol menu di kanan orb** (menggantikan pintasan tugas): Laporan keuangan, Tugas hari ini, dan Ruang obrolan (entri "Nine" dihapus di putaran 3).
 - **Ruang obrolan** (seperti "projects"): tiap ruang punya nama, instruksi opsional untuk Nine, dan riwayat obrolannya sendiri; membukanya tidak bercampur dengan obrolan utama. Disimpan di penyimpanan pribadi aplikasi (**tidak dienkripsi**, tidak ikut cadangan); maksimal 20 ruang, 120 pesan per ruang. Nama dan instruksi ruang ikut dikirim ke AI selama kamu mengobrol di ruang itu (ke Gemini bila mode internet dipakai). Setiap kali aplikasi dimulai ulang, yang terbuka adalah obrolan utama.
-- **Layar Nine** (gaya halaman streak): hari beruntun, level, Nine dengan gelembung ucapan, bar XP, dan daftar cara menumbuhkan kedekatan. Tangan dan kaki Nine berupa **empat bola melayang** (dua tangan, dua kaki) bertekstur sama dengan orb (gradien, tepi, bayangan, cahaya emas tipis). Geraknya berbasis pegas (`LimbMotion`): berayun pelan dengan periode berbeda-beda, kadang melambai, merentang, bersorak, mengetuk, menggeser, atau menendang, ikut suasana hati Nine, dan melompat saat Nine diketuk.
+- **Layar Nine** (gaya halaman streak; sejak putaran 3 tidak lagi dibuka dari menu): hari beruntun, level, Nine dengan gelembung ucapan, bar XP, dan daftar cara menumbuhkan kedekatan. Tangan dan kaki Nine berupa **empat bola melayang** (dua tangan, dua kaki) bertekstur sama dengan orb (gradien, tepi, bayangan, cahaya emas tipis). Geraknya berbasis pegas (`LimbMotion`): berayun pelan dengan periode berbeda-beda, kadang melambai, merentang, bersorak, mengetuk, menggeser, atau menendang, ikut suasana hati Nine, dan melompat saat Nine diketuk.
 - **Layar Keuangan** (gaya rekap bank): tab Rekap dan Riwayat, pilihan periode (hari ini, minggu, bulan, semua), ringkasan pemasukan, pengeluaran, dan selisih, grafik batang per jenis, dan kategori dengan persen (dibulatkan agar total tepat 100%).
 - **Kejutan harian (side quest)**: paling banyak satu per hari, muncul sebagai ajakan santai dari Nine (misalnya menawarkan bernyanyi), bukan sebagai tugas. Memakai fitur itu, lewat ajakan atau sendiri, menambah kedekatan sedikit; menolak tidak apa-apa. Berhenti muncul setelah semua fitur ditemukan.
 - **Tanya info HP**: sisa penyimpanan, RAM, tipe HP, versi Android, status Wi-Fi/Bluetooth/jaringan, kesehatan/suhu baterai, uptime, volume, layar, prosesor. Tidak membaca nomor IMEI, serial, MAC, atau nama jaringan. Status Wi-Fi/Bluetooth bergantung pada pengaturan sistem; bila tidak bisa dipastikan, Nine bilang begitu.
@@ -34,7 +42,7 @@ Nine adalah asisten suara seperti Siri yang berjalan **sepenuhnya di perangkat**
 - **Google Maps otomatis**: tujuan, moda (mobil/motor/jalan/sepeda/transit), "hindari tol", dan titik awal; rute langsung dimulai.
 - **Tutup semua aplikasi**: mematikan proses latar aplikasi lain yang diizinkan Android, dan di **Nine-Full.apk** juga mengosongkan layar Recents; "termasuk Nine" menutup Nine juga. Android tidak membolehkan aplikasi biasa menutup aplikasi yang sedang di layar.
 - **Profil pengguna** saat pertama dibuka (nama, panggilan, tanggal lahir, pasangan opsional), bisa diubah di Pengaturan → Profil. Ulang tahun diucapkan sekali di harinya. Nama pasangan dan tanggal lahir **tidak** dikirim ke mode internet.
-- **Sapaan beragam** menurut waktu, suasana hati, dan level kedekatan Nine; "status affinity" menampilkan level, persen progres, dan hari pemakaian.
+- **Sapaan beragam** menurut waktu, suasana hati, dan level kedekatan Nine; "status affinity" menampilkan level (dari 8), persen progres, dan hari pemakaian.
 - **Gombal, pantun, kata bijak**, serta lagu bar droid (melodi karangan sendiri bergaya bar luar angkasa; **bukan** melodi Cantina Band yang berhak cipta).
 - **Kirim gambar**: tombol **+** di kolom ketik. Gambar dikecilkan, metadata (termasuk lokasi) dibuang, dibaca model AI offline, lalu dihapus. Hanya jalan bila model terpasang mampu membaca gambar; bila tidak, Nine mengatakannya.
 - **Kalimat berantakan** (urutan kata acak, kata pengisi, salah ketik kecil) dicoba dipahami lewat parser cadangan.
@@ -99,6 +107,15 @@ Setiap push ke `main` otomatis mem-build kedua APK (GitHub Actions) dan menerbit
 - Pemutar suara droid menunggu dengan jeda yang menyesuaikan sisa durasi (bukan polling 10 ms).
 - Widget tidak lagi dibangun ulang setiap aplikasi dibuka (hanya bila ekspresinya berubah atau tema diganti).
 
+## Bagikan ke teman
+
+Bisa. Repo ini publik, jadi tautan yang sama berlaku untuk siapa pun: `https://github.com/<akun>/<repo>/releases/latest/download/Nine.apk`. Beri tahu temanmu:
+
+- Pakai **Nine.apk** (bukan Nine-Full) kecuali ia memang butuh fitur aksesibilitas; Full bisa diperingatkan Play Protect.
+- Butuh Android 8.0 atau lebih baru, ±80 MB, dan izin "Pasang aplikasi tak dikenal" untuk browser/My Files.
+- Perintah dasar jalan tanpa model AI. Model Gemma (±2,5 GB) opsional dan diunduh terpisah di aplikasi (kadang butuh token Hugging Face, lihat di atas).
+- Kunci tanda tangan sideload ada di repo publik (lihat Catatan jujur), jadi APK ini tidak cocok dibagikan sebagai "resmi" ke orang yang tidak kamu kenal. Repo ini juga belum punya berkas lisensi.
+
 ## Supaya benar-benar offline
 
 | Komponen | Sumber | Persiapan sekali |
@@ -134,6 +151,7 @@ Internet hanya dipakai untuk mengunduh model. Percakapan, suara, dan catatan tid
 | Folder | Isi |
 |---|---|
 | `nlu/` | Parser perintah ID+EN (Kotlin murni, diuji di `src/test`) |
+| `coach/` | Mentor bahasa Inggris offline (Kotlin murni, diuji di `src/test`): `GrammarCheck` (aturan koreksi), `WordChoice` (kata yang lebih bagus), `CoachIntent` (deteksi perintah), `CoachSession` (alur latihan), `CoachFeedback` (susunan balasan) |
 | `llm/` | `ModelManager` (unduh/impor), `LlmBrain` (Gemma via LiteRT-LM), `TextClean`, `LangGuard` (deteksi bahasa campur) |
 | `core/` | `AssistantController` (alur dengar → pahami → jalankan/tanya Gemma → ucapkan), `Persona`, `Prefs`, `MemoryStore` + `FactExtractor` (ingatan jangka panjang) |
 | `skills/` | Eksekusi perintah perangkat, kontak, catatan |

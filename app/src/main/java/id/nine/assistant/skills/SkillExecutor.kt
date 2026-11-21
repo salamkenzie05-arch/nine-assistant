@@ -23,6 +23,7 @@ import android.os.SystemClock
 import android.view.KeyEvent
 import android.telephony.SmsManager
 import androidx.core.content.ContextCompat
+import id.nine.assistant.coach.CoachFeedback
 import id.nine.assistant.core.AppLang
 import id.nine.assistant.core.Fmt
 import id.nine.assistant.NineApp
@@ -294,6 +295,10 @@ class SkillExecutor(
         is Command.Camera -> camera(cmd, lang)
         is Command.RecordAudio -> recordAudio(cmd, lang, denied)
         Command.AffinityStatus -> affinityStatus(lang)
+        is Command.CorrectEnglish -> SkillResult(CoachFeedback.correctionReply(cmd.sentence, lang))
+        is Command.BetterWord -> SkillResult(CoachFeedback.betterWordReply(cmd.word, lang))
+        // Sesi latihan dikendalikan AssistantController (butuh status percakapan); di sini hanya jaring pengaman.
+        is Command.EnglishCoach -> SkillResult(lang.t("Latihan bahasa Inggris dijalankan dari obrolan utama.", "English practice runs from the main chat."))
         Command.WhereAmI -> whereAmI(lang, denied)
         is Command.MediaControl -> mediaControl(cmd, lang)
         is Command.CallControl -> callControl(cmd, lang, denied)
@@ -1185,10 +1190,13 @@ class SkillExecutor(
             " Menuju level tertinggi: hari ke-${st.days} dari ${AffinityRules.FULL_DAYS} ($total%), tidak bisa dipercepat dengan XP.",
             " Toward the top level: day ${st.days} of ${AffinityRules.FULL_DAYS} ($total%); XP can't speed that up."
         )
+        // Tangga level dengan level sekarang diberi tanda kurung siku, mis. "Stranger › [Aware] › Acquainted › ...".
+        val ladder = Affinity.LEVELS.joinToString(" › ") { if (it.number == st.level.number) "[${it.name(lang)}]" else it.name(lang) }
+        val count = Affinity.LEVELS.size
         return SkillResult(
             lang.t(
-                "Kedekatan kita level ${st.level.number} dari 9: ${st.level.name(lang)}${s(lang)}. $streak$next$days",
-                "We're at level ${st.level.number} of 9: ${st.level.name(lang)}${s(lang)}. $streak$next$days"
+                "Kedekatan kita level ${st.level.number} dari $count: ${st.level.name(lang)}${s(lang)}. $streak$next$days\n\nTangga level: $ladder",
+                "We're at level ${st.level.number} of $count: ${st.level.name(lang)}${s(lang)}. $streak$next$days\n\nLevel ladder: $ladder"
             )
         )
     }
@@ -2183,6 +2191,7 @@ class SkillExecutor(
             "• \"Tutup semua aplikasi\" / \"Tutup semua termasuk Nine\"\n" +
             "• \"Gombalin dong\" / \"Pantun\" / \"Kata bijak\" / \"Nyanyi lagu bar droid\"\n" +
             "• \"Panggil saya Tuan\" / \"Status affinity\" / tombol + di kolom ketik untuk kirim gambar\n" +
+            "• \"Jadi mentor bahasa Inggris saya\" (koreksi grammar & saran kata, offline) / \"Koreksi kalimat saya: i goes to school\" / \"Kata lain dari good\"\n" +
             "• \"Ganti bahasa ke Inggris\" / \"Lupakan percakapan\"",
         "Here are some things I can do:\n" +
             "• Chat or ask me anything (needs the AI brain in Settings)\n" +
@@ -2208,6 +2217,7 @@ class SkillExecutor(
             "• \"Close all apps\" / \"Close everything including Nine\"\n" +
             "• \"Flirt with me\" / \"Pantun\" / \"A wise quote\" / \"Sing the bar droid song\"\n" +
             "• \"Call me Sir\" / \"Affinity status\" / the + button in the typing bar sends an image\n" +
+            "• \"Be my English mentor\" (grammar fixes & better words, offline) / \"Correct my sentence: i goes to school\" / \"Another word for good\"\n" +
             "• \"Switch language to Indonesian\" / \"Forget our conversation\""
     )
 }

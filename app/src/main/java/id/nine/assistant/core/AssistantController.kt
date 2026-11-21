@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
 import id.nine.assistant.NineApp
+import id.nine.assistant.coach.CoachSession
 import id.nine.assistant.llm.LangGuard
 import id.nine.assistant.llm.LlmBrain
 import id.nine.assistant.llm.OnlineBrain
@@ -95,6 +96,7 @@ class AssistantController(context: Context, private val ui: Ui) {
             recognizing = false
             ui.onPartial("")
             ui.onLevel(0f)
+            viaVoice = true
             handleUtterance(pickBest(alternatives))
         }
 
@@ -121,6 +123,11 @@ class AssistantController(context: Context, private val ui: Ui) {
 
     private var recognizing = false
     private var pending: Pending? = null
+    /** Sesi mentor bahasa Inggris (offline); selama ada, ucapan diperiksa grammar-nya, bukan dijalankan sebagai perintah. */
+    private var coach: CoachSession? = null
+    private var coachAt = 0L
+    /** Ucapan terakhir datang dari mikrofon (bukan ketikan): hanya begitu Nine mendengarkan lagi sendiri. */
+    private var viaVoice = false
     /** Konfirmasi yang sedang menunggu adalah ajakan kejutan harian (penolakan dijawab ringan, bukan "dibatalkan"). */
     private var questOffer = false
     private var retry: Retry? = null
@@ -152,7 +159,8 @@ class AssistantController(context: Context, private val ui: Ui) {
         }
         recognizing = true
         setState(State.THINKING) // menunggu "siap bicara"
-        input.start(lang)
+        // Latihan bahasa Inggris: mikrofon mendengarkan dalam bahasa Inggris walau bahasa aplikasi Indonesia.
+        input.start(if (coach != null) AppLang.EN else lang)
     }
 
     /** Berhenti merekam dan proses yang sudah terdengar. */
@@ -281,6 +289,7 @@ class AssistantController(context: Context, private val ui: Ui) {
         recognizing = false
         input.cancel()
         stopOutput()
+        viaVoice = false
         handleUtterance(t)
     }
 
@@ -397,7 +406,7 @@ class AssistantController(context: Context, private val ui: Ui) {
     // ------------------------------------------------------------------ memahami & menjalankan
 
     private fun pickBest(alternatives: List<String>): String {
-        if (pending != null || alternatives.size == 1) return alternatives.first()
+        if (pending != null || coach != null || alternatives.size == 1) return alternatives.first()
         return alternatives.firstOrNull { parser.parse(it) !is Command.Unknown } ?: alternatives.first()
     }
 
@@ -409,6 +418,10 @@ class AssistantController(context: Context, private val ui: Ui) {
             ui.onAffinity(nine.affinity.record())
         } catch (e: Exception) {
             // affinity tidak boleh mengganggu perintah
+        }
+
+        coach?.let { session ->
+            if (pending == null && coachTurn(session, text)) return
         }
 
         val p = pending
@@ -466,6 +479,51 @@ class AssistantController(context: Context, private val ui: Ui) {
         execute(cmd, confirmed = false)
     }
 
+    /**
+     * Satu giliran latihan bahasa Inggris. Kembalikan false bila ucapan harus diproses seperti biasa
+     * (sesi sudah lama menganggur, atau pengguna minta ganti bahasa aplikasi).
+     */
+    private fun coachTurn(session: CoachSession, text: String): Boolean {
+        val now = System.currentTimeMillis()
+        if (now - coachAt > COACH_IDLE_MS) {
+            coach = null // lama tidak dipakai: kembali ke mode biasa
+            return false
+        }
+        if (text.trim().split(Regex("\\s+")).size <= 6 && parser.parse(text) is Command.SwitchLanguage) {
+            coach = null
+            return false
+        }
+        coachAt = now
+        val turn = session.handle(text, lang)
+        if (turn.ended) coach = null
+        ui.onMood(turn.mood)
+        reply(turn.reply, listenAfter = !turn.ended && viaVoice)
+        return true
+    }
+
+    /** "Jadi mentor bahasa Inggris saya" / "stop latihan". */
+    private fun coachCommand(on: Boolean) {
+        val l = lang
+        if (on) {
+            val session = CoachSession()
+            coach = session
+            coachAt = System.currentTimeMillis()
+            pending = null
+            questOffer = false
+            ui.onMood(Mood.HAPPY)
+            reply(session.start(l), listenAfter = viaVoice)
+            return
+        }
+        val session = coach
+        coach = null
+        if (session == null) {
+            reply(l.t("Latihan bahasa Inggris sedang tidak berjalan.", "English practice isn't running."), listenAfter = false)
+        } else {
+            ui.onMood(Mood.HAPPY)
+            reply(session.stop(l), listenAfter = false)
+        }
+    }
+
     /** Simpan otomatis kalimat berisi fakta tentang pengguna ke ingatan jangka panjang. */
     private fun autoRemember(text: String) {
         if (!prefs.autoMemory) return
@@ -484,7 +542,7 @@ class AssistantController(context: Context, private val ui: Ui) {
         is Command.SetAlarm, is Command.SetTimer, is Command.Flashlight, is Command.Volume,
         Command.CurrentTime, Command.CurrentDate, Command.Battery, Command.StopSpeaking, Command.Greeting,
         Command.Thanks, Command.WhoAreYou, Command.HowAreYou, Command.Help, is Command.SwitchLanguage, is Command.PhoneInfo, Command.DeviceInfo,
-        is Command.NeedInfo, Command.AffinityStatus -> true
+        is Command.NeedInfo, Command.AffinityStatus, is Command.EnglishCoach, is Command.CorrectEnglish, is Command.BetterWord -> true
         is Command.Camera -> true // kamera aman tersedia di layar kunci
         is Command.AlarmToggle -> true // mematikan alarm yang berbunyi harus bisa dari layar kunci
         is Command.MediaControl, is Command.CallControl, is Command.Emote, is Command.Sing -> true
@@ -512,6 +570,10 @@ class AssistantController(context: Context, private val ui: Ui) {
         if (ui.isLocked() && !safeWhileLocked(cmd) && cmd !is Command.Unknown) {
             reply(lang.t("Buka kunci HP dulu${prefs.persona.sfx(lang)}.", "Please unlock your phone first${prefs.persona.sfx(lang)}."), listenAfter = false)
             ui.onRequestUnlock { execute(cmd, confirmed, fromAi) }
+            return
+        }
+        if (cmd is Command.EnglishCoach) {
+            coachCommand(cmd.on)
             return
         }
         if (fromAi && !confirmed) {
@@ -727,8 +789,8 @@ class AssistantController(context: Context, private val ui: Ui) {
         try {
             val st = nine.affinity.state()
             parts += l.t(
-                "Tingkat kedekatan dengan pengguna: level ${st.level.number}/9 (${st.level.name(l)}), streak ${st.streak} hari. Makin tinggi levelnya, makin hangat dan akrab nadamu, tetap sopan.",
-                "Closeness with the user: level ${st.level.number}/9 (${st.level.name(l)}), ${st.streak}-day streak. The higher the level, the warmer and more familiar your tone, while staying polite."
+                "Tingkat kedekatan dengan pengguna: level ${st.level.number}/${Affinity.LEVELS.size} (${st.level.name(l)}), streak ${st.streak} hari. Makin tinggi levelnya, makin hangat dan akrab nadamu, tetap sopan.",
+                "Closeness with the user: level ${st.level.number}/${Affinity.LEVELS.size} (${st.level.name(l)}), ${st.streak}-day streak. The higher the level, the warmer and more familiar your tone, while staying polite."
             )
         } catch (e: Exception) {
             // abaikan
@@ -1076,5 +1138,10 @@ class AssistantController(context: Context, private val ui: Ui) {
         if (state == s) return
         state = s
         ui.onState(s)
+    }
+
+    private companion object {
+        /** Sesi latihan yang didiamkan selama ini dianggap selesai (agar perintah biasa tidak terjebak). */
+        const val COACH_IDLE_MS = 20 * 60_000L
     }
 }

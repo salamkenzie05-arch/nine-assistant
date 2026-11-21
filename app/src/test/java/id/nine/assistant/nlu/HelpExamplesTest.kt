@@ -42,4 +42,12 @@ class HelpExamplesTest {
         expect("AffinityStatus", "Status affinity", "Affinity status")
         done()
     }
+
+    @Test
+    fun mentorBahasaInggris() {
+        expect("EnglishCoach", "Jadi mentor bahasa Inggris saya", "Be my English mentor")
+        expect("CorrectEnglish", "Koreksi kalimat saya: i goes to school", "Correct my sentence: i goes to school")
+        expect("BetterWord", "Kata lain dari good", "Another word for good")
+        done()
+    }
 }

@@ -227,6 +227,16 @@ sealed class Command {
     data object AffinityStatus : Command()
     data object WhereAmI : Command()
 
+    // --- Mentor bahasa Inggris (aturan lokal, tanpa AI)
+    /** Mulai ([on] = true) atau akhiri sesi latihan bahasa Inggris. */
+    data class EnglishCoach(val on: Boolean) : Command()
+
+    /** "correct my sentence: ..." — periksa satu kalimat tanpa memulai sesi. */
+    data class CorrectEnglish(val sentence: String) : Command()
+
+    /** "another word for good": pilihan kata yang lebih bagus. */
+    data class BetterWord(val word: String) : Command()
+
     /** Perintah belum lengkap; tanyakan informasi yang kurang. */
     data class NeedInfo(val pending: Pending) : Command()
 

@@ -26,9 +26,4 @@
         android:drawableStart="@drawable/ic_chat"
         android:text="@string/hub_spaces" />
 
-    <TextView
-        android:id="@+id/hubNine"
-        style="@style/Nine.MenuRow"
-        android:drawableStart="@drawable/ic_nine"
-        android:text="@string/hub_nine" />
 </LinearLayout>

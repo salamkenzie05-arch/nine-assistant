@@ -1,5 +1,7 @@
 package id.nine.assistant.nlu
 
+import id.nine.assistant.coach.CoachIntent
+import id.nine.assistant.coach.CoachIntents
 import id.nine.assistant.core.AppLang
 import java.time.LocalDateTime
 
@@ -67,7 +69,7 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
     private fun answersQuestion(c: Command): Boolean = when (c) {
         Command.CurrentTime, Command.CurrentDate, Command.Battery, Command.DeviceInfo, is Command.PhoneInfo, Command.Help,
         Command.WhoAreYou, Command.HowAreYou, Command.TodoList, Command.ReadNotes, Command.ReadMemory, Command.ShowAlarms,
-        Command.AffinityStatus, Command.WhereAmI -> true
+        Command.AffinityStatus, Command.WhereAmI, is Command.CorrectEnglish, is Command.BetterWord, is Command.EnglishCoach -> true
         is Command.ShowAgenda, is Command.Calculate, is Command.FinanceReport, is Command.FinanceList,
         is Command.Entertain -> true
         else -> false
@@ -78,6 +80,7 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
 
     private fun parseCommand(raw: String, norm: String, now: LocalDateTime): Command {
         return parseLanguage(raw)
+            ?: parseCoach(raw)
             ?: parseReset(raw)
             ?: parseControl(raw)
             ?: parseCalc(raw)
@@ -923,10 +926,21 @@ class CommandParser(private val clock: () -> LocalDateTime = { LocalDateTime.now
         """\b(?:streak|affinity|afinitas|tingkat\s+kedekatan|level\s+kedekatan|""" +
             """(?:status|progres|progress|kemajuan|poin|skor|score|xp|level)\s+(?:kedekatan|affinity|kita|hubungan(?:\s+kita)?)|""" +
             """kedekatan\s+(?:kita|ku|saya|aku)|seberapa\s+dekat\s+(?:kita|aku|saya)|how\s+close\s+are\s+we|""" +
-            """(?:our|my)\s+(?:level|affinity|streak|xp)|level\s+(?:kita|aku|saya|ku)|level\s+berapa|sudah\s+level\s+berapa)\b"""
+            """(?:our|my)\s+(?:level|affinity|streak|xp)|level\s+(?:kita|aku|saya|ku)|level\s+berapa|sudah\s+level\s+berapa|""" +
+            """level\s+apa|(?:daftar|list|tangga|semua|apa\s+saja)\s+level|what\s+level\s+(?:are\s+we|am\s+i)|affinity\s+levels?)\b"""
     )
 
     private fun parseAffinity(raw: String): Command? = if (reAffinity.containsMatchIn(raw)) Command.AffinityStatus else null
+
+    // ------------------------------------------------------------------ mentor bahasa Inggris
+
+    private fun parseCoach(raw: String): Command? = when (val i = CoachIntents.detect(raw)) {
+        is CoachIntent.Start -> Command.EnglishCoach(true)
+        is CoachIntent.Stop -> Command.EnglishCoach(false)
+        is CoachIntent.Correct -> Command.CorrectEnglish(i.sentence)
+        is CoachIntent.BetterWord -> Command.BetterWord(i.word)
+        else -> null
+    }
 
     private val reWhere = rx("""^(?:(?:aku|saya|gue)\s+(?:lagi\s+|sedang\s+)?(?:di\s+mana|dimana)|(?:di\s+mana|dimana)\s+(?:aku|saya|gue|posisi\s+(?:aku|saya))(?:\s+sekarang)?|lokasi\s+(?:aku|saya|ku)(?:\s+sekarang)?|posisi\s+(?:aku|saya)(?:\s+sekarang)?|where\s+am\s+i(?:\s+(?:now|right\s+now))?|what(?:'s|\s+is)\s+my\s+(?:location|current\s+location|address))$""")
 

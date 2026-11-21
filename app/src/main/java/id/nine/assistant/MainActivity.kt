@@ -545,7 +545,7 @@ open class MainActivity : AppCompatActivity(), AssistantController.Ui {
         }
     }
 
-    /** Menu tombol di samping orb: laporan keuangan, tugas hari ini, ruang obrolan, dan layar Nine. */
+    /** Menu tombol di samping orb: laporan keuangan, tugas hari ini, dan ruang obrolan. */
     private fun showHub() {
         val sheet = BottomSheetDialog(this)
         val v = layoutInflater.inflate(R.layout.sheet_hub, null)
@@ -556,7 +556,6 @@ open class MainActivity : AppCompatActivity(), AssistantController.Ui {
         go(R.id.hubFinance, FinanceActivity::class.java)
         go(R.id.hubTodo, TodoActivity::class.java)
         go(R.id.hubSpaces, SpacesActivity::class.java)
-        go(R.id.hubNine, NineActivity::class.java)
         sheet.setContentView(v)
         sheet.show()
     }
