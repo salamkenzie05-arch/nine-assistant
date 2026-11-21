@@ -110,7 +110,7 @@ class VoiceTest {
         val voices = listOf(v("Indonesian female"), v("Indonesian male"))
         assertEquals("Indonesian female", VoicePicker.pick(voices, "id", VoiceGender.FEMALE).name)
         assertEquals("Indonesian male", VoicePicker.pick(voices, "id", VoiceGender.MALE).name)
-        assertEquals(1.0f, VoicePicker.pick(voices, "id", VoiceGender.MALE).pitch, 0f)
+        assertEquals(VoicePicker.pitchFor(VoiceGender.MALE, true), VoicePicker.pick(voices, "id", VoiceGender.MALE).pitch, 0f)
         assertTrue(VoicePicker.pick(voices, "id", VoiceGender.MALE).byName)
         // "female" memuat kata "male": jangan salah baca sebagai pria
         assertEquals("x female voice", VoicePicker.pick(listOf(v("x female voice")), "id", VoiceGender.FEMALE).name)
@@ -125,15 +125,17 @@ class VoiceTest {
     }
 
     @Test
-    fun unknownNamesGetDifferentVoicesAndShiftedPitch() {
-        val voices = listOf(v("voice-a"), v("voice-b"))
+    fun unknownNamesUseTheSameBestVoiceWithClearlyDifferentPitch() {
+        val voices = listOf(v("voice-a", quality = 500), v("voice-b", quality = 200))
         val f = VoicePicker.pick(voices, "id", VoiceGender.FEMALE)
         val m = VoicePicker.pick(voices, "id", VoiceGender.MALE)
+        // satu suara terbaik untuk keduanya: tidak pernah suara kedua yang mutunya lebih rendah
         assertEquals("voice-a", f.name)
-        assertEquals("voice-b", m.name)
-        assertTrue(f.pitch > 1.0f)
-        assertTrue(m.pitch < 1.0f)
+        assertEquals("voice-a", m.name)
+        assertTrue(f.pitch >= 1.05f)
+        assertTrue(m.pitch <= 0.8f)
         assertFalse(f.byName)
+        assertFalse(m.byName)
         // satu suara saja: dipakai keduanya, hanya nada yang beda
         val one = listOf(v("solo"))
         assertEquals("solo", VoicePicker.pick(one, "id", VoiceGender.MALE).name)
@@ -179,5 +181,17 @@ class VoiceTest {
         assertEquals(VoiceGender.FEMALE, NineVoice.FEMALE.gender)
         assertEquals(VoiceGender.MALE, NineVoice.MALE.gender)
         assertEquals(3, NineVoice.values().size)
+    }
+
+    @Test
+    fun geminiQuotaFailuresFallToDroidButOtherFailuresDoNot() {
+        fun f(k: id.nine.assistant.llm.FailKind) = id.nine.assistant.llm.Failure(k, null, "x")
+        assertTrue(VoiceFallback.toDroid(f(id.nine.assistant.llm.FailKind.RATE_LIMIT)))
+        assertTrue(VoiceFallback.toDroid(f(id.nine.assistant.llm.FailKind.QUOTA_DAILY)))
+        for (k in listOf(
+            id.nine.assistant.llm.FailKind.AUTH, id.nine.assistant.llm.FailKind.NETWORK, id.nine.assistant.llm.FailKind.SERVER,
+            id.nine.assistant.llm.FailKind.TIMEOUT, id.nine.assistant.llm.FailKind.NOT_FOUND, id.nine.assistant.llm.FailKind.OTHER
+        )) assertFalse("$k", VoiceFallback.toDroid(f(k)))
+        assertFalse(VoiceFallback.toDroid(null))
     }
 }

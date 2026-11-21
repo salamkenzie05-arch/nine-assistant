@@ -15,33 +15,34 @@ object ExpressionTag {
 
     private val NAMES: Map<String, Mood> = buildMap {
         fun add(m: Mood, vararg names: String) = names.forEach { put(it, m) }
-        add(Mood.NEUTRAL, "neutral", "netral", "calm", "tenang", "biasa")
-        add(Mood.HAPPY, "happy", "senang", "gembira", "bahagia", "smile", "smiling", "tersenyum")
+        add(Mood.NEUTRAL, "neutral", "netral", "calm", "tenang", "biasa", "serious", "formal", "polite", "sopan", "whisper", "whispers", "whispering", "softly", "gentle", "pause", "pauses", "short", "long")
+        add(Mood.HAPPY, "happy", "senang", "gembira", "bahagia", "smile", "smiling", "tersenyum", "cheerful", "excited", "enthusiastic", "pleased", "delighted", "proud", "warm", "warmly", "friendly", "ramah", "confident", "positive")
         add(Mood.LOVE, "love", "loving", "cinta", "sayang", "heart")
-        add(Mood.SURPRISED, "surprised", "surprise", "terkejut", "kaget", "kagum", "amazed")
+        add(Mood.SURPRISED, "surprised", "surprise", "terkejut", "kaget", "kagum", "amazed", "gasps", "gasp", "shocked", "astonished")
         add(Mood.CONFUSED, "confused", "bingung", "heran")
-        add(Mood.SAD, "sad", "sedih", "sympathetic", "simpati")
+        add(Mood.SAD, "sad", "sedih", "sympathetic", "simpati", "apologetic", "apologetically", "apologizing", "apologising", "sorry", "regretful", "sighs", "sigh", "concerned", "worried", "empathetic", "gloomy", "somber", "maaf")
         add(Mood.ANNOYED, "annoyed", "angry", "kesal", "jengkel")
         add(Mood.SLEEPY, "sleepy", "tired", "mengantuk", "ngantuk", "lelah")
-        add(Mood.CURIOUS, "curious", "penasaran", "thinking", "berpikir")
+        add(Mood.CURIOUS, "curious", "penasaran", "thinking", "berpikir", "thoughtful", "pensive", "hmm", "pondering", "interested")
         add(Mood.SCARED, "scared", "afraid", "takut")
-        add(Mood.WINK, "wink", "winking", "kedip", "mengedip", "playful", "jenaka")
-        add(Mood.LAUGH, "laugh", "laughing", "tertawa", "tawa", "funny", "lucu")
+        add(Mood.WINK, "wink", "winking", "kedip", "mengedip", "playful", "playfully", "jenaka", "teasing", "witty")
+        add(Mood.LAUGH, "laugh", "laughing", "laughs", "giggles", "giggle", "chuckles", "chuckle", "tertawa", "tawa", "funny", "lucu")
     }
 
     /** Nama yang diminta di instruksi AI (yang lain hanya sinonim yang kita terima dengan toleran). */
     val PROMPT_NAMES = listOf("neutral", "happy", "love", "surprised", "confused", "sad", "annoyed", "sleepy", "curious", "scared", "wink", "laugh")
 
-    private const val INNER = """(?:(?:mood|ekspresi|expression)\s*[:=]\s*)?([A-Za-z]{2,12})"""
+    /** Isi tag: satu sampai tiga kata ("apologetic", "sighs softly", "sad, apologetic"), boleh diawali "mood:". */
+    private const val INNER = """(?:(?:mood|ekspresi|expression)\s*[:=]\s*)?([A-Za-z]{2,16}(?:[ ,\-]+[A-Za-z]{2,16}){0,2})"""
     private const val MEM_WORD = """(?:ingat|remember|memori|memory|mem)"""
-    private val reLead = Regex("""^\s*\[\s*$INNER\s*]\s*""", RegexOption.IGNORE_CASE)
-    private val reAny = Regex("""\[\s*$INNER\s*]""", RegexOption.IGNORE_CASE)
+    private val reLead = Regex("""^\s*\[\s*$INNER\s*](?!\()\s*""", RegexOption.IGNORE_CASE)
+    private val reAny = Regex("""(?<![\w\])])\[\s*$INNER\s*](?![(\[])""", RegexOption.IGNORE_CASE)
     private val reMemLead = Regex("""^\s*\[\s*$MEM_WORD\s*[:=]\s*([^\]\n]{3,200}?)\s*]\s*""", RegexOption.IGNORE_CASE)
     private val reMemAny = Regex("""\[\s*$MEM_WORD\s*[:=]\s*[^\]\n]{3,200}?\s*]""", RegexOption.IGNORE_CASE)
     private val reMemStart = Regex("""^\[\s*$MEM_WORD\b""", RegexOption.IGNORE_CASE)
 
     /** Cukup panjang untuk tag terpanjang ("[expression: surprised]") dengan sedikit ruang. */
-    private const val MAX_TAG = 28
+    private const val MAX_TAG = 44
 
     /** Tag ingatan boleh panjang (satu kalimat fakta). */
     private const val MAX_MEM_TAG = 240
@@ -49,7 +50,21 @@ object ExpressionTag {
     /** Paling banyak ini tag ingatan yang dipakai dari satu jawaban. */
     const val MAX_FACTS = 3
 
-    private fun lookup(name: String): Mood? = NAMES[name.trim().lowercase()]
+    private val reWordSep = Regex("""[ ,\-]+""")
+
+    /** Ekspresi dari isi tag: kata pertama yang dikenal ("sighs softly" → sighs). Null bila tak ada yang dikenal. */
+    private fun lookup(name: String): Mood? {
+        val low = name.trim().lowercase()
+        NAMES[low]?.let { return it }
+        for (w in low.split(reWordSep)) NAMES[w]?.let { return it }
+        return null
+    }
+
+    /**
+     * Tag bergaya TTS yang tidak kita kenal ("[apologetic]", "[whispers]") tetap dibuang dari teks: model sering menulisnya
+     * walau tidak diminta. Hanya tag huruf kecil (tulisan biasa seperti "[Catatan]" atau "[A]" dibiarkan).
+     */
+    private fun looksLikeTag(name: String): Boolean = name == name.lowercase() && !reWordSep.containsMatchIn(name.trim())
 
     /**
      * Pisahkan tag di awal [raw] (ekspresi dan ingatan, urutan bebas). Teks yang tidak diawali tag yang dikenal dikembalikan
@@ -58,6 +73,7 @@ object ExpressionTag {
     fun parse(raw: String): Parsed {
         var rest = raw
         var mood: Mood? = null
+        var consumed = false
         val facts = ArrayList<String>()
         var guard = 0
         while (guard++ < 6) {
@@ -69,11 +85,14 @@ object ExpressionTag {
                 continue
             }
             val m = reLead.find(rest) ?: break
-            val md = lookup(m.groupValues[1]) ?: break
+            val name = m.groupValues[1]
+            val md = lookup(name)
+            if (md == null && !looksLikeTag(name)) break
             if (mood == null) mood = md
+            consumed = true
             rest = rest.substring(m.range.last + 1)
         }
-        return if (mood == null && facts.isEmpty()) Parsed(null, raw) else Parsed(mood, rest, facts)
+        return if (!consumed && facts.isEmpty()) Parsed(null, raw) else Parsed(mood, rest, facts)
     }
 
     /**
@@ -92,7 +111,18 @@ object ExpressionTag {
     fun strip(text: String): String {
         if (text.indexOf('[') < 0) return text
         val noMem = reMemAny.replace(text, "")
-        return reAny.replace(noMem) { if (lookup(it.groupValues[1]) != null) "" else it.value }
+        var changed = noMem != text
+        val out = reAny.replace(noMem) {
+            val name = it.groupValues[1]
+            if (lookup(name) != null || looksLikeTag(name)) {
+                changed = true
+                ""
+            } else {
+                it.value
+            }
+        }
+        // Tag di tengah kalimat meninggalkan dua spasi / spasi sebelum tanda baca.
+        return if (changed) out.replace(Regex("""[ \t]{2,}"""), " ").replace(Regex("""[ \t]+([,.!?;:])"""), "$1") else out
     }
 
     /** Teks yang boleh tampil/diucapkan dari keluaran mentah [raw]: tanpa tag di awal; kosong selama tag masih datang sebagian. */

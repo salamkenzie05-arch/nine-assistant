@@ -38,7 +38,14 @@ object VoicePicker {
     /** Suara Google Indonesia: ida/idc terdengar wanita, idb/idd pria (pengamatan umum, bukan data resmi). */
     private val googleId = mapOf("ida" to VoiceGender.FEMALE, "idb" to VoiceGender.MALE, "idc" to VoiceGender.FEMALE, "idd" to VoiceGender.MALE)
 
-    fun pitchFor(g: VoiceGender): Float = if (g == VoiceGender.MALE) 0.9f else 1.05f
+    /**
+     * Geseran nada selalu dipakai supaya pria dan wanita terdengar beda walau petunjuk nama salah (Android tidak mengekspos
+     * gender): lebih kecil bila nama suara memberi petunjuk, lebih besar bila tidak ada petunjuk sama sekali.
+     */
+    fun pitchFor(g: VoiceGender, hinted: Boolean = false): Float = when {
+        g == VoiceGender.MALE -> if (hinted) 0.88f else 0.74f
+        else -> if (hinted) 1.04f else 1.1f
+    }
 
     private fun hinted(v: VoiceInfo): VoiceGender? {
         val n = v.name
@@ -53,9 +60,8 @@ object VoicePicker {
         if (same.isEmpty()) return Pick(null, pitchFor(gender), false)
         // Suara di perangkat lebih dulu (tanpa internet, lebih cepat), lalu mutu tertinggi; nama sebagai pemutus agar stabil.
         val ordered = same.sortedWith(compareBy<VoiceInfo> { it.network }.thenByDescending { it.quality }.thenBy { it.name })
-        ordered.firstOrNull { hinted(it) == gender }?.let { return Pick(it.name, 1.0f, true) }
-        // Tanpa petunjuk: suara pertama untuk wanita, suara kedua (bila ada) untuk pria, dengan geseran nada.
-        val idx = if (gender == VoiceGender.MALE && ordered.size > 1) 1 else 0
-        return Pick(ordered[idx].name, pitchFor(gender), false)
+        ordered.firstOrNull { hinted(it) == gender }?.let { return Pick(it.name, pitchFor(gender, true), true) }
+        // Tanpa petunjuk: SATU suara terbaik untuk keduanya (bukan suara kedua yang mutunya bisa lebih rendah), dibedakan lewat nada.
+        return Pick(ordered[0].name, pitchFor(gender), false)
     }
 }

@@ -120,6 +120,12 @@ sealed class Command {
     data class AppSetting(val setting: NineSetting) : Command()
 
     data class Call(val target: String) : Command()
+
+    /**
+     * Telepon polisi ke [number] (nomor menurut negara pengguna). Dibuat executor hanya sebagai isi pertanyaan konfirmasi;
+     * panggilan baru terjadi bila perintah ini dijalankan dengan confirmed = true setelah pengguna menjawab "ya".
+     */
+    data class CallEmergency(val number: String) : Command()
     data class SendSms(val target: String, val body: String?) : Command()
 
     /** Dibuat oleh executor setelah kontak ditemukan; dikirim hanya setelah konfirmasi. */

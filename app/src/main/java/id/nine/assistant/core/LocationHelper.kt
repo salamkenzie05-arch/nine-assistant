@@ -21,7 +21,7 @@ import java.util.concurrent.Executors
  */
 class LocationHelper(context: Context, private val prefs: Prefs) {
 
-    data class Place(val lat: Double, val lon: Double, val accuracyM: Float, val label: String?, val time: Long)
+    data class Place(val lat: Double, val lon: Double, val accuracyM: Float, val label: String?, val time: Long, val countryCode: String? = null)
 
     private val app = context.applicationContext
     private val lm = app.getSystemService(Context.LOCATION_SERVICE) as LocationManager
@@ -87,17 +87,19 @@ class LocationHelper(context: Context, private val prefs: Prefs) {
             return
         }
         io.execute {
+            var country: String? = null
             val label = try {
                 if (Geocoder.isPresent()) {
                     @Suppress("DEPRECATION")
                     val a = Geocoder(app, Locale("id", "ID")).getFromLocation(loc.latitude, loc.longitude, 1)?.firstOrNull()
+                    country = a?.countryCode
                     listOfNotNull(a?.subLocality, a?.locality ?: a?.subAdminArea, a?.adminArea, a?.countryName)
                         .distinct().joinToString(", ").ifBlank { null }
                 } else null
             } catch (e: Exception) {
                 null
             }
-            val p = Place(loc.latitude, loc.longitude, loc.accuracy, label ?: last?.label, loc.time)
+            val p = Place(loc.latitude, loc.longitude, loc.accuracy, label ?: last?.label, loc.time, country)
             last = p
             done?.let { main.post { it(p) } }
         }

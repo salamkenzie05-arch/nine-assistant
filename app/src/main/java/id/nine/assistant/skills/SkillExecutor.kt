@@ -22,6 +22,7 @@ import android.provider.Settings
 import android.os.SystemClock
 import android.view.KeyEvent
 import android.telephony.SmsManager
+import android.telephony.TelephonyManager
 import androidx.core.content.ContextCompat
 import id.nine.assistant.coach.CoachFeedback
 import id.nine.assistant.core.AppLang
@@ -35,6 +36,7 @@ import id.nine.assistant.a11y.NineAccessibilityService
 import id.nine.assistant.audio.GuitarTuning
 import id.nine.assistant.audio.Songs
 import id.nine.assistant.call.CallControl
+import id.nine.assistant.nlu.EmergencyNumbers
 import id.nine.assistant.nlu.FunKind
 import id.nine.assistant.nlu.MediaAction
 import id.nine.assistant.nlu.NineSetting
@@ -175,6 +177,7 @@ class SkillExecutor(
         Command.ForgetAll -> forgetAll(lang, confirmed)
         Command.ReadMemory -> readMemory(lang)
         is Command.Call -> call(cmd.target, lang, denied)
+        is Command.CallEmergency -> callEmergency(cmd, lang, confirmed)
         is Command.SendSms -> prepareSms(cmd, lang, denied)
         is Command.SendSmsResolved -> sendSms(cmd, lang, denied)
         is Command.SwitchLanguage -> SkillResult(
@@ -812,7 +815,10 @@ class SkillExecutor(
     }
 
     private fun call(target: String, lang: AppLang, denied: Set<String>): SkillResult {
+        // Polisi (atau nomor darurat yang diucapkan langsung) tidak pernah ditelepon langsung: selalu tanya dulu.
+        if (EmergencyNumbers.isPoliceWord(target)) return askEmergency(EmergencyNumbers.police(countryIso()), lang)
         val number = asPhoneNumber(target)
+        if (number != null && EmergencyNumbers.isEmergencyNumber(number)) return askEmergency(number, lang)
         if (number != null) return dial(number, number, lang, denied)
 
         contactPermissionResult(lang, denied)?.let { return it }
@@ -828,6 +834,48 @@ class SkillExecutor(
                 lang.t("Kontak \"$target\" tidak ditemukan.", "I couldn't find a contact named \"$target\".")
             )
         }
+    }
+
+    /** Negara pengguna: jaringan seluler yang dipakai, lalu lokasi terakhir (bila masih baru), lalu SIM, lalu wilayah HP. */
+    private fun countryIso(): String? {
+        val tm = ctx.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
+        val network = runCatching { tm?.networkCountryIso }.getOrNull()
+        val sim = runCatching { tm?.simCountryIso }.getOrNull()
+        val place = runCatching { location.last }.getOrNull()
+        val fresh = place?.takeIf { System.currentTimeMillis() - it.time < 6 * 3_600_000L }?.countryCode
+        return EmergencyNumbers.pickCountry(network, fresh, sim, java.util.Locale.getDefault().country)
+    }
+
+    /** Tanyakan dulu: belum menelepon. Jawaban "ya" yang ketat menjalankan [Command.CallEmergency] dengan confirmed = true. */
+    private fun askEmergency(number: String, lang: AppLang): SkillResult {
+        val iso = countryIso()
+        val where = iso?.let { java.util.Locale("", it).getDisplayCountry(lang.locale) }?.takeIf { it.isNotBlank() }
+        val at = if (where != null) "$number ($where)" else number
+        return SkillResult(
+            lang.t(
+                "Telepon polisi di $at? Katakan \"ya\" untuk menelepon, atau \"tidak\" untuk batal.",
+                "Call the police on $at? Say \"yes\" to call, or \"no\" to cancel."
+            ),
+            pending = Pending.Confirm(Command.CallEmergency(number))
+        )
+    }
+
+    private fun callEmergency(cmd: Command.CallEmergency, lang: AppLang, confirmed: Boolean): SkillResult {
+        // Tanpa konfirmasi tidak pernah menelepon (jaga-jaga bila perintah ini sampai tanpa lewat pertanyaan).
+        if (!confirmed) return askEmergency(cmd.number, lang)
+        val uri = Uri.parse("tel:" + Uri.encode(cmd.number))
+        if (has(Manifest.permission.CALL_PHONE)) {
+            return SkillResult(
+                lang.t("Menelepon polisi di ${cmd.number}.", "Calling the police on ${cmd.number}."),
+                intent = Intent(Intent.ACTION_CALL, uri),
+                fallback = Intent(Intent.ACTION_DIAL, uri)
+            )
+        }
+        // Tanpa izin telepon: buka aplikasi telepon dengan nomor terisi (jangan meminta izin di saat darurat).
+        return SkillResult(
+            lang.t("Membuka aplikasi telepon dengan nomor polisi ${cmd.number}. Tekan tombol telepon.", "Opening the dialer with the police number ${cmd.number}. Press the call button."),
+            intent = Intent(Intent.ACTION_DIAL, uri)
+        )
     }
 
     private fun dial(number: String, display: String, lang: AppLang, denied: Set<String>): SkillResult {

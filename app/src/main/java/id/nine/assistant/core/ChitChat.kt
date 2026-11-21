@@ -126,6 +126,11 @@ object ChitChat {
     /** Jawaban AI yang menyiratkan tidak tahu / butuh pencarian. */
     fun looksUnsure(reply: String): Boolean = unsure.containsMatchIn(reply)
 
+    private val mentionsSearchRx = rx("""\b(?:google|search(?:ing)?|look(?:ed|ing)?\s+(?:it\s+)?up|cari(?:kan)?|pencarian|mencari)\b""")
+
+    /** Jawaban AI sudah menyebut pencarian/Google sendiri, jadi tak perlu pengantar tambahan. */
+    fun mentionsSearch(reply: String): Boolean = mentionsSearchRx.containsMatchIn(reply)
+
     /** Balasan singkat yang diucapkan sebelum membuka Google. */
     fun searchNotice(lang: AppLang, sfx: String): String = lang.t(
         "Saya belum yakin soal itu$sfx, jadi saya carikan di Google.",

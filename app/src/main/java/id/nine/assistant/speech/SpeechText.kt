@@ -27,19 +27,13 @@ object SpeechText {
         return head
     }
 
-    /** Gaya bicara (bahasa Inggris, sesuai petunjuk gaya Gemini TTS) untuk ekspresi [mood]; null = suara biasa. */
+    /**
+     * Gaya bicara (bahasa Inggris, sesuai petunjuk gaya Gemini TTS) untuk ekspresi [mood]; null = suara biasa. Sengaja hanya
+     * dua gaya halus: gaya ekstrem ("sleepy and slow", "laughing") membuat timbre berubah-ubah dan kadang terdengar jelek.
+     */
     fun style(mood: Mood?): String? = when (mood) {
-        null, Mood.NEUTRAL -> null
-        Mood.HAPPY -> "warm and cheerful"
-        Mood.LOVE -> "soft and affectionate"
-        Mood.SURPRISED -> "surprised and excited"
-        Mood.CONFUSED -> "puzzled and hesitant"
-        Mood.SAD -> "gentle and a little sad"
-        Mood.ANNOYED -> "dry and slightly annoyed"
-        Mood.SLEEPY -> "sleepy and slow"
-        Mood.CURIOUS -> "curious and interested"
-        Mood.SCARED -> "nervous and worried"
-        Mood.WINK -> "playful and teasing"
-        Mood.LAUGH -> "amused, with a light laugh in the voice"
+        Mood.HAPPY, Mood.LOVE, Mood.WINK, Mood.LAUGH -> "warm and friendly"
+        Mood.SAD, Mood.SCARED, Mood.CONFUSED, Mood.SLEEPY -> "gentle and calm"
+        else -> null
     }
 }

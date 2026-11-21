@@ -67,6 +67,17 @@ class SystemTts(context: Context) {
         }
     }
 
+    /** Nyalakan mesin sekarang (tanpa berbicara) supaya ucapan berikutnya tidak menunggu inisialisasi. Aman dipanggil berulang. */
+    fun warmUp() {
+        synchronized(lock) {
+            if (SystemClock.elapsedRealtime() < failedUntil) return
+            if (starting == null) startEngine()
+            lastUsed = SystemClock.elapsedRealtime()
+        }
+        main.removeCallbacks(idle)
+        main.postDelayed(idle, IDLE_MS)
+    }
+
     /** Lepas mesin sekarang (saat aplikasi ditutup). */
     fun release() {
         main.removeCallbacks(idle)

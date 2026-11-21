@@ -22,6 +22,20 @@ object Answers {
     private fun tidy(s: String) = s.trim().trimEnd('.', ',', '!', '?', ' ')
 
     fun isYes(s: String): Boolean = yes.matches(tidy(s))
+
+    private val strictYes = Regex(
+        """^(?:ya|iya|yap|yup|yes|yeah|yep|betul|benar|oke|ok|okay)(?:\s+(?:tolong|telepon|telpon|hubungi|panggil|sekarang|segera|please|call|them|now|dong|banget|saya|iya|ya))*$""",
+        RegexOption.IGNORE_CASE
+    )
+
+    /**
+     * Jawaban "ya" yang ketat, untuk tindakan yang tak boleh terjadi tanpa sengaja (menelepon polisi): hanya "ya" ditambah kata
+     * penguat singkat ("ya, telepon sekarang"). Kalimat lain yang kebetulan diawali "ya" ("ya sudah nanti saja") tidak dihitung.
+     */
+    fun isStrictYes(s: String): Boolean {
+        val t = s.lowercase().replace(Regex("""[,.!?;:]+"""), " ").replace(Regex("""\s+"""), " ").trim()
+        return t.isNotEmpty() && t.split(' ').size <= 4 && strictYes.matches(t)
+    }
     fun isNo(s: String): Boolean = no.matches(tidy(s))
 }
 
@@ -37,8 +51,11 @@ class SlotFiller(private val parser: CommandParser) {
         val norm = NumberWords.normalize(text.trim())
 
         return when (p) {
-            is Pending.Confirm ->
-                if (Answers.isYes(text)) SlotOutcome.Resolved(p.command) else SlotOutcome.NotAnAnswer
+            is Pending.Confirm -> {
+                // Menelepon polisi: jawaban "ya" harus ketat supaya tidak terpicu oleh ucapan lain.
+                val yes = if (p.command is Command.CallEmergency) Answers.isStrictYes(text) else Answers.isYes(text)
+                if (yes) SlotOutcome.Resolved(p.command) else SlotOutcome.NotAnAnswer
+            }
 
             is Pending.AlarmTime -> {
                 val tp = TimeParser.parse(norm)

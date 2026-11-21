@@ -16,6 +16,7 @@ import id.nine.assistant.llm.Failure
 import id.nine.assistant.llm.Failures
 import java.util.concurrent.Callable
 import java.util.concurrent.CancellationException
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
 import java.util.concurrent.LinkedBlockingQueue
@@ -52,6 +53,31 @@ class SpeechOutput(context: Context, private val prefs: Prefs, private val onNot
     /** Dipanggil (main thread) setelah satu potong terdengar: suara apa yang dipakai dan kenapa. Dipakai tombol "Coba suara". */
     var onEngine: ((String) -> Unit)? = null
 
+    /**
+     * Satu jawaban = satu suara. Potongan pertama menentukan mesinnya (Gemini atau HP), dan potongan berikutnya mengikuti:
+     * model Gemini yang sama, atau langsung suara HP. Potongan Gemini yang gagal setelah itu dilewati, tidak diganti suara lain,
+     * karena suara yang berganti di tengah jawaban terdengar seperti bug.
+     */
+    private class StreamLock {
+        @Volatile
+        var engine = E_NONE
+
+        @Volatile
+        var model: String? = null
+        val first = CountDownLatch(1)
+        var firstSubmitted = false // main thread
+    }
+
+    private var lock = StreamLock()
+
+    /** Model Gemini TTS yang terakhir berhasil: dicoba lebih dulu di jawaban berikutnya supaya timbrenya sama. */
+    @Volatile
+    private var lastGoodModel: String? = null
+
+    /** Setelah Gemini gagal, tetap pakai suara HP sampai waktu ini (elapsedRealtime) supaya suara tidak bolak-balik. */
+    @Volatile
+    private var stickUntil = 0L
+
     // Status aliran ucapan saat ini (main thread)
     private var streamOpen = false
     private var lastQueuedId: String? = null
@@ -62,6 +88,7 @@ class SpeechOutput(context: Context, private val prefs: Prefs, private val onNot
     private var gender = VoiceGender.FEMALE
     private var droid = true // pilihan Droid: tanpa Gemini maupun suara HP
     private var droidCount = 0
+    private var droidNote: String? = null // bila Droid dipakai karena kuota Gemini habis: laporan untuk "Coba suara"
     private var style: String? = null
     private var ttsKey: String? = null // bukan null = sintesis Gemini dipakai untuk aliran ini
     private var ttsSkip: String? = null // bila ttsKey null: alasan Gemini tidak dipakai (untuk laporan "Coba suara")
@@ -107,11 +134,13 @@ class SpeechOutput(context: Context, private val prefs: Prefs, private val onNot
     fun beginStream(lang: AppLang, onStart: (() -> Unit)? = null) {
         stop()
         streamOpen = true
+        lock = StreamLock()
         this.lang = lang
         val choice = NineVoice.of(prefs.voice)
         droid = choice == NineVoice.DROID
         gender = choice.gender ?: VoiceGender.FEMALE
         droidCount = 0
+        droidNote = null
         style = null
         sentences = 0
         spokenChars = 0
@@ -125,6 +154,9 @@ class SpeechOutput(context: Context, private val prefs: Prefs, private val onNot
         }
     }
 
+    /** Aliran saat ini memakai suara Gemini (jaringan, jadi baru berbunyi beberapa detik kemudian). Valid setelah [beginStream]. */
+    fun usesGemini(): Boolean = ttsKey != null
+
     /** Ekspresi Nine untuk jawaban ini (menentukan gaya bicara suara Gemini). Panggil sebelum [enqueue] pertama. */
     fun setMood(mood: Mood?) {
         style = SpeechText.style(mood)
@@ -137,6 +169,10 @@ class SpeechOutput(context: Context, private val prefs: Prefs, private val onNot
             // Droid cukup "berkicau" untuk beberapa kalimat pertama; sisanya dibaca di layar.
             if (droidCount >= DROID_MAX_SENTENCES) return
             droidCount++
+            droidNote?.let {
+                droidNote = null
+                report(generation, it)
+            }
             enqueueAudio(DroidVoice.SAMPLE_RATE) { DroidVoice.render(text) }
             return
         }
@@ -202,6 +238,16 @@ class SpeechOutput(context: Context, private val prefs: Prefs, private val onNot
         system.stop()
     }
 
+    /**
+     * Siapkan mesin suara HP lebih awal (dipanggil saat Nine mulai berpikir) supaya kalimat pertama tidak menunggu mesin
+     * menyala. Hanya bila suara Wanita/Pria dan Gemini tidak akan dipakai; tidak berbuat apa-apa untuk Droid.
+     */
+    fun warmUp() {
+        if (NineVoice.of(prefs.voice) == NineVoice.DROID) return
+        val geminiLikely = prefs.internetMode && prefs.geminiKey.isNotBlank() && online() && SystemClock.elapsedRealtime() >= stickUntil
+        if (!geminiLikely) system.warmUp()
+    }
+
     fun shutdown() {
         stop()
         worker.shutdownNow()
@@ -234,20 +280,57 @@ class SpeechOutput(context: Context, private val prefs: Prefs, private val onNot
         var tts: GeminiTts? = null
         var fut: Future<TtsResult>? = null
         val key = ttsKey
+        val lk = lock
         if (key != null) {
             val g = GeminiTts(key)
             tts = g
             pendingTts.add(g)
-            val f = renderer.submit(Callable { g.synthesize(text, gd, st) })
+            val isFirst = !lk.firstSubmitted
+            lk.firstSubmitted = true
+            val f = renderer.submit(Callable { synth(g, lk, isFirst, text, gd, st) })
             fut = f
             pending.add(f)
         }
-        worker.execute { speakJob(gen, id, text, l, gd, tts, fut, sk) }
+        worker.execute { speakJob(gen, id, text, l, gd, tts, fut, sk, lk) }
+    }
+
+    /** Model Gemini TTS dalam urutan coba: yang terakhir berhasil lebih dulu. */
+    private fun orderedModels(): List<TtsModel> {
+        val good = lastGoodModel ?: return GeminiTts.MODELS
+        return GeminiTts.MODELS.sortedBy { if (it.id == good) 0 else 1 }
+    }
+
+    /** Sintesis satu potong di thread render. Potongan pertama menentukan mesin aliran; yang lain menunggu hasilnya (maks 30 dtk). */
+    private fun synth(g: GeminiTts, lk: StreamLock, first: Boolean, text: String, gd: VoiceGender, st: String?): TtsResult {
+        if (first) {
+            try {
+                val r = g.synthesize(text, gd, st, orderedModels())
+                lk.model = r.model
+                if (r.pcm != null) {
+                    lk.engine = E_GEMINI
+                    lastGoodModel = r.model
+                } else if (VoiceFallback.toDroid(r.failures.lastOrNull()?.second ?: g.coolingFailure())) {
+                    lk.engine = E_DROID // kuota Gemini habis: pindah ke suara Droid (percobaan berikutnya diatur masa istirahat Gemini)
+                } else {
+                    lk.engine = E_PHONE
+                    stickUntil = SystemClock.elapsedRealtime() + STICKY_MS
+                }
+                return r
+            } finally {
+                lk.first.countDown()
+            }
+        }
+        lk.first.await(FIRST_WAIT_SEC, TimeUnit.SECONDS)
+        return when (lk.engine) {
+            E_PHONE, E_DROID -> TtsResult(null, null, emptyList())
+            E_GEMINI -> g.synthesize(text, gd, st, GeminiTts.MODELS.filter { it.id == lk.model }.ifEmpty { GeminiTts.MODELS })
+            else -> g.synthesize(text, gd, st, orderedModels())
+        }
     }
 
     // ------------------------------------------------------------------ kerja di thread suara
 
-    private fun speakJob(gen: Int, id: String, text: String, lang: AppLang, gender: VoiceGender, tts: GeminiTts?, fut: Future<TtsResult>?, skip: String?) {
+    private fun speakJob(gen: Int, id: String, text: String, lang: AppLang, gender: VoiceGender, tts: GeminiTts?, fut: Future<TtsResult>?, skip: String?, lk: StreamLock) {
         if (gen != generation) return
         val res = if (fut != null) await(fut, gen) else null
         if (gen != generation) return
@@ -257,6 +340,13 @@ class SpeechOutput(context: Context, private val prefs: Prefs, private val onNot
             report(gen, "Gemini · " + (res?.model ?: "TTS") + " · " + gender.geminiVoice)
             notifyStart(gen)
             play(pcm.samples, pcm.rate, gen, speech = true)
+        } else if (lk.engine == E_DROID) {
+            report(gen, lang.t("Bunyi droid (kuota suara Gemini habis)", "Droid sound (Gemini voice quota used up)"))
+            notifyStart(gen)
+            play(DroidVoice.render(SpeechText.cap(text, VoiceFallback.DROID_MAX_CHARS)), DroidVoice.SAMPLE_RATE, gen, speech = false)
+        } else if (lk.engine == E_GEMINI) {
+            // Jawaban ini sudah berbunyi dengan suara Gemini: potongan ini dilewati daripada berganti ke suara HP di tengah jawaban.
+            report(gen, lang.t("Suara Gemini terputus; sisa jawaban hanya tampil di layar", "Gemini voice dropped; the rest is on screen only"))
         } else {
             val viaPhone = system.speak(text, lang, gender, { gen == generation }, { notifyStart(gen) })
             if (gen != generation) return
@@ -326,7 +416,18 @@ class SpeechOutput(context: Context, private val prefs: Prefs, private val onNot
         }
         val probe = GeminiTts(key)
         if (!probe.available()) {
-            ttsSkip = probe.coolingFailure()?.let { Failures.describe(it, lang) } ?: lang.t("sedang istirahat", "resting")
+            val cf = probe.coolingFailure()
+            if (VoiceFallback.toDroid(cf)) {
+                // Kuota suara Gemini habis: seluruh jawaban dibunyikan dengan suara Droid.
+                droid = true
+                droidNote = lang.t("Bunyi droid (kuota suara Gemini habis)", "Droid sound (Gemini voice quota used up)")
+                return
+            }
+            ttsSkip = cf?.let { Failures.describe(it, lang) } ?: lang.t("sedang istirahat", "resting")
+            return
+        }
+        if (SystemClock.elapsedRealtime() < stickUntil) {
+            ttsSkip = lang.t("baru saja gagal, memakai suara HP sebentar", "failed a moment ago, using the phone voice for now")
             return
         }
         ttsKey = key
@@ -402,6 +503,17 @@ class SpeechOutput(context: Context, private val prefs: Prefs, private val onNot
         const val LOCAL_MAX_CHARS = 700
 
         const val AWAIT_MAX_SEC = 60L
+
+        /** Lama potongan kedua menunggu potongan pertama menentukan mesin. */
+        const val FIRST_WAIT_SEC = 30L
+
+        /** Lama tetap memakai suara HP setelah Gemini gagal. */
+        const val STICKY_MS = 60_000L
+
+        const val E_NONE = 0
+        const val E_GEMINI = 1
+        const val E_PHONE = 2
+        const val E_DROID = 3
 
         /** Jumlah kalimat yang "dikicaukan" suara Droid per jawaban. */
         const val DROID_MAX_SENTENCES = 3

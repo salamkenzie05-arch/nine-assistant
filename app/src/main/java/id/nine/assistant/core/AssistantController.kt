@@ -4,6 +4,9 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
 import androidx.core.content.ContextCompat
 import id.nine.assistant.NineApp
 import id.nine.assistant.coach.CoachSession
@@ -127,6 +130,13 @@ class AssistantController(context: Context, private val ui: Ui) {
 
     private var recognizing = false
     private var pending: Pending? = null
+        set(value) {
+            field = value
+            pendingAt = SystemClock.elapsedRealtime()
+        }
+
+    /** Kapan [pending] terakhir diisi (elapsedRealtime): pertanyaan "telepon polisi?" kedaluwarsa bila tak dijawab. */
+    private var pendingAt = 0L
     /** Sesi mentor bahasa Inggris (offline); selama ada, ucapan diperiksa grammar-nya, bukan dijalankan sebagai perintah. */
     private var coach: CoachSession? = null
     private var coachAt = 0L
@@ -142,6 +152,51 @@ class AssistantController(context: Context, private val ui: Ui) {
     private var cancelAi: (() -> Unit)? = null
     /** Naik setiap kali jawaban Gemma dibatalkan/diganti, agar callback lama diabaikan. */
     private var askGen = 0
+
+    private val handler = Handler(Looper.getMainLooper())
+
+    /**
+     * Penahan teks jawaban: dengan suara Gemini, suara baru berbunyi 1-3 detik setelah teks siap (sintesis lewat jaringan).
+     * Agar teks dan suara tidak berjarak, teks baru ditampilkan saat suara mulai berbunyi, atau paling lama [REVEAL_MAX_MS]
+     * setelah teks pertama datang (bila suara macet), atau saat jawaban dihentikan. Untuk suara Droid/HP tanpa Gemini penahan
+     * ini tidak aktif dan teks tampil langsung seperti biasa.
+     */
+    private inner class TextGate(private val index: Int, enabled: Boolean) {
+        var isOpen = !enabled
+            private set
+        private var held: String? = null
+        private val timeout = Runnable { release() }
+
+        fun show(text: String) {
+            if (isOpen) log.update(index, text) else held = text
+        }
+
+        /** Mulai hitung mundur pengaman. */
+        fun arm() {
+            if (isOpen) return
+            handler.removeCallbacks(timeout)
+            handler.postDelayed(timeout, REVEAL_MAX_MS)
+        }
+
+        /** Tampilkan teks yang tertahan (atau buang bila [showHeld] false, mis. entri akan dihapus/ditimpa). */
+        fun release(showHeld: Boolean = true) {
+            if (isOpen) return
+            isOpen = true
+            handler.removeCallbacks(timeout)
+            val t = held
+            held = null
+            if (showHeld && t != null) log.update(index, t)
+            ui.onPartial("")
+        }
+    }
+
+    private var gate: TextGate? = null
+
+    /** Ganti penahan teks aktif: yang lama langsung menampilkan teksnya (jawabannya sudah terpotong). */
+    private fun newGate(index: Int, enabled: Boolean): TextGate {
+        gate?.release()
+        return TextGate(index, enabled).also { gate = it }
+    }
 
     // ------------------------------------------------------------------ mendengar
 
@@ -183,6 +238,8 @@ class AssistantController(context: Context, private val ui: Ui) {
     }
 
     private fun stopOutput() {
+        gate?.release()
+        gate = null
         output.stop()
         askGen++
         cancelAi?.invoke()
@@ -432,6 +489,10 @@ class AssistantController(context: Context, private val ui: Ui) {
             if (pending == null && coachTurn(session, text)) return
         }
 
+        // Pertanyaan "telepon polisi?" yang lama tak dijawab dibuang: "ya" yang datang belakangan tidak boleh menelepon.
+        pending?.let { old ->
+            if (old is Pending.Confirm && old.command is Command.CallEmergency && SystemClock.elapsedRealtime() - pendingAt > EMERGENCY_CONFIRM_MS) pending = null
+        }
         val p = pending
         if (p != null) {
             pending = null
@@ -747,10 +808,12 @@ class AssistantController(context: Context, private val ui: Ui) {
      * Buka Google dengan [query] sudah terketik (hasil pencarian langsung tampil). [notice] diucapkan sebagai
      * pengantar; null = tanpa pengantar.
      */
-    private fun searchGoogle(query: String, notice: String?) {
+    private fun searchGoogle(query: String, notice: String?, quiet: Boolean = false) {
         val r = executor.execute(Command.WebSearch(query), lang)
         val intent = r.intent
         val ok = intent != null && ui.onLaunch(intent, r.fallback)
+        // [quiet]: jawaban AI barusan sudah menjelaskannya ("saya bukakan Google"): cukup buka, jangan menambah balasan kedua.
+        if (quiet && ok) return
         val text = when {
             !ok -> lang.t(
                 "Maaf${prefs.persona.sfx(lang)}, saya tidak bisa membuka Google di perangkat ini.",
@@ -881,6 +944,7 @@ class AssistantController(context: Context, private val ui: Ui) {
         val ai = online
         val online = ai.isUsable()
         setState(State.THINKING)
+        if (prefs.speakReplies) output.warmUp() // siapkan mesin suara selagi AI berpikir
         when {
             online -> ui.onPartial(l.t("Mencari jawaban…", "Looking that up…"))
             brain.state == LlmBrain.State.IDLE || brain.state == LlmBrain.State.LOADING ->
@@ -894,7 +958,11 @@ class AssistantController(context: Context, private val ui: Ui) {
         val raw = StringBuilder()
         val splitter = TextClean.SentenceSplitter()
         val speak = prefs.speakReplies
-        if (speak) output.beginStream(l) { setState(State.SPEAKING) }
+        if (speak) output.beginStream(l) {
+            gate?.release() // suara mulai berbunyi: tampilkan teks yang tertahan
+            setState(State.SPEAKING)
+        }
+        val g = newGate(index, speak && output.usesGemini())
         val gen = ++askGen
         var holding = true // menahan keluaran sampai jelas ini bukan "CMD:" dan tag ekspresi (bila ada) sudah lengkap
         var tagMood: Mood? = null // ekspresi dari tag "[happy]" di awal jawaban AI
@@ -933,6 +1001,7 @@ class AssistantController(context: Context, private val ui: Ui) {
         fun showFailure(text: String, mood: Mood) {
             brainJob = null
             cancelAi = null
+            g.release(false)
             ui.onPartial("")
             output.stop()
             ui.onMood(mood)
@@ -955,17 +1024,18 @@ class AssistantController(context: Context, private val ui: Ui) {
                     val tagged = ExpressionTag.parse(r)
                     if (cmdOf(tagged.text) != null || maybeCmd(tagged.text)) return
                     holding = false
-                    ui.onPartial("")
+                    ui.onPartial(if (g.isOpen) "" else l.t("Menyiapkan suara…", "Preparing the voice…"))
                     tagged.mood?.let {
                         tagMood = it
                         ui.onMoodHold(it, 3200)
                         if (speak) output.setMood(it)
                     }
-                    log.update(index, TextClean.clean(tagged.text))
+                    g.show(TextClean.clean(tagged.text))
+                    g.arm()
                     if (speak) for (sentence in splitter.push(tagged.text)) output.enqueue(TextClean.speech(sentence))
                     return
                 }
-                log.update(index, TextClean.clean(ExpressionTag.parse(raw.toString()).text))
+                g.show(TextClean.clean(ExpressionTag.parse(raw.toString()).text))
                 if (speak) {
                     for (sentence in splitter.push(text)) output.enqueue(TextClean.speech(sentence))
                 }
@@ -976,13 +1046,14 @@ class AssistantController(context: Context, private val ui: Ui) {
                 brainJob = null
                 cancelAi = null
                 aiSeenUpTo = log.entries.size
-                ui.onPartial("")
+                if (g.isOpen) ui.onPartial("")
                 val tagged = ExpressionTag.parse(fullText)
                 rememberFacts(tagged.facts)
                 val body = tagged.text
                 val action = cmdOf(body)
                 if (action != null) {
                     // AI memahami permintaan sebagai tindakan: jalankan lewat modul perintah yang sebenarnya.
+                    g.release(false)
                     output.stop()
                     log.remove(index) // perintah internal tidak ditampilkan; hanya hasilnya
                     val parsed = parser.parse(action)
@@ -991,12 +1062,14 @@ class AssistantController(context: Context, private val ui: Ui) {
                 }
                 val cleaned = TextClean.clean(body)
                 if (cleaned.isEmpty()) {
+                    g.release(false)
                     log.update(index, "…")
                     output.stop()
                     setState(State.IDLE)
                     return
                 }
-                log.update(index, cleaned)
+                g.show(cleaned)
+                g.arm()
                 if (speak) {
                     if (holding) {
                         // seluruh jawaban pendek tertahan: bunyikan sekarang
@@ -1012,9 +1085,11 @@ class AssistantController(context: Context, private val ui: Ui) {
                     ui.onMood(if (unsure) Mood.CURIOUS else (tagMood ?: tagged.mood ?: ExpressionTag.guess(finalText)))
                     val followUp = finalText.trimEnd().endsWith("?")
                     val finishUp = {
+                        g.release() // bila suara tak pernah sempat mulai, teks tetap tampil
                         setState(State.IDLE)
                         if (unsure) {
-                            searchGoogle(question, ChitChat.searchNotice(l, prefs.persona.sfx(l)))
+                            // Bila jawaban AI sendiri sudah menyebut Google/pencarian, jangan menambah balasan kedua yang mengulang.
+                            searchGoogle(question, ChitChat.searchNotice(l, prefs.persona.sfx(l)), quiet = ChitChat.mentionsSearch(finalText))
                         } else if (followUp) {
                             startListening()
                         }
@@ -1030,7 +1105,7 @@ class AssistantController(context: Context, private val ui: Ui) {
                     ui.onPartial(l.t("Merapikan bahasa…", "Polishing the wording…"))
                     rewrite(cleaned) { fixed ->
                         ui.onPartial("")
-                        if (fixed != null) log.update(index, fixed)
+                        if (fixed != null) g.show(fixed)
                         conclude(fixed ?: cleaned)
                     }
                 } else {
@@ -1096,15 +1171,31 @@ class AssistantController(context: Context, private val ui: Ui) {
             then?.invoke()
             return
         }
-        log.add(false, text, priv)
         val after: () -> Unit = {
+            gate?.release()
             setState(State.IDLE)
             then?.invoke()
             if (listenAfter) startListening()
         }
         if (prefs.speakReplies) {
-            output.speak(text, lang, onStart = { setState(State.SPEAKING) }) { after() }
+            gate?.release() // balasan sebelumnya yang masih menahan teks: tampilkan sekarang
+            gate = null
+            output.beginStream(lang) {
+                gate?.release() // suara mulai berbunyi: tampilkan teks yang tertahan
+                setState(State.SPEAKING)
+            }
+            // Teks baru ditampilkan saat suara Gemini mulai berbunyi (lihat [TextGate]); suara Droid/HP tampil langsung.
+            val held = output.usesGemini()
+            val index = log.add(false, if (held) "" else text, priv)
+            if (held) {
+                val gt = newGate(index, true)
+                gt.show(text)
+                gt.arm()
+            }
+            output.enqueue(text)
+            output.endStream { after() }
         } else {
+            log.add(false, text, priv)
             talkQuietly(text)
             after()
         }
@@ -1167,6 +1258,12 @@ class AssistantController(context: Context, private val ui: Ui) {
     }
 
     private companion object {
+        /** Paling lama teks jawaban menunggu suara Gemini mulai berbunyi sebelum ditampilkan juga. */
+        const val REVEAL_MAX_MS = 4_500L
+
+        /** Paling lama jawaban "ya" diterima setelah Nine bertanya "telepon polisi?". */
+        const val EMERGENCY_CONFIRM_MS = 45_000L
+
         /** Sesi latihan yang didiamkan selama ini dianggap selesai (agar perintah biasa tidak terjebak). */
         const val COACH_IDLE_MS = 20 * 60_000L
     }

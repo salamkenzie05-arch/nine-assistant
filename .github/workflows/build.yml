@@ -136,11 +136,11 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
-          name: Nine 1.0 beta (build ${{ github.run_number }})
+          name: Nine BETA 1.0 (build ${{ github.run_number }})
           body: |
             Tanda tangan APK: ${{ steps.sig.outputs.label }}.
 
-            **Versi BETA** - masih dalam pengujian. Fitur yang memakai layanan aksesibilitas (on/off Wi-Fi/Bluetooth otomatis, putar lagu otomatis di YouTube Music) belum teruji di semua HP; bila gagal, Nine menampilkan kode galat singkat.
+            **Nine BETA 1.0** - versi beta, masih dalam pengujian. Fitur yang memakai layanan aksesibilitas (on/off Wi-Fi/Bluetooth otomatis, putar lagu otomatis di YouTube Music) belum teruji di semua HP; bila gagal, Nine menampilkan kode galat singkat.
 
             APK Nine untuk Android (arm64, Android 8.0+). Dua edisi dengan package yang sama (bisa saling menimpa):
 

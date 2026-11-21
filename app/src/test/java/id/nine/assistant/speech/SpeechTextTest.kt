@@ -48,10 +48,13 @@ class SpeechTextTest {
     }
 
     @Test
-    fun neutralHasNoStyleAndEveryOtherMoodHasOne() {
+    fun onlyTwoGentleStylesExist() {
         assertNull(SpeechText.style(null))
         assertNull(SpeechText.style(Mood.NEUTRAL))
-        for (m in Mood.values()) if (m != Mood.NEUTRAL) assertNotNull("tanpa gaya: $m", SpeechText.style(m))
+        // hanya dua gaya halus supaya timbre suara tidak berubah-ubah
+        val styles = Mood.values().mapNotNull { SpeechText.style(it) }.toSet()
+        assertEquals(setOf("warm and friendly", "gentle and calm"), styles)
+        assertNull(SpeechText.style(Mood.CURIOUS))
         // gaya harus pendek dan satu baris (dikirim ke API)
         for (m in Mood.values()) SpeechText.style(m)?.let { assertTrue(it.length < 60 && !it.contains('\n')) }
     }
