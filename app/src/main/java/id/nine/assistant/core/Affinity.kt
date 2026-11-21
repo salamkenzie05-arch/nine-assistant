@@ -5,7 +5,7 @@ import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
 /**
- * Tingkat kedekatan dengan Nine (seperti streak): 8 level berdasarkan XP, plus streak harian.
+ * Tingkat kedekatan dengan Nine (seperti streak): 9 level berdasarkan XP, plus streak harian.
  *
  * - +10 XP untuk interaksi pertama setiap hari, +2 XP per interaksi berikutnya (maks. 20 XP per hari dari ini)
  * - Bonus streak: +1 XP per hari streak (maks. +15) pada interaksi pertama hari itu
@@ -53,8 +53,9 @@ class Affinity(context: Context) {
             Level(4, 340, "Interested", "Interested", "lv4"),
             Level(5, 600, "Familiar", "Familiar", "lv5"),
             Level(6, 950, "Connected", "Connected", "lv6"),
-            Level(7, 1450, "Loyal", "Loyal", "lv7"),
-            Level(8, 2300, "Devoted", "Devoted", "lv8")
+            Level(7, 1200, "Trusted", "Trusted", "lv7"),
+            Level(8, 1450, "Loyal", "Loyal", "lv8"),
+            Level(9, 2300, "Devoted", "Devoted", "lv9")
         )
 
         fun levelFor(xp: Int): Level = LEVELS.last { xp >= it.minXp }

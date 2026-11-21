@@ -41,17 +41,17 @@ class Round2LogicTest {
     fun affinityTopLevelNeedsNinetyDays() {
         assertEquals(1, AffinityRules.levelByDays(0))
         assertEquals(2, AffinityRules.levelByDays(3))
-        assertEquals(7, AffinityRules.levelByDays(89))
-        assertEquals(8, AffinityRules.levelByDays(90))
-        assertEquals(8, AffinityRules.levelByDays(400))
+        assertEquals(8, AffinityRules.levelByDays(89))
+        assertEquals(9, AffinityRules.levelByDays(90))
+        assertEquals(9, AffinityRules.levelByDays(400))
     }
 
     @Test
     fun affinityEffectiveLevelTakesTheLowerOfXpAndDays() {
-        assertEquals("XP tinggi tetapi baru 10 hari", 3, AffinityRules.effectiveLevel(8, 10))
+        assertEquals("XP tinggi tetapi baru 10 hari", 3, AffinityRules.effectiveLevel(9, 10))
         assertEquals("hari banyak tetapi XP rendah", 2, AffinityRules.effectiveLevel(2, 100))
-        assertEquals(8, AffinityRules.effectiveLevel(8, 90))
-        assertEquals("nilai di luar rentang dipangkas", 8, AffinityRules.effectiveLevel(9, 90))
+        assertEquals(9, AffinityRules.effectiveLevel(9, 90))
+        assertEquals("nilai di luar rentang dipangkas", 9, AffinityRules.effectiveLevel(10, 90))
         assertEquals(1, AffinityRules.effectiveLevel(0, 0))
     }
 
@@ -60,7 +60,7 @@ class Round2LogicTest {
         assertEquals(90, AffinityRules.daysLeft(0))
         assertEquals(60, AffinityRules.daysLeft(30))
         assertEquals(0, AffinityRules.daysLeft(120))
-        assertEquals(1f, AffinityRules.daysProgress(8, 10), 0f)
+        assertEquals(1f, AffinityRules.daysProgress(9, 10), 0f)
         val p = AffinityRules.daysProgress(1, 0)
         assertTrue(p in 0f..1f)
         assertEquals(1f, AffinityRules.daysProgress(1, 3), 0f)

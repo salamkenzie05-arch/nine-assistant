@@ -7,10 +7,10 @@ package id.nine.assistant.core
 object AffinityRules {
     const val FULL_DAYS = 90
 
-    /** Hari pemakaian minimum untuk level 1..8 (indeks 0..7). */
-    val MIN_DAYS = intArrayOf(0, 3, 8, 16, 30, 48, 68, FULL_DAYS)
+    /** Hari pemakaian minimum untuk level 1..9 (indeks 0..8). */
+    val MIN_DAYS = intArrayOf(0, 3, 8, 16, 30, 48, 58, 68, FULL_DAYS)
 
-    /** Level tertinggi (1..8) yang diizinkan oleh [days] hari pemakaian. */
+    /** Level tertinggi (1..9) yang diizinkan oleh [days] hari pemakaian. */
     fun levelByDays(days: Int): Int {
         var level = 1
         for (i in MIN_DAYS.indices) if (days >= MIN_DAYS[i]) level = i + 1

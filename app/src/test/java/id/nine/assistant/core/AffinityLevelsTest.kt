@@ -4,17 +4,17 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Tes tangga level kedekatan: 8 level bernama sesuai permintaan, XP dan hari naik teratur. */
+/** Tes tangga level kedekatan: 9 level bernama sesuai permintaan, XP dan hari naik teratur. */
 class AffinityLevelsTest {
 
     @Test
-    fun delapanLevelBernama() {
+    fun sembilanLevelBernama() {
         assertEquals(
-            listOf("Stranger", "Aware", "Acquainted", "Interested", "Familiar", "Connected", "Loyal", "Devoted"),
+            listOf("Stranger", "Aware", "Acquainted", "Interested", "Familiar", "Connected", "Trusted", "Loyal", "Devoted"),
             Affinity.LEVELS.map { it.nameEn }
         )
         assertEquals(Affinity.LEVELS.map { it.nameEn }, Affinity.LEVELS.map { it.nameId })
-        assertEquals((1..8).toList(), Affinity.LEVELS.map { it.number })
+        assertEquals((1..9).toList(), Affinity.LEVELS.map { it.number })
     }
 
     @Test
@@ -34,6 +34,10 @@ class AffinityLevelsTest {
         assertEquals("Aware", Affinity.levelFor(60).nameEn)
         assertEquals("Aware", Affinity.levelFor(169).nameEn)
         assertEquals("Acquainted", Affinity.levelFor(170).nameEn)
+        assertEquals("Connected", Affinity.levelFor(1199).nameEn)
+        assertEquals("Trusted", Affinity.levelFor(1200).nameEn)
+        assertEquals("Trusted", Affinity.levelFor(1449).nameEn)
+        assertEquals("Loyal", Affinity.levelFor(1450).nameEn)
         assertEquals("Devoted", Affinity.levelFor(999_999).nameEn)
         assertEquals(null, Affinity.nextAfter(Affinity.LEVELS.last()))
         assertEquals("Aware", Affinity.nextAfter(Affinity.LEVELS.first())?.nameEn)
