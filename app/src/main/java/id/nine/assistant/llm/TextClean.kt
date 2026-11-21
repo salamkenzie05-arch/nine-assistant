@@ -6,26 +6,35 @@ object TextClean {
     private val reBold = Regex("""\*\*(.+?)\*\*""")
     private val reItalic = Regex("""(?<![\w*])\*(?!\s)(.+?)(?<!\s)\*(?![\w*])""")
     private val reHeading = Regex("""(?m)^\s{0,3}#{1,6}\s*""")
-    private val reBullet = Regex("""(?m)^\s*(?:[-*•]|\d+[.)])\s+""")
+    private val reBullet = Regex("""(?m)^[ \t]*[-*•][ \t]+""")
+    private val reNumbered = Regex("""(?m)^[ \t]*(\d{1,2})[.)][ \t]+""")
+    private val reMarker = Regex("""(?m)^(?:•|\d{1,2}\.)[ \t]+""")
     private val reCode = Regex("""`{1,3}""")
     private val reLink = Regex("""\[([^\]]+)]\([^)]*\)""")
     private val reEmoji = Regex("""[\x{1F300}-\x{1FAFF}\x{2600}-\x{27BF}\x{1F000}-\x{1F2FF}\x{FE0F}]""")
     private val reSpaces = Regex("""[ \t]{2,}""")
 
-    /** Hapus format markdown dan emoji agar enak dibaca dan diucapkan. */
+    /**
+     * Hapus format markdown dan emoji agar enak dibaca di layar. Daftar tetap terbaca: butir ("-", "*", "•") menjadi "• "
+     * dan butir bernomor menjadi "1. ".
+     */
     fun clean(s: String): String {
         var t = s
         t = reLink.replace(t, "$1")
+        t = reBullet.replace(t, "• ")
+        t = reNumbered.replace(t, "$1. ")
         t = reBold.replace(t, "$1")
         t = reItalic.replace(t, "$1")
         t = reHeading.replace(t, "")
-        t = reBullet.replace(t, "")
         t = reCode.replace(t, "")
         t = t.replace("*", "")
         t = reEmoji.replace(t, "")
         t = reSpaces.replace(t, " ")
         return t.trim()
     }
+
+    /** Teks untuk diucapkan: seperti [clean] tetapi tanpa penanda butir dan nomor di awal baris. */
+    fun speech(s: String): String = reMarker.replace(clean(s), "")
 
     /**
      * Pemotong kalimat untuk teks yang datang bertahap (streaming).

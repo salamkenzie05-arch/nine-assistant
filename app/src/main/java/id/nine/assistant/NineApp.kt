@@ -15,9 +15,9 @@ import id.nine.assistant.alarm.AlarmScheduler
 import id.nine.assistant.core.ConversationLog
 import id.nine.assistant.core.Perf
 import id.nine.assistant.core.Prefs
-import id.nine.assistant.llm.GeminiClient
 import id.nine.assistant.llm.LlmBrain
 import id.nine.assistant.llm.ModelManager
+import id.nine.assistant.llm.MultiBrain
 import id.nine.assistant.llm.OnlineBrain
 import id.nine.assistant.widget.WidgetUpdater
 
@@ -30,10 +30,10 @@ class NineApp : Application() {
         private set
     lateinit var brain: LlmBrain
         private set
-    lateinit var gemini: GeminiClient
+    lateinit var multi: MultiBrain
         private set
-    /** Otak online (Gemini). */
-    val online: OnlineBrain get() = gemini
+    /** Otak online: beberapa penyedia AI gratis dengan cadangan otomatis. */
+    val online: OnlineBrain get() = multi
     val log = ConversationLog()
     /** Ruang obrolan khusus (tersimpan) dan penukar isi log antara obrolan utama dan ruang. */
     lateinit var spaces: id.nine.assistant.core.SpaceStore
@@ -61,7 +61,7 @@ class NineApp : Application() {
         // Model Gemma (±2,5 GB) TIDAK dimuat saat proses mulai; ia dimuat saat ada pertanyaan yang butuh AI
         // dan otomatis dilepas bila tak dipakai (2 menit di layar, 30 detik di latar belakang).
         brain.isForeground = { MainActivity.visible }
-        gemini = GeminiClient(this, prefs)
+        multi = MultiBrain(this, prefs)
         models.addListener { status ->
             when (status) {
                 ModelManager.Status.Missing -> brain.unload()

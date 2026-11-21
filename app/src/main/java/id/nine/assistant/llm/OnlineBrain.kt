@@ -5,9 +5,9 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import id.nine.assistant.core.AppLang
 
-/** Otak online Nine (Gemini). Dipakai hanya bila pengguna menyalakan Mode internet. */
+/** Otak online Nine (penyedia AI gratis). Dipakai hanya bila pengguna menyalakan Mode internet dan mengisi kunci. */
 interface OnlineBrain {
-    /** Nama penyedia untuk ditampilkan, mis. "Gemini". */
+    /** Nama penyedia untuk ditampilkan, mis. "Gemini + Groq". */
     val displayName: String
 
     /** Mode internet aktif dan API key terisi. */
@@ -28,7 +28,7 @@ interface OnlineBrain {
      */
     fun ask(text: String, lang: AppLang, history: List<Pair<String, String>>, context: String, cb: Callback)
 
-    /** Callback tambahan: [onFallback] dipanggil bila gagal karena jaringan/kuota sebelum ada teks. */
+    /** Callback tambahan: [onFallback] dipanggil bila semua penyedia gagal sebelum ada teks; [reason] sudah berupa kalimat siap tampil. */
     interface Callback : LlmBrain.ReplyCallback {
         fun onFallback(reason: String)
     }

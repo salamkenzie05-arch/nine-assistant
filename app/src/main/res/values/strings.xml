@@ -47,7 +47,7 @@
     <string name="voice_preview">Contoh suara</string>
     <string name="assistant_button">Jadikan asisten default</string>
     <string name="sec_privacy">Privasi</string>
-    <string name="privacy_text">Semua data tetap di HP ini. Internet hanya untuk mengunduh model dan Mode internet.</string>
+    <string name="privacy_text">Data Nine tetap di HP ini. Internet dipakai untuk mengunduh model dan, bila Mode internet menyala, mengirim pertanyaan umum ke penyedia AI yang kuncinya diisi di Pengaturan.</string>
 
     <string name="todo_title">Tugas hari ini</string>
     <string name="todo_hint">Tambah tugas…</string>
@@ -59,15 +59,20 @@
     <string name="widget_orb_desc">Orb Nine (ikut tema): ketuk untuk bicara</string>
     <string name="widget_today_desc">Nine (ikut tema) · tugas hari ini</string>
 
-    <string name="internet_switch">Mode internet · Gemini</string>
-    <string name="gemini_key_hint">Kunci API Gemini</string>
-    <string name="gemini_get_key">Dapatkan kunci gratis</string>
+    <string name="internet_switch">Mode internet · AI online gratis</string>
     <string name="city_hint">Kota untuk cuaca (opsional)</string>
-    <string name="internet_status_off">Mati. Jawaban dari Gemma offline.</string>
-    <string name="internet_status_nokey">Isi kunci API untuk mengaktifkan.</string>
-    <string name="internet_status_online">Aktif · online</string>
-    <string name="internet_status_offline">Aktif · offline, memakai Gemma</string>
-    <string name="brain_online">Online · %1$s + pencarian web</string>
+    <string name="internet_status_off">Mati. Jawaban dari Gemma offline (bila terpasang).</string>
+    <string name="internet_status_nokey">Isi minimal satu kunci API untuk mengaktifkan.</string>
+    <string name="internet_status_online">Aktif · online · %1$s</string>
+    <string name="internet_status_offline">Aktif · tidak ada internet, memakai Gemma bila terpasang</string>
+    <string name="ai_intro">Isi satu atau beberapa kunci gratis (tanpa kartu kredit). Nine mencoba berurutan: Gemini, Groq, Cerebras, lalu OpenRouter, dan beralih sendiri bila kuota satu penyedia habis. Pertanyaan umum (bukan perintah) dikirim ke penyedia itu bersama ringkasan singkat konteks: ingatan Nine, tugas dan acara hari ini, serta lokasi bila diizinkan. Penyedia gratis bisa memakai percakapan untuk meningkatkan produknya, jadi jangan menyebut data sensitif. Obrolan curhat dan data kebugaran Nine tidak pernah dikirim.</string>
+    <string name="ai_key_hint">Kunci API %1$s</string>
+    <string name="ai_get_key">Dapatkan kunci %1$s (gratis)</string>
+    <string name="ai_search_switch">Pencarian Google lewat Gemini (hanya untuk kunci berbayar)</string>
+    <string name="ai_test">Tes koneksi</string>
+    <string name="ai_testing">Menguji…</string>
+    <string name="ai_test_nokey">Isi minimal satu kunci dulu.</string>
+    <string name="brain_online">Online · %1$s</string>
 
     <string name="variant_e2b">E2B · 2,6 GB · cepat</string>
     <string name="variant_e4b">E4B · 3,7 GB · lebih pintar</string>
@@ -95,7 +100,7 @@
     <string name="calendar_target">Simpan acara baru ke</string>
     <string name="calendar_auto">Otomatis</string>
     <string name="calendar_access">Izinkan akses kalender</string>
-    <string name="gemini_model_hint">Model (opsional)</string>
+    <string name="gemini_model_hint">Model Gemini (opsional)</string>
     <string name="wake_phrase_hint">Frasa, mis. hey nine</string>
     <string name="model_import_short">Impor file</string>
 

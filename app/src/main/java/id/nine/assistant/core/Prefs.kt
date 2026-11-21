@@ -86,14 +86,43 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("net_mode", false)
         set(value) = sp.edit().putBoolean("net_mode", value).apply()
 
-    /** API key Gemini, disimpan terenkripsi (Android Keystore). */
+    /** Cadangan hasil dekripsi, dikunci oleh teks terenkripsinya (selalu berbeda tiap simpan), agar Keystore tak dipanggil berulang. */
+    private val keyCache = HashMap<String, String>()
+
+    /** API key penyedia AI online ([id]: "gemini", "groq", "cerebras", "openrouter"), disimpan terenkripsi (Android Keystore). */
+    fun providerKey(id: String): String {
+        val stored = sp.getString("${id}_key", "") ?: ""
+        if (stored.isEmpty()) return ""
+        synchronized(keyCache) {
+            return keyCache.getOrPut(stored) { SecureStore.decrypt(stored) }
+        }
+    }
+
+    fun setProviderKey(id: String, value: String) {
+        val v = value.trim()
+        if (v == providerKey(id)) return // tak berubah: jangan menulis ulang (hindari enkripsi sia-sia)
+        sp.edit().putString("${id}_key", SecureStore.encrypt(v)).apply()
+    }
+
+    /** Pencarian Google lewat Gemini; hanya berguna untuk kunci berbayar, jadi mati secara bawaan. */
+    var aiSearch: Boolean
+        get() = sp.getBoolean("ai_search", false)
+        set(value) = sp.edit().putBoolean("ai_search", value).apply()
+
+    /** Daftar model hasil penemuan per penyedia (JSON), agar tak ditanyakan tiap pertanyaan. */
+    fun modelCache(id: String): String? = sp.getString("ai_models_$id", null)
+
+    fun setModelCache(id: String, json: String?) {
+        sp.edit().apply { if (json == null) remove("ai_models_$id") else putString("ai_models_$id", json) }.apply()
+    }
+
     var geminiKey: String
-        get() = SecureStore.decrypt(sp.getString("gemini_key", "") ?: "")
-        set(value) = sp.edit().putString("gemini_key", SecureStore.encrypt(value.trim())).apply()
+        get() = providerKey("gemini")
+        set(value) = setProviderKey("gemini", value)
 
     /** Enkripsi ulang rahasia yang masih tersimpan polos dari versi lama. */
     fun migrateSecrets() {
-        for (k in listOf("gemini_key", "hf_token")) {
+        for (k in listOf("gemini_key", "groq_key", "cerebras_key", "openrouter_key", "hf_token")) {
             val v = sp.getString(k, "") ?: ""
             if (v.isNotEmpty() && !SecureStore.isEncrypted(v)) sp.edit().putString(k, SecureStore.encrypt(v)).apply()
         }

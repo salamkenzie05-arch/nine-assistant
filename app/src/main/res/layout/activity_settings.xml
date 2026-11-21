@@ -59,42 +59,28 @@
                     android:textSize="15sp" />
 
                 <LinearLayout
-                    android:id="@+id/geminiFields"
+                    android:id="@+id/aiFields"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical">
 
-                    <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
+                    <TextView
+                        android:id="@+id/txtAiIntro"
+                        style="@style/Nine.Status"
+                        android:layout_marginTop="4dp"
+                        android:text="@string/ai_intro" />
+
+                    <LinearLayout
+                        android:id="@+id/aiKeyList"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:hint="@string/gemini_key_hint"
-                        app:endIconMode="password_toggle">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/editGeminiKey"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:importantForAutofill="no"
-                            android:inputType="textPassword"
-                            android:maxLines="1"
-                            android:textSize="15sp" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnGetKey"
-                        style="@style/Widget.Material3.Button.TextButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textColor="@color/nine_gold"
-                        android:text="@string/gemini_get_key" />
+                        android:orientation="vertical" />
 
                     <com.google.android.material.textfield.TextInputLayout
                         style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
+                        android:layout_marginTop="8dp"
                         android:hint="@string/gemini_model_hint">
 
                         <com.google.android.material.textfield.TextInputEditText
@@ -106,6 +92,28 @@
                             android:maxLines="1"
                             android:textSize="15sp" />
                     </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switchAiSearch"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:minHeight="48dp"
+                        android:text="@string/ai_search_switch"
+                        android:textColor="@color/nine_on_bg"
+                        android:textSize="14sp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnTestAi"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/ai_test"
+                        android:textColor="@color/nine_gold" />
+
+                    <TextView
+                        android:id="@+id/txtAiTest"
+                        style="@style/Nine.Status"
+                        android:visibility="gone" />
                 </LinearLayout>
 
                 <com.google.android.material.textfield.TextInputLayout

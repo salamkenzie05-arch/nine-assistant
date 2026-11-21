@@ -14,6 +14,7 @@ import id.nine.assistant.fit.HealthIntent
 import id.nine.assistant.fit.HealthRequest
 import id.nine.assistant.fit.InBodyParser
 import id.nine.assistant.fit.InBodyReading
+import id.nine.assistant.llm.AiHistory
 import id.nine.assistant.llm.LangGuard
 import id.nine.assistant.llm.LlmBrain
 import id.nine.assistant.llm.OnlineBrain
@@ -280,7 +281,7 @@ class AssistantController(context: Context, private val ui: Ui) {
                 log.update(index, cleaned)
                 ui.onMood(moodForText(cleaned))
                 if (prefs.speakReplies) {
-                    output.speak(cleaned, l, onStart = { setState(State.SPEAKING) }) { setState(State.IDLE) }
+                    output.speak(TextClean.speech(fullText), l, onStart = { setState(State.SPEAKING) }) { setState(State.IDLE) }
                 } else {
                     setState(State.IDLE)
                 }
@@ -1135,22 +1136,11 @@ class AssistantController(context: Context, private val ui: Ui) {
         return parts.joinToString("\n")
     }
 
-    /** Riwayat layar untuk Gemini: giliran sebelumnya, role bergantian, dimulai dari pengguna. */
+    /** Riwayat layar untuk AI online: giliran sebelumnya (bukan yang pribadi), role bergantian, dimulai dari pengguna. */
     private fun historyForAi(excludeFrom: Int): List<Pair<String, String>> {
         val entries = log.entries.subList(0, excludeFrom.coerceIn(0, log.entries.size))
             .filter { !it.private && it.text.isNotBlank() && it.text != "…" && LangGuard.sameLanguage(it.text, lang) }
-            .takeLast(14)
-        val out = ArrayList<Pair<String, String>>()
-        for (e in entries) {
-            val role = if (e.fromUser) "user" else "model"
-            if (out.isNotEmpty() && out.last().first == role) {
-                out[out.size - 1] = role to (out.last().second + "\n" + e.text)
-            } else {
-                out.add(role to e.text)
-            }
-        }
-        while (out.isNotEmpty() && out.first().first != "user") out.removeAt(0)
-        return out
+        return AiHistory.build(entries.map { it.fromUser to it.text })
     }
 
     /** Untuk Gemma (yang menyimpan riwayatnya sendiri): sisipkan giliran perintah yang belum ia lihat + konteks. */
@@ -1265,6 +1255,21 @@ class AssistantController(context: Context, private val ui: Ui) {
             cancelAi = { brain.cancel() }
         }
 
+        // Tampilkan kegagalan sebagai balasan Nine (diucapkan bila suara menyala).
+        fun showFailure(text: String, mood: Mood) {
+            brainJob = null
+            cancelAi = null
+            ui.onPartial("")
+            output.stop()
+            ui.onMood(mood)
+            log.update(index, text)
+            if (speak) {
+                output.speak(text, l, onStart = { setState(State.SPEAKING) }) { setState(State.IDLE) }
+            } else {
+                setState(State.IDLE)
+            }
+        }
+
         val sink = object : OnlineBrain.Callback {
             override fun onChunk(text: String) {
                 if (gen != askGen) return
@@ -1275,12 +1280,12 @@ class AssistantController(context: Context, private val ui: Ui) {
                     holding = false
                     ui.onPartial("")
                     log.update(index, TextClean.clean(r))
-                    if (speak) for (sentence in splitter.push(r)) output.enqueue(TextClean.clean(sentence))
+                    if (speak) for (sentence in splitter.push(r)) output.enqueue(TextClean.speech(sentence))
                     return
                 }
                 log.update(index, TextClean.clean(raw.toString()))
                 if (speak) {
-                    for (sentence in splitter.push(text)) output.enqueue(TextClean.clean(sentence))
+                    for (sentence in splitter.push(text)) output.enqueue(TextClean.speech(sentence))
                 }
             }
 
@@ -1310,13 +1315,14 @@ class AssistantController(context: Context, private val ui: Ui) {
                 if (speak) {
                     if (holding) {
                         // seluruh jawaban pendek tertahan: bunyikan sekarang
-                        for (sentence in splitter.push(fullText)) output.enqueue(TextClean.clean(sentence))
+                        for (sentence in splitter.push(fullText)) output.enqueue(TextClean.speech(sentence))
                     }
-                    splitter.flush()?.let { output.enqueue(TextClean.clean(it)) }
+                    splitter.flush()?.let { output.enqueue(TextClean.speech(it)) }
                 }
                 fun conclude(finalText: String) {
                     // AI mengaku tidak tahu / butuh pencarian: setelah selesai bicara, buka Google dengan pertanyaannya.
-                    val unsure = ChitChat.looksUnsure(finalText) && ChitChat.worthSearching(question) && !ui.isLocked()
+                    // Jawaban panjang berarti AI sudah menjawab dengan isi; hanya jawaban pendek "saya tidak tahu" yang memicu Google.
+                    val unsure = finalText.length <= 320 && ChitChat.looksUnsure(finalText) && ChitChat.worthSearching(question) && !ui.isLocked()
                     ui.onMood(if (unsure) Mood.CURIOUS else moodForText(finalText))
                     val followUp = finalText.trimEnd().endsWith("?")
                     val finishUp = {
@@ -1343,27 +1349,15 @@ class AssistantController(context: Context, private val ui: Ui) {
 
             override fun onError(message: String) {
                 if (gen != askGen) return
-                brainJob = null
-                cancelAi = null
-                ui.onPartial("")
-                output.stop()
-                ui.onMood(if (message == "no_model") Mood.CONFUSED else Mood.SAD)
                 val text = if (message == "no_model") {
                     prefs.persona.didNotUnderstand(l, question)
-                } else if (message.contains("Gemini")) {
-                    message
                 } else {
                     l.t(
                         "Maaf${prefs.persona.sfx(l)}, otak AI saya sedang bermasalah ($message). Coba lagi sebentar lagi.",
                         "My apologies${prefs.persona.sfx(l)}, my AI core ran into trouble ($message). Please try again shortly."
                     )
                 }
-                log.update(index, text)
-                if (speak) {
-                    output.speak(text, l, onStart = { setState(State.SPEAKING) }) { setState(State.IDLE) }
-                } else {
-                    setState(State.IDLE)
-                }
+                showFailure(text, if (message == "no_model") Mood.CONFUSED else Mood.SAD)
             }
 
             override fun onFallback(reason: String) {
@@ -1377,11 +1371,12 @@ class AssistantController(context: Context, private val ui: Ui) {
                     brainJob = brain.ask(gemmaMessage(question, l, userIndex), l, this)
                     cancelAi = { brain.cancel() }
                 } else {
-                    onError(
+                    showFailure(
                         l.t(
-                            "Tidak bisa terhubung ke ${ai.displayName} ($reason) dan otak AI offline belum diunduh.",
-                            "I couldn't reach ${ai.displayName} ($reason) and the offline AI brain isn't downloaded."
-                        )
+                            "Maaf${prefs.persona.sfx(l)}, AI online belum bisa menjawab: ${reason.trimEnd('.')}.",
+                            "My apologies${prefs.persona.sfx(l)}, the online AI couldn't answer: ${reason.trimEnd('.')}."
+                        ),
+                        Mood.SAD
                     )
                 }
             }

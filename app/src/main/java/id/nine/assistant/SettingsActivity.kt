@@ -14,6 +14,7 @@ import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Toast
+import com.google.android.material.textfield.TextInputEditText
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -27,6 +28,8 @@ import id.nine.assistant.core.MemoryStore
 import id.nine.assistant.core.Prefs
 import id.nine.assistant.widget.WidgetUpdater
 import id.nine.assistant.databinding.ActivitySettingsBinding
+import id.nine.assistant.databinding.ItemAiKeyBinding
+import id.nine.assistant.llm.Providers
 import id.nine.assistant.llm.ModelManager
 import id.nine.assistant.skills.CalendarSkill
 import id.nine.assistant.speech.SpeechOutput
@@ -90,20 +93,16 @@ class SettingsActivity : AppCompatActivity() {
 
         // --- Mode internet
         binding.switchInternet.isChecked = prefs.internetMode
-        binding.editGeminiKey.setText(prefs.geminiKey)
+        buildAiKeyFields()
         binding.editGeminiModel.setText(if (prefs.geminiModel == Prefs.DEFAULT_GEMINI_MODEL) "" else prefs.geminiModel)
+        binding.switchAiSearch.isChecked = prefs.aiSearch
+        binding.switchAiSearch.setOnCheckedChangeListener { _, checked -> prefs.aiSearch = checked }
+        binding.btnTestAi.setOnClickListener { testAi() }
         binding.editCity.setText(prefs.city)
         binding.switchInternet.setOnCheckedChangeListener { _, checked ->
             saveKeys()
             prefs.internetMode = checked
             renderInternet()
-        }
-        binding.btnGetKey.setOnClickListener {
-            try {
-                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://aistudio.google.com/apikey")))
-            } catch (e: Exception) {
-                // tidak ada browser
-            }
         }
         renderInternet()
 
@@ -289,8 +288,57 @@ class SettingsActivity : AppCompatActivity() {
         populateCalendars()
     }
 
+    private val aiKeyEdits = LinkedHashMap<String, TextInputEditText>()
+
+    /** Satu kolom kunci + tombol "Dapatkan kunci" untuk tiap penyedia AI online. */
+    private fun buildAiKeyFields() {
+        binding.aiKeyList.removeAllViews()
+        aiKeyEdits.clear()
+        for (p in Providers.all) {
+            val item = ItemAiKeyBinding.inflate(layoutInflater, binding.aiKeyList, true)
+            item.keyLayout.hint = getString(R.string.ai_key_hint, p.label)
+            item.editKey.setText(prefs.providerKey(p.id))
+            item.btnGetKey.text = getString(R.string.ai_get_key, p.label)
+            item.btnGetKey.setOnClickListener {
+                try {
+                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(p.keyUrl)))
+                } catch (e: Exception) {
+                    // tidak ada browser
+                }
+            }
+            aiKeyEdits[p.id] = item.editKey
+        }
+    }
+
     private fun saveKeys() {
-        prefs.geminiKey = binding.editGeminiKey.text.toString()
+        for ((id, edit) in aiKeyEdits) prefs.setProviderKey(id, edit.text?.toString() ?: "")
+    }
+
+    /** Uji tiap penyedia yang kuncinya terisi dan tampilkan model yang dipilih Nine atau penyebab gagalnya. */
+    private fun testAi() {
+        saveKeys()
+        prefs.geminiModel = binding.editGeminiModel.text.toString()
+        binding.txtAiTest.visibility = View.VISIBLE
+        if (nine.multi.configs().isEmpty()) {
+            binding.txtAiTest.setText(R.string.ai_test_nokey)
+            return
+        }
+        binding.btnTestAi.isEnabled = false
+        binding.txtAiTest.setText(R.string.ai_testing)
+        val lines = ArrayList<String>()
+        nine.multi.test(
+            prefs.lang,
+            onLine = { line ->
+                lines.add(line)
+                if (!isFinishing && !isDestroyed) binding.txtAiTest.text = lines.joinToString("\n")
+            },
+            onDone = {
+                if (!isFinishing && !isDestroyed) {
+                    binding.btnTestAi.isEnabled = true
+                    renderInternet()
+                }
+            }
+        )
     }
 
     private fun renderAlarms() {
@@ -429,15 +477,13 @@ class SettingsActivity : AppCompatActivity() {
     private fun size(b: Long): String = Formatter.formatShortFileSize(this, b)
 
     private fun renderInternet() {
-        val noKey = prefs.geminiKey.isBlank() && binding.editGeminiKey.text.isNullOrBlank()
-        binding.txtInternetStatus.setText(
-            when {
-                !prefs.internetMode -> R.string.internet_status_off
-                noKey -> R.string.internet_status_nokey
-                nine.online.isOnline() -> R.string.internet_status_online
-                else -> R.string.internet_status_offline
-            }
-        )
+        val noKey = nine.multi.configs().isEmpty() && aiKeyEdits.values.all { it.text.isNullOrBlank() }
+        binding.txtInternetStatus.text = when {
+            !prefs.internetMode -> getString(R.string.internet_status_off)
+            noKey -> getString(R.string.internet_status_nokey)
+            nine.online.isOnline() -> getString(R.string.internet_status_online, nine.online.displayName)
+            else -> getString(R.string.internet_status_offline)
+        }
     }
 
     private val notifPermission =
